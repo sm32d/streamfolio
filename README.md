@@ -108,7 +108,7 @@ UI tests (Espresso/Compose) can be executed with:
 
 ## License
 
-This project is licensed under the **MIT License** – feel free to fork, modify, and redistribute.
+This project is licensed under the **GPL-3.0 license** – feel free to fork, modify, and redistribute.
 
 ---
 
