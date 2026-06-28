@@ -108,9 +108,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             val currentCat = _selectedCategory.value
             
             // Check if it's a custom feed
-            val customFeed = customFeeds.value.firstOrNull { it.category == currentCat }
-            if (customFeed != null) {
-                repository.fetchCustomFeed(customFeed)
+            val matchingFeeds = customFeeds.value.filter { it.category == currentCat }
+            if (matchingFeeds.isNotEmpty()) {
+                repository.fetchCustomFeeds(matchingFeeds, currentCat)
             } else {
                 repository.fetchGoogleNews(
                     category = currentCat,
@@ -180,7 +180,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.deleteCustomFeed(feed)
             if (_selectedCategory.value == feed.category) {
-                _selectedCategory.value = "Top Stories"
+                val hasRemaining = customFeeds.value.any { it.category == feed.category && it.id != feed.id }
+                if (!hasRemaining) {
+                    _selectedCategory.value = "Top Stories"
+                }
             }
         }
     }

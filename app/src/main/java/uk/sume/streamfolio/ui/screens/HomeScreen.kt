@@ -67,7 +67,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
         } else {
             emptyList()
         }
-        googleCategories + customFeeds.map { it.category }
+        (googleCategories + customFeeds.map { it.category }).distinct()
     }
 
     LaunchedEffect(categories) {

@@ -8,6 +8,8 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import uk.sume.streamfolio.data.local.AppDatabase
@@ -31,6 +33,17 @@ class NewsRepository(context: Context) {
 
     private val userAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
 
+    private fun buildBrowserRequest(url: String): Request {
+        return Request.Builder()
+            .url(url)
+            .header("User-Agent", userAgent)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .header("Connection", "keep-alive")
+            .header("Cache-Control", "max-age=0")
+            .build()
+    }
+
     // Fetch Google News RSS feed
     suspend fun fetchGoogleNews(category: String, language: String, region: String) = withContext(Dispatchers.IO) {
         val topic = category.uppercase()
@@ -41,10 +54,7 @@ class NewsRepository(context: Context) {
         }
 
         try {
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", userAgent)
-                .build()
+            val request = buildBrowserRequest(url)
 
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
@@ -62,57 +72,64 @@ class NewsRepository(context: Context) {
         }
     }
 
-    // Fetch Custom RSS Feed
-    suspend fun fetchCustomFeed(feed: CustomFeed) = withContext(Dispatchers.IO) {
-        try {
-            var url = feed.url.trim()
-            if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                url = "https://$url"
-            }
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", userAgent)
-                .build()
+    // Fetch multiple Custom RSS Feeds for a single category/tab in parallel
+    suspend fun fetchCustomFeeds(feeds: List<CustomFeed>, category: String) = withContext(Dispatchers.IO) {
+        val allArticles = mutableListOf<Article>()
+        val jobs = feeds.map { feed ->
+            async {
+                val feedArticles = mutableListOf<Article>()
+                try {
+                    var url = feed.url.trim()
+                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                        url = "https://$url"
+                    }
+                    val request = buildBrowserRequest(url)
 
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val xml = response.body?.string() ?: ""
-                    val articles = if (parser.isOpml(xml)) {
-                        val urls = parser.parseOpmlUrls(xml)
-                        val aggregated = mutableListOf<Article>()
-                        for (childUrl in urls) {
-                            try {
-                                var formattedChildUrl = childUrl.trim()
-                                if (!formattedChildUrl.startsWith("http://") && !formattedChildUrl.startsWith("https://")) {
-                                    formattedChildUrl = "https://$formattedChildUrl"
-                                }
-                                val childRequest = Request.Builder()
-                                    .url(formattedChildUrl)
-                                    .header("User-Agent", userAgent)
-                                    .build()
-                                client.newCall(childRequest).execute().use { childResponse ->
-                                    if (childResponse.isSuccessful) {
-                                        val childXml = childResponse.body?.string() ?: ""
-                                        val childArticles = parser.parse(childXml, feed.category, feed.id)
-                                        aggregated.addAll(childArticles)
+                    client.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val xml = response.body?.string() ?: ""
+                            val parsed = if (parser.isOpml(xml)) {
+                                val urls = parser.parseOpmlUrls(xml)
+                                val aggregated = mutableListOf<Article>()
+                                for (childUrl in urls) {
+                                    try {
+                                        var formattedChildUrl = childUrl.trim()
+                                        if (!formattedChildUrl.startsWith("http://") && !formattedChildUrl.startsWith("https://")) {
+                                            formattedChildUrl = "https://$formattedChildUrl"
+                                        }
+                                        val childRequest = buildBrowserRequest(formattedChildUrl)
+                                        client.newCall(childRequest).execute().use { childResponse ->
+                                            if (childResponse.isSuccessful) {
+                                                val childXml = childResponse.body?.string() ?: ""
+                                                val childArticles = parser.parse(childXml, feed.category, feed.id)
+                                                aggregated.addAll(childArticles)
+                                            }
+                                        }
+                                    } catch (childEx: Exception) {
+                                        Log.e("NewsRepository", "Error fetching OPML child feed $childUrl", childEx)
                                     }
                                 }
-                            } catch (childEx: Exception) {
-                                Log.e("NewsRepository", "Error fetching OPML child feed $childUrl", childEx)
+                                aggregated
+                            } else {
+                                parser.parse(xml, feed.category, feed.id)
                             }
+                            feedArticles.addAll(parsed)
                         }
-                        aggregated
-                    } else {
-                        parser.parse(xml, feed.category, feed.id)
                     }
-                    articleDao.clearNonBookmarkedArticlesByCategory(feed.category)
-                    articleDao.insertArticles(articles)
-                    triggerThumbnailResolution(articles)
+                } catch (e: Exception) {
+                    Log.e("NewsRepository", "Error fetching custom feed ${feed.url}", e)
                 }
+                feedArticles
             }
-        } catch (e: Exception) {
-            Log.e("NewsRepository", "Error fetching custom feed ${feed.url}", e)
         }
+        val results = jobs.awaitAll()
+        for (list in results) {
+            allArticles.addAll(list)
+        }
+        
+        articleDao.clearNonBookmarkedArticlesByCategory(category)
+        articleDao.insertArticles(allArticles)
+        triggerThumbnailResolution(allArticles)
     }
 
     // Search news online using Google News RSS search endpoint
@@ -120,10 +137,7 @@ class NewsRepository(context: Context) {
         if (query.isBlank()) return@withContext
         val url = "https://news.google.com/rss/search?q=$query&hl=$language&gl=$region&ceid=$region:$language"
         try {
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", userAgent)
-                .build()
+            val request = buildBrowserRequest(url)
 
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {

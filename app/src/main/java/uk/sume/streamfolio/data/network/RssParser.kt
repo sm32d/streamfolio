@@ -12,8 +12,9 @@ class RssParser {
      */
     fun isOpml(xmlContent: String): Boolean {
         val trimmed = xmlContent.trimStart()
-        return trimmed.startsWith("<opml", ignoreCase = true) || 
-               trimmed.contains("<opml", ignoreCase = true)
+        val limit = 500.coerceAtMost(trimmed.length)
+        val prefix = trimmed.substring(0, limit).lowercase()
+        return prefix.contains("<opml") && !prefix.contains("<rss") && !prefix.contains("<feed")
     }
 
     /**
