@@ -42,7 +42,7 @@ fun GlassmorphicNavBar(
             .padding(horizontal = 24.dp, vertical = 8.dp)
             .shadow(16.dp, RoundedCornerShape(32.dp))
             .clip(RoundedCornerShape(32.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.98f))
             .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
             .padding(vertical = 8.dp, horizontal = 12.dp)
     ) {

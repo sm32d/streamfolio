@@ -65,8 +65,12 @@ class NewsRepository(context: Context) {
     // Fetch Custom RSS Feed
     suspend fun fetchCustomFeed(feed: CustomFeed) = withContext(Dispatchers.IO) {
         try {
+            var url = feed.url.trim()
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                url = "https://$url"
+            }
             val request = Request.Builder()
-                .url(feed.url)
+                .url(url)
                 .header("User-Agent", userAgent)
                 .build()
 

@@ -44,7 +44,8 @@ fun AppNavigation(viewModel: NewsViewModel) {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)
     ) { innerPadding ->
         Box(
             modifier = Modifier.fillMaxSize()

@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,9 +55,23 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
     val customFeeds by viewModel.customFeeds.collectAsState()
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
 
-    val categories = remember(customFeeds) {
-        listOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment") + 
-                customFeeds.map { it.category }
+    val selectedCategoriesPref = remember { viewModel.prefs.selectedCategories }
+    val isGoogleNewsEnabled = remember { viewModel.prefs.isGoogleNewsEnabled }
+    val categories = remember(customFeeds, selectedCategoriesPref, isGoogleNewsEnabled) {
+        val defaultCategories = listOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+        val googleCategories = if (isGoogleNewsEnabled) {
+            val filteredDefaults = defaultCategories.filter { selectedCategoriesPref.contains(it) }
+            if (filteredDefaults.isEmpty()) listOf("Top Stories") else filteredDefaults
+        } else {
+            emptyList()
+        }
+        googleCategories + customFeeds.map { it.category }
+    }
+
+    LaunchedEffect(categories) {
+        if (categories.isNotEmpty() && !categories.contains(selectedCategory)) {
+            viewModel.selectCategory(categories.first())
+        }
     }
 
     val isDark = isSystemInDarkTheme()
@@ -64,7 +79,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
 
     // Derive publisher domains from current articles for publisher filter carousel
     val publishers = remember(articles) {
-        articles.map { it.sourceName to getPublisherDomain(it.sourceName, it.sourceUrl) }
+        articles.map { it.sourceName to getPublisherDomain(it.sourceName, it.sourceUrl, it.link) }
             .distinctBy { it.first }
             .take(10)
     }
@@ -152,7 +167,31 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
             }
 
             // Refresh indicator or Shimmer Loader
-            if (isRefreshing && articles.isEmpty()) {
+            if (categories.isEmpty()) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        Text(
+                            text = "No feeds active",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Please enable Google News or add a custom RSS feed in Settings to start reading.",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else if (isRefreshing && articles.isEmpty()) {
                 SkeletonLoader(modifier = Modifier.weight(1f))
             } else {
                 PullToRefreshBox(
@@ -553,11 +592,25 @@ fun ArticleListItem(
 }
 
 // Extract publisher domain helper
-fun getPublisherDomain(sourceName: String, sourceUrl: String): String {
+fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: String = ""): String {
     if (sourceUrl.isNotBlank()) {
         try {
             val uri = Uri.parse(sourceUrl)
-            return uri.host ?: ""
+            val host = uri.host
+            if (!host.isNullOrEmpty() && !host.contains("google.com")) {
+                return host
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+    if (articleLink.isNotBlank()) {
+        try {
+            val uri = Uri.parse(articleLink)
+            val host = uri.host
+            if (!host.isNullOrEmpty() && !host.contains("google.com")) {
+                return host
+            }
         } catch (e: Exception) {
             // ignore
         }

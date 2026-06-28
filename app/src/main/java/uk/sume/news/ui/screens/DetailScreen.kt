@@ -230,7 +230,7 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                         .background(MaterialTheme.colorScheme.surface)
                                         .padding(4.dp)
                                 ) {
-                                    val domain = getPublisherDomain(article.sourceName, article.sourceUrl)
+                                    val domain = getPublisherDomain(article.sourceName, article.sourceUrl, article.link)
                                     AsyncImage(
                                         model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
                                         contentDescription = null,
@@ -372,17 +372,49 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                 }
             } else {
                 // In-App WebView Layout
-                AndroidView(
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            webViewClient = WebViewClient()
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            loadUrl(url)
+                var isWebViewLoading by remember { mutableStateOf(true) }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                        super.onPageStarted(view, url, favicon)
+                                        isWebViewLoading = true
+                                    }
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        super.onPageFinished(view, url)
+                                        isWebViewLoading = false
+                                    }
+                                    override fun onReceivedError(
+                                        view: WebView?,
+                                        errorCode: Int,
+                                        description: String?,
+                                        failingUrl: String?
+                                    ) {
+                                        super.onReceivedError(view, errorCode, description, failingUrl)
+                                        isWebViewLoading = false
+                                    }
+                                }
+                                settings.javaScriptEnabled = true
+                                settings.domStorageEnabled = true
+                                loadUrl(url)
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    
+                    if (isWebViewLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
+                    }
+                }
             }
         }
 

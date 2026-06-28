@@ -5,6 +5,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +44,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
 
     var selectedLang by remember { mutableStateOf(defaultLang) }
     var selectedRegion by remember { mutableStateOf(defaultRegion) }
+    var isGoogleNewsEnabled by remember { mutableStateOf(true) }
 
     val languages = mapOf("en" to "English", "es" to "Español", "fr" to "Français", "de" to "Deutsch", "hi" to "हिन्दी", "zh" to "中文")
     val regions = mapOf(
@@ -84,6 +88,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                 .clip(RoundedCornerShape(32.dp))
                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f))
                 .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(32.dp))
+                .verticalScroll(rememberScrollState())
                 .padding(32.dp)
         ) {
             Text(
@@ -144,12 +149,127 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                 onSelected = { selectedRegion = it }
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Google News Toggle
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .clickable { isGoogleNewsEnabled = !isGoogleNewsEnabled }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.RssFeed,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Enable Google News",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Include global topic RSS categories",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+                Switch(
+                    checked = isGoogleNewsEnabled,
+                    onCheckedChange = { isGoogleNewsEnabled = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+            }
+
+            AnimatedVisibility(visible = isGoogleNewsEnabled) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Categories Selector
+                    Text(
+                        text = "Select Categories of Interest",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    
+                    val availableCategories = listOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+                    var selectedCats by remember { mutableStateOf(availableCategories.toSet()) }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        availableCategories.chunked(3).forEach { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowItems.forEach { cat ->
+                                    val isCatSelected = selectedCats.contains(cat)
+                                    val chipBg = if (isCatSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    val chipColor = if (isCatSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(chipBg)
+                                            .clickable {
+                                                selectedCats = if (isCatSelected) {
+                                                    if (selectedCats.size > 1) selectedCats - cat else selectedCats
+                                                } else {
+                                                    selectedCats + cat
+                                                }
+                                            }
+                                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = cat,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = chipColor,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                                if (rowItems.size < 3) {
+                                    Spacer(modifier = Modifier.weight((3 - rowItems.size).toFloat()))
+                                }
+                            }
+                        }
+                    }
+
+                    // Save helper state to trigger outside scope on start click
+                    LaunchedEffect(selectedCats) {
+                        viewModel.prefs.selectedCategories = selectedCats
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Start Button with micro-interactions
             Button(
                 onClick = {
                     viewModel.updatePreferences(selectedLang, selectedRegion)
+                    viewModel.prefs.isGoogleNewsEnabled = isGoogleNewsEnabled
                     viewModel.prefs.isCompletedOnboarding = true
                     viewModel.refreshCurrentFeed()
                     navController.navigate("home_screen") {
