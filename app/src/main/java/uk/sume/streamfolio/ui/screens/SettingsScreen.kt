@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.EmeraldPrimary
+import uk.sume.streamfolio.ui.theme.EmeraldSecondary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 
@@ -120,7 +121,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             .size(44.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(
-                                Brush.linearGradient(listOf(EmeraldPrimary, Color(0xFF059669)))
+                                Brush.linearGradient(listOf(EmeraldPrimary, EmeraldSecondary))
                             ),
                         contentAlignment = Alignment.Center
                     ) {

@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.EmeraldPrimary
+import uk.sume.streamfolio.ui.theme.EmeraldSecondary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.util.Locale
@@ -302,7 +303,7 @@ private fun WelcomeStep(systemLocale: Locale) {
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(EmeraldPrimary, Color(0xFF059669))
+                        listOf(EmeraldPrimary, EmeraldSecondary)
                     )
                 ),
             contentAlignment = Alignment.Center
