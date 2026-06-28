@@ -59,7 +59,8 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
 
     val selectedCategoriesPref = remember { viewModel.prefs.selectedCategories }
     val isDefaultFeedsEnabled = remember { viewModel.prefs.isDefaultFeedsEnabled }
-    val categories = remember(customFeeds, selectedCategoriesPref, isDefaultFeedsEnabled) {
+    val categoryOrder = viewModel.prefs.categoryOrder
+    val categories = remember(customFeeds, selectedCategoriesPref, isDefaultFeedsEnabled, categoryOrder) {
         val defaultCategories = listOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
         val googleCategories = if (isDefaultFeedsEnabled) {
             val filteredDefaults = defaultCategories.filter { selectedCategoriesPref.contains(it) }
@@ -67,7 +68,11 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
         } else {
             emptyList()
         }
-        (googleCategories + customFeeds.map { it.category }).distinct()
+        val rawCategories = (googleCategories + customFeeds.map { it.category }).distinct()
+        rawCategories.sortedWith(compareBy { cat ->
+            val index = categoryOrder.indexOf(cat)
+            if (index == -1) Int.MAX_VALUE else index
+        })
     }
 
     LaunchedEffect(categories) {

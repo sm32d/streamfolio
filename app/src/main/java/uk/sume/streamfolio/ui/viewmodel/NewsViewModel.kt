@@ -103,7 +103,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 repository.fetchDefaultFeeds(
                     category = currentCat,
                     language = prefs.language,
-                    region = prefs.region
+                    region = prefs.region,
+                    disabledFeedUrls = prefs.disabledFeedUrls,
+                    enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
                 )
             }
             _isRefreshing.value = false
@@ -121,7 +123,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     language = prefs.language,
                     region = prefs.region,
                     activeCategories = enabledCats,
-                    customFeeds = customFeeds.value
+                    customFeeds = customFeeds.value,
+                    disabledFeedUrls = prefs.disabledFeedUrls,
+                    enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
                 )
                 _isLoadingSearch.value = false
             }

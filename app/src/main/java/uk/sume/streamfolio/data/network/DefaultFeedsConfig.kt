@@ -1,5 +1,12 @@
 package uk.sume.streamfolio.data.network
 
+data class CuratedProvider(
+    val region: String,
+    val category: String,
+    val publisherName: String,
+    val url: String
+)
+
 object DefaultFeedsConfig {
     private val FEEDS = mapOf(
         "US" to mapOf(
@@ -164,13 +171,81 @@ object DefaultFeedsConfig {
         )
     )
 
-    fun getFeedsFor(region: String, category: String): List<String> {
+    fun getFeedsFor(
+        region: String,
+        category: String,
+        disabledFeedUrls: Set<String> = emptySet(),
+        enabledCrossRegionFeeds: Set<String> = emptySet()
+    ): List<String> {
         val regionUpper = region.uppercase()
         val regionMap = FEEDS[regionUpper] ?: FEEDS["US"]!!
-        val feeds = regionMap[category]
-        if (feeds.isNullOrEmpty()) {
-            return FEEDS["US"]?.get(category) ?: emptyList()
+        val standardFeeds = regionMap[category] ?: emptyList()
+        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains(it) }
+        
+        val manuallyEnabledCrossFeeds = mutableListOf<String>()
+        for ((r, categoryMap) in FEEDS) {
+            if (r != regionUpper) {
+                val urls = categoryMap[category] ?: emptyList()
+                for (url in urls) {
+                    if (enabledCrossRegionFeeds.contains(url)) {
+                        manuallyEnabledCrossFeeds.add(url)
+                    }
+                }
+            }
         }
-        return feeds
+        return (activeFeeds + manuallyEnabledCrossFeeds).distinct()
+    }
+
+    fun getPublisherName(url: String): String {
+        return when {
+            url.contains("ap.xml") -> "Associated Press (AP)"
+            url.contains("nytimes.com") -> "The New York Times"
+            url.contains("bbci.co.uk") -> "BBC News"
+            url.contains("theguardian.com") -> "The Guardian"
+            url.contains("cnbc.com") -> "CNBC"
+            url.contains("marketwatch.com") -> "MarketWatch"
+            url.contains("techcrunch.com") -> "TechCrunch"
+            url.contains("theverge.com") -> "The Verge"
+            url.contains("sciencedaily.com") -> "ScienceDaily"
+            url.contains("nasa.gov") -> "NASA"
+            url.contains("espn.com") -> "ESPN"
+            url.contains("yahoo.com") -> "Yahoo Sports"
+            url.contains("channelnewsasia.com") -> "CNA"
+            url.contains("straitstimes.com") -> "The Straits Times"
+            url.contains("techinasia.com") -> "Tech in Asia"
+            url.contains("timesofindia") -> "Times of India"
+            url.contains("hindustantimes.com") -> "Hindustan Times"
+            url.contains("moneycontrol.com") -> "Moneycontrol"
+            url.contains("gadgets360") -> "Gadgets360"
+            url.contains("ndtv.com") -> "NDTV"
+            url.contains("cbc.ca") -> "CBC News"
+            url.contains("thestar.com") -> "Toronto Star"
+            url.contains("abc.net.au") -> "ABC News"
+            url.contains("smh.com.au") -> "Sydney Morning Herald"
+            url.contains("france24.com") -> "France 24"
+            url.contains("lefigaro.fr") -> "Le Figaro"
+            url.contains("tagesschau.de") -> "Tagesschau"
+            url.contains("dw.com") -> "Deutsche Welle (DW)"
+            else -> "Unknown Source"
+        }
+    }
+
+    fun getAllCuratedProviders(): List<CuratedProvider> {
+        val providers = mutableListOf<CuratedProvider>()
+        for ((region, categoriesMap) in FEEDS) {
+            for ((category, urls) in categoriesMap) {
+                for (url in urls) {
+                    providers.add(
+                        CuratedProvider(
+                            region = region,
+                            category = category,
+                            publisherName = getPublisherName(url),
+                            url = url
+                        )
+                    )
+                }
+            }
+        }
+        return providers
     }
 }

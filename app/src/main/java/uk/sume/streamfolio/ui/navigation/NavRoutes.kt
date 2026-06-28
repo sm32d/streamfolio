@@ -128,7 +128,65 @@ fun AppNavigation(viewModel: NewsViewModel) {
                     )
                 }
             ) {
-                SettingsCategoriesScreen(navController = navController, viewModel = viewModel)
+                SettingsManageContentScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
+                route = "settings_reorder",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsReorderScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
+                route = "settings_providers",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsProvidersScreen(navController = navController, viewModel = viewModel)
             }
             composable(
                 route = "settings_feeds",

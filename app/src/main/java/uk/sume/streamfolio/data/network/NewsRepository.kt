@@ -45,8 +45,14 @@ class NewsRepository(context: Context) {
     }
 
     // Fetch Default Curated RSS Feeds
-    suspend fun fetchDefaultFeeds(category: String, language: String, region: String) = withContext(Dispatchers.IO) {
-        val feedUrls = DefaultFeedsConfig.getFeedsFor(region, category)
+    suspend fun fetchDefaultFeeds(
+        category: String,
+        language: String,
+        region: String,
+        disabledFeedUrls: Set<String> = emptySet(),
+        enabledCrossRegionFeeds: Set<String> = emptySet()
+    ) = withContext(Dispatchers.IO) {
+        val feedUrls = DefaultFeedsConfig.getFeedsFor(region, category, disabledFeedUrls, enabledCrossRegionFeeds)
         val allArticles = mutableListOf<Article>()
         
         val jobs = feedUrls.map { url ->
@@ -145,14 +151,16 @@ class NewsRepository(context: Context) {
         region: String,
         category: String = "SEARCH",
         activeCategories: Set<String>,
-        customFeeds: List<CustomFeed>
+        customFeeds: List<CustomFeed>,
+        disabledFeedUrls: Set<String> = emptySet(),
+        enabledCrossRegionFeeds: Set<String> = emptySet()
     ) = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext
         val allArticles = mutableListOf<Article>()
         val urlsToSearch = mutableListOf<Pair<String, String>>()
         
         for (cat in activeCategories) {
-            val feeds = DefaultFeedsConfig.getFeedsFor(region, cat)
+            val feeds = DefaultFeedsConfig.getFeedsFor(region, cat, disabledFeedUrls, enabledCrossRegionFeeds)
             for (url in feeds) {
                 urlsToSearch.add(Pair(url, cat))
             }

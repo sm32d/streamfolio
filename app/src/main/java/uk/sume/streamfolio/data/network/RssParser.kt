@@ -4,6 +4,9 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import uk.sume.streamfolio.data.model.Article
 import java.io.StringReader
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
 class RssParser {
 
@@ -175,7 +178,7 @@ class RssParser {
                 link = articleLink,
                 title = cleanTitle,
                 description = cleanDesc,
-                pubDate = pubDate ?: "",
+                pubDate = normalizePubDate(pubDate),
                 sourceName = cleanSource,
                 sourceUrl = sourceUrl ?: "",
                 category = category,
@@ -183,6 +186,35 @@ class RssParser {
                 isBookmarked = false,
                 customFeedId = customFeedId
             )
+        }
+
+        private fun normalizePubDate(rawDate: String?): String {
+            if (rawDate.isNullOrBlank()) return ""
+            val formats = listOf(
+                "EEE, dd MMM yyyy HH:mm:ss z",
+                "EEE, dd MMM yyyy HH:mm:ss Z",
+                "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+                "yyyy-MM-dd'T'HH:mm:ssXXX",
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                "yyyy-MM-dd HH:mm:ss",
+                "EEE, dd MMM yyyy HH:mm:ss"
+            )
+            val outputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            for (format in formats) {
+                try {
+                    val sdf = SimpleDateFormat(format, Locale.US)
+                    val date = sdf.parse(rawDate.trim())
+                    if (date != null) {
+                        return outputFormat.format(date)
+                    }
+                } catch (e: Exception) {
+                    // try next format
+                }
+            }
+            return rawDate
         }
     }
 }

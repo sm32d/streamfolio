@@ -25,4 +25,19 @@ class PreferencesHelper(context: Context) {
     var isDefaultFeedsEnabled: Boolean
         get() = prefs.getBoolean("google_news_enabled", true)
         set(value) = prefs.edit().putBoolean("google_news_enabled", value).apply()
+
+    var categoryOrder: List<String>
+        get() {
+            val orderStr = prefs.getString("category_order", "Top Stories,World,Business,Technology,Science,Sports,Health,Entertainment") ?: "Top Stories,World,Business,Technology,Science,Sports,Health,Entertainment"
+            return orderStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        }
+        set(value) = prefs.edit().putString("category_order", value.joinToString(",")).apply()
+
+    var disabledFeedUrls: Set<String>
+        get() = prefs.getStringSet("disabled_feed_urls", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("disabled_feed_urls", value).apply()
+
+    var enabledCrossRegionFeeds: Set<String>
+        get() = prefs.getStringSet("enabled_cross_region_feeds", emptySet()) ?: emptySet()
+        set(value) = prefs.edit().putStringSet("enabled_cross_region_feeds", value).apply()
 }

@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,6 +18,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -38,6 +42,8 @@ import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.theme.EmeraldSecondary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.data.network.DefaultFeedsConfig
+import uk.sume.streamfolio.data.network.CuratedProvider
 
 // ─── Main Settings Screen ───────────────────────────────────────────────────
 
@@ -90,8 +96,8 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 SettingsRow(
                     icon = Icons.Default.List,
                     iconBg = Color(0xFF6366F1),
-                    title = "Topics & Categories",
-                    subtitle = "Manage active Google News topics",
+                    title = "Manage Content & Sources",
+                    subtitle = "Customise topics and curation channels",
                     onClick = { navController.navigate("settings_categories") }
                 )
                 CardDivider()
@@ -237,11 +243,11 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
     }
 }
 
-// ─── Sub-page: Topics & Categories ──────────────────────────────────────────
+// ─── Sub-page: Manage Content & Sources ────────────────────────────────────────
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewModel) {
+fun SettingsManageContentScreen(navController: NavController, viewModel: NewsViewModel) {
     var isDefaultFeedsEnabled by remember { mutableStateOf(viewModel.prefs.isDefaultFeedsEnabled) }
     val availableCategories = listOf(
         "🗞️ Top Stories" to "Top Stories",
@@ -272,10 +278,10 @@ fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewMo
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 120.dp)
         ) {
-            SubPageTopBar(title = "Topics & Categories", onBack = { navController.popBackStack() })
+            SubPageTopBar(title = "Manage Content & Sources", onBack = { navController.popBackStack() })
 
             Text(
-                text = "Control which default curated topic categories appear in your feed.",
+                text = "Control default curated categories, adjust tab positions, and toggle specific news publishers.",
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
@@ -396,6 +402,429 @@ fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewMo
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            Text(
+                text = "CURATION OPTIONS",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            SettingsCard {
+                SettingsRow(
+                    icon = Icons.Default.Sort,
+                    iconBg = Color(0xFF3B82F6),
+                    title = "Reorder Category Tabs",
+                    subtitle = "Adjust the position and priority of your category tabs",
+                    onClick = { navController.navigate("settings_reorder") }
+                )
+                CardDivider()
+                SettingsRow(
+                    icon = Icons.Default.Widgets,
+                    iconBg = Color(0xFF10B981),
+                    title = "Default Feed Providers",
+                    subtitle = "Enable or disable curated news publishers",
+                    onClick = { navController.navigate("settings_providers") }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel) {
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    val customFeeds by viewModel.customFeeds.collectAsState()
+    val isDefaultFeedsEnabled = viewModel.prefs.isDefaultFeedsEnabled
+    val selectedCategoriesPref = viewModel.prefs.selectedCategories
+    
+    // Merge default and custom RSS categories dynamically
+    val allActiveCategories = remember(customFeeds, selectedCategoriesPref, isDefaultFeedsEnabled) {
+        val defaultCategories = listOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+        val googleCategories = if (isDefaultFeedsEnabled) {
+            val filteredDefaults = defaultCategories.filter { selectedCategoriesPref.contains(it) }
+            if (filteredDefaults.isEmpty()) listOf("Top Stories") else filteredDefaults
+        } else {
+            emptyList()
+        }
+        val rawCategories = (googleCategories + customFeeds.map { it.category }).distinct()
+        val categoryOrder = viewModel.prefs.categoryOrder
+        rawCategories.sortedWith(compareBy { cat ->
+            val index = categoryOrder.indexOf(cat)
+            if (index == -1) Int.MAX_VALUE else index
+        })
+    }
+
+    var categoryList by remember(allActiveCategories) { mutableStateOf(allActiveCategories) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+        ) {
+            SubPageTopBar(title = "Reorder Category Tabs", onBack = { navController.popBackStack() })
+
+            Text(
+                text = "Hold and drag the handles next to each category to change the order in which they appear on your dashboard.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            var draggedIndex by remember { mutableStateOf(-1) }
+            var dragOffset by remember { mutableStateOf(0f) }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 120.dp)
+            ) {
+                for (index in categoryList.indices) {
+                    val category = categoryList[index]
+                    val isDraggingThis = index == draggedIndex
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .graphicsLayer {
+                                translationY = if (isDraggingThis) dragOffset else 0f
+                                shadowElevation = if (isDraggingThis) 8f else 0f
+                                scaleX = if (isDraggingThis) 1.02f else 1f
+                                scaleY = if (isDraggingThis) 1.02f else 1f
+                            }
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                if (isDraggingThis) MaterialTheme.colorScheme.surfaceVariant
+                                else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                            )
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DragHandle,
+                                contentDescription = "Drag Handle",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .pointerInput(index) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                draggedIndex = index
+                                                dragOffset = 0f
+                                            },
+                                            onDragEnd = {
+                                                draggedIndex = -1
+                                                dragOffset = 0f
+                                                viewModel.prefs.categoryOrder = categoryList
+                                                viewModel.refreshCurrentFeed()
+                                            },
+                                            onDragCancel = {
+                                                draggedIndex = -1
+                                                dragOffset = 0f
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragOffset += dragAmount.y
+                                                
+                                                val itemHeightPx = 180f
+                                                if (dragOffset > itemHeightPx && draggedIndex < categoryList.size - 1) {
+                                                    val newList = categoryList.toMutableList()
+                                                    val nextIdx = draggedIndex + 1
+                                                    val temp = newList[draggedIndex]
+                                                    newList[draggedIndex] = newList[nextIdx]
+                                                    newList[nextIdx] = temp
+                                                    categoryList = newList
+                                                    draggedIndex = nextIdx
+                                                    dragOffset -= itemHeightPx
+                                                } else if (dragOffset < -itemHeightPx && draggedIndex > 0) {
+                                                    val newList = categoryList.toMutableList()
+                                                    val prevIdx = draggedIndex - 1
+                                                    val temp = newList[draggedIndex]
+                                                    newList[draggedIndex] = newList[prevIdx]
+                                                    newList[prevIdx] = temp
+                                                    categoryList = newList
+                                                    draggedIndex = prevIdx
+                                                    dragOffset += itemHeightPx
+                                                }
+                                            }
+                                        )
+                                    }
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = category,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = {
+                                    if (index > 0) {
+                                        val newList = categoryList.toMutableList()
+                                        val temp = newList[index]
+                                        newList[index] = newList[index - 1]
+                                        newList[index - 1] = temp
+                                        categoryList = newList
+                                        viewModel.prefs.categoryOrder = newList
+                                        viewModel.refreshCurrentFeed()
+                                    }
+                                },
+                                enabled = index > 0 && draggedIndex == -1,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up")
+                            }
+                            IconButton(
+                                onClick = {
+                                    if (index < categoryList.size - 1) {
+                                        val newList = categoryList.toMutableList()
+                                        val temp = newList[index]
+                                        newList[index] = newList[index + 1]
+                                        newList[index + 1] = temp
+                                        categoryList = newList
+                                        viewModel.prefs.categoryOrder = newList
+                                        viewModel.refreshCurrentFeed()
+                                    }
+                                },
+                                enabled = index < categoryList.size - 1 && draggedIndex == -1,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurface,
+                                    disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                )
+                            ) {
+                                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewModel) {
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+    
+    val allProviders = remember { DefaultFeedsConfig.getAllCuratedProviders() }
+    val groupedProviders = remember(allProviders) {
+        allProviders.groupBy { it.region }
+    }
+    
+    val activeRegion = viewModel.prefs.region.uppercase()
+    val sortedRegions = remember(groupedProviders, activeRegion) {
+        groupedProviders.keys.sortedWith(Comparator { r1, r2 ->
+            when {
+                r1 == activeRegion && r2 == activeRegion -> 0
+                r1 == activeRegion -> -1
+                r2 == activeRegion -> 1
+                else -> r1.compareTo(r2)
+            }
+        })
+    }
+    
+    var disabledUrls by remember { mutableStateOf(viewModel.prefs.disabledFeedUrls) }
+    var enabledCrossRegion by remember { mutableStateOf(viewModel.prefs.enabledCrossRegionFeeds) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+        ) {
+            SubPageTopBar(title = "Default Feed Providers", onBack = { navController.popBackStack() })
+
+            Text(
+                text = "Control exactly which curated news publishers are enabled. Grouped by region and category.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 120.dp)
+            ) {
+                for (regionCode in sortedRegions) {
+                    val providersInRegion = groupedProviders[regionCode] ?: emptyList()
+                    val isActiveRegion = regionCode == activeRegion
+                    
+                    val regionName = when (regionCode) {
+                        "US" -> "🇺🇸 United States"
+                        "GB" -> "🇬🇧 United Kingdom"
+                        "SG" -> "🇸🇬 Singapore"
+                        "IN" -> "🇮🇳 India"
+                        "CA" -> "🇨🇦 Canada"
+                        "AU" -> "🇦🇺 Australia"
+                        "FR" -> "🇫🇷 France"
+                        "DE" -> "🇩🇪 Germany"
+                        else -> regionCode
+                    }
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp, bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = regionName,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldPrimary
+                        )
+                        
+                        // Active / Inactive Region Badge
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                            border = BorderStroke(1.dp, if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        ) {
+                            Text(
+                                text = if (isActiveRegion) "Active Region" else "Inactive",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isActiveRegion) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                    ) {
+                        val sortedProviders = providersInRegion.sortedBy { it.category }
+                        for (i in sortedProviders.indices) {
+                            val provider = sortedProviders[i]
+                            val isEnabled = if (isActiveRegion) {
+                                !disabledUrls.contains(provider.url)
+                            } else {
+                                enabledCrossRegion.contains(provider.url)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        if (isActiveRegion) {
+                                            val isCurrentlyEnabled = !disabledUrls.contains(provider.url)
+                                            val newDisabled = if (isCurrentlyEnabled) {
+                                                disabledUrls + provider.url
+                                            } else {
+                                                disabledUrls - provider.url
+                                            }
+                                            disabledUrls = newDisabled
+                                            viewModel.prefs.disabledFeedUrls = newDisabled
+                                        } else {
+                                            val isCurrentlyEnabled = enabledCrossRegion.contains(provider.url)
+                                            val newEnabled = if (isCurrentlyEnabled) {
+                                                enabledCrossRegion - provider.url
+                                            } else {
+                                                enabledCrossRegion + provider.url
+                                            }
+                                            enabledCrossRegion = newEnabled
+                                            viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                        }
+                                        viewModel.refreshCurrentFeed()
+                                    }
+                                    .graphicsLayer {
+                                        alpha = if (isEnabled) 1f else 0.6f
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = provider.publisherName,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = provider.category,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
+                                Switch(
+                                    checked = isEnabled,
+                                    onCheckedChange = { checked ->
+                                        if (isActiveRegion) {
+                                            val newDisabled = if (checked) {
+                                                disabledUrls - provider.url
+                                            } else {
+                                                disabledUrls + provider.url
+                                            }
+                                            disabledUrls = newDisabled
+                                            viewModel.prefs.disabledFeedUrls = newDisabled
+                                        } else {
+                                            val newEnabled = if (checked) {
+                                                enabledCrossRegion + provider.url
+                                            } else {
+                                                enabledCrossRegion - provider.url
+                                            }
+                                            enabledCrossRegion = newEnabled
+                                            viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                        }
+                                        viewModel.refreshCurrentFeed()
+                                    },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = EmeraldPrimary
+                                    )
+                                )
+                            }
+                            if (i < sortedProviders.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
