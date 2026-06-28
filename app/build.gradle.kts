@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "uk.sume.news"
+    namespace = "uk.sume.streamfolio"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "uk.sume.news"
+        applicationId = "uk.sume.streamfolio"
         minSdk = 30
         targetSdk = 36
         versionCode = 1
