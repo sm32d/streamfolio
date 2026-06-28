@@ -40,6 +40,8 @@ import uk.sume.streamfolio.ui.components.SkeletonLoader
 import uk.sume.streamfolio.ui.components.SwipeableCard
 import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.LightGradient
+import uk.sume.streamfolio.ui.theme.EmeraldPrimary
+import androidx.compose.ui.draw.shadow
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLEncoder
 import java.text.SimpleDateFormat
@@ -141,7 +143,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
             ) {
                 categories.forEach { category ->
                     val isSelected = category == selectedCategory
-                    val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    val tabBg = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                     val tabColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 
                     Tab(
@@ -234,6 +236,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                                         Box(
                                             modifier = Modifier
                                                 .size(56.dp)
+                                                .shadow(3.dp, CircleShape)
                                                 .clip(CircleShape)
                                                 .background(MaterialTheme.colorScheme.surface)
                                                 .border(
@@ -495,6 +498,11 @@ fun ArticleListItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp)
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                RoundedCornerShape(20.dp)
+            )
             .clickable(onClick = onTap),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
@@ -634,7 +642,11 @@ fun formatPubDate(pubDateStr: String): String {
     val formats = listOf(
         "EEE, dd MMM yyyy HH:mm:ss z",
         "EEE, dd MMM yyyy HH:mm:ss Z",
-        "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd HH:mm:ss"
     )
     for (format in formats) {
         try {

@@ -1,6 +1,5 @@
 package uk.sume.streamfolio.ui.screens
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -11,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -26,39 +26,386 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.DarkGradient
+import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+// ─── Main Settings Screen ───────────────────────────────────────────────────
+
 @Composable
 fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            // Header
+            Text(
+                text = "Settings",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+            )
+            Text(
+                text = "Customise your StreamFolio experience.",
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+
+            // Section: Personalisation
+            SectionLabel("Personalisation")
+            Spacer(modifier = Modifier.height(10.dp))
+            SettingsCard {
+                SettingsRow(
+                    icon = Icons.Default.Tune,
+                    iconBg = EmeraldPrimary,
+                    title = "Preferences",
+                    subtitle = "Language & region for your news feed",
+                    onClick = { navController.navigate("settings_preferences") }
+                )
+                CardDivider()
+                SettingsRow(
+                    icon = Icons.Default.List,
+                    iconBg = Color(0xFF6366F1),
+                    title = "Topics & Categories",
+                    subtitle = "Manage active Google News topics",
+                    onClick = { navController.navigate("settings_categories") }
+                )
+                CardDivider()
+                SettingsRow(
+                    icon = Icons.Default.RssFeed,
+                    iconBg = Color(0xFFF59E0B),
+                    title = "Custom RSS Feeds",
+                    subtitle = "Add and manage private RSS publishers",
+                    onClick = { navController.navigate("settings_feeds") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Section: About
+            SectionLabel("About")
+            Spacer(modifier = Modifier.height(10.dp))
+            SettingsCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.linearGradient(listOf(EmeraldPrimary, Color(0xFF059669)))
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "StreamFolio",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Version 1.0 · Free forever",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Sub-page: Preferences ──────────────────────────────────────────────────
+
+@Composable
+fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewModel) {
     val currentLang = viewModel.prefs.language
     val currentRegion = viewModel.prefs.region
-    val customFeeds by viewModel.customFeeds.collectAsState()
-
     var selectedLang by remember { mutableStateOf(currentLang) }
     var selectedRegion by remember { mutableStateOf(currentRegion) }
 
-    val languages = mapOf("en" to "English", "es" to "Español", "fr" to "Français", "de" to "Deutsch", "hi" to "हिन्दी", "zh" to "中文")
+    val languages = mapOf(
+        "en" to "🇬🇧 English",
+        "es" to "🇪🇸 Español",
+        "fr" to "🇫🇷 Français",
+        "de" to "🇩🇪 Deutsch",
+        "hi" to "🇮🇳 हिन्दी",
+        "zh" to "🇨🇳 中文"
+    )
     val regions = mapOf(
-        "US" to "United States",
-        "GB" to "United Kingdom",
-        "CA" to "Canada",
-        "FR" to "France",
-        "DE" to "Germany",
-        "IN" to "India",
-        "AU" to "Australia",
-        "SG" to "Singapore"
+        "US" to "🇺🇸 United States",
+        "GB" to "🇬🇧 United Kingdom",
+        "CA" to "🇨🇦 Canada",
+        "FR" to "🇫🇷 France",
+        "DE" to "🇩🇪 Germany",
+        "IN" to "🇮🇳 India",
+        "AU" to "🇦🇺 Australia",
+        "SG" to "🇸🇬 Singapore"
     )
 
-    // Custom Feed creation inputs
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            SubPageTopBar(title = "Preferences", onBack = { navController.popBackStack() })
+
+            Text(
+                text = "Choose the language and country that best matches your news preferences.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                modifier = Modifier.padding(bottom = 28.dp)
+            )
+
+            SettingsSelectorField(
+                label = "Feed Language",
+                icon = Icons.Default.Language,
+                value = languages[selectedLang] ?: "English",
+                options = languages,
+                onSelected = {
+                    selectedLang = it
+                    viewModel.updatePreferences(it, selectedRegion)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsSelectorField(
+                label = "Region / Country",
+                icon = Icons.Default.Place,
+                value = regions[selectedRegion] ?: "United States",
+                options = regions,
+                onSelected = {
+                    selectedRegion = it
+                    viewModel.updatePreferences(selectedLang, it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+            InfoNote("Changing language or region will refresh your news feed immediately.")
+        }
+    }
+}
+
+// ─── Sub-page: Topics & Categories ──────────────────────────────────────────
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewModel) {
+    var isGoogleNewsEnabled by remember { mutableStateOf(viewModel.prefs.isGoogleNewsEnabled) }
+    val availableCategories = listOf(
+        "🗞️ Top Stories" to "Top Stories",
+        "💼 Business" to "Business",
+        "💻 Technology" to "Technology",
+        "🔬 Science" to "Science",
+        "⚽ Sports" to "Sports",
+        "❤️ Health" to "Health",
+        "🎬 Entertainment" to "Entertainment"
+    )
+    var selectedCats by remember { mutableStateOf(viewModel.prefs.selectedCategories) }
+
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            SubPageTopBar(title = "Topics & Categories", onBack = { navController.popBackStack() })
+
+            Text(
+                text = "Control which Google News topic categories appear in your feed.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                modifier = Modifier.padding(bottom = 28.dp)
+            )
+
+            // Google News toggle card
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        if (isGoogleNewsEnabled) EmeraldPrimary.copy(alpha = 0.08f)
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    )
+                    .border(
+                        1.dp,
+                        if (isGoogleNewsEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+                        RoundedCornerShape(18.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            val newVal = !isGoogleNewsEnabled
+                            isGoogleNewsEnabled = newVal
+                            viewModel.prefs.isGoogleNewsEnabled = newVal
+                            viewModel.refreshCurrentFeed()
+                        }
+                    )
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isGoogleNewsEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.RssFeed,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column {
+                        Text(
+                            text = "Google News",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "RSS categories from Google News",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+                Switch(
+                    checked = isGoogleNewsEnabled,
+                    onCheckedChange = { checked ->
+                        isGoogleNewsEnabled = checked
+                        viewModel.prefs.isGoogleNewsEnabled = checked
+                        viewModel.refreshCurrentFeed()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = EmeraldPrimary
+                    )
+                )
+            }
+
+            AnimatedVisibility(visible = isGoogleNewsEnabled) {
+                Column {
+                    Spacer(modifier = Modifier.height(28.dp))
+                    Text(
+                        text = "CATEGORIES",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        availableCategories.forEach { (label, key) ->
+                            val isSelected = selectedCats.contains(key)
+                            CategoryToggleChip(
+                                label = label,
+                                isSelected = isSelected,
+                                onClick = {
+                                    val updated = if (isSelected) {
+                                        if (selectedCats.size > 1) selectedCats - key else selectedCats
+                                    } else {
+                                        selectedCats + key
+                                    }
+                                    selectedCats = updated
+                                    viewModel.prefs.selectedCategories = updated
+                                    viewModel.refreshCurrentFeed()
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "${selectedCats.size} of ${availableCategories.size} selected",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Sub-page: Custom RSS Feeds ─────────────────────────────────────────────
+
+@Composable
+fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) {
+    val customFeeds by viewModel.customFeeds.collectAsState()
+
     var feedTitle by remember { mutableStateOf("") }
     var feedUrl by remember { mutableStateOf("") }
     var feedCategory by remember { mutableStateOf("") }
@@ -66,474 +413,186 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
 
-    // Active sub-page navigation state ("preferences", "categories", "feeds", or null for main menu)
-    var activeSubPage by remember { mutableStateOf<String?>(null) }
-
-    BackHandler(enabled = activeSubPage != null) {
-        activeSubPage = null
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(bgBrush)
     ) {
-        AnimatedContent(
-            targetState = activeSubPage,
-            transitionSpec = {
-                if (targetState != null) {
-                    // Slide in sub-page from right to left
-                    (slideInHorizontally { width -> width } + fadeIn()).togetherWith(slideOutHorizontally { width -> -width } + fadeOut())
-                } else {
-                    // Slide out sub-page from left to right (going back to main menu)
-                    (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(slideOutHorizontally { width -> width } + fadeOut())
-                }
-            },
-            label = "SettingsNavigation"
-        ) { page ->
-            when (page) {
-                null -> {
-                    // Main Settings Menu (System Settings Style)
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 120.dp)
-                    ) {
-                        // Header
-                        Text(
-                            text = "Settings",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .windowInsetsPadding(WindowInsets.statusBars)
-                                .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 24.dp)
-                        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            SubPageTopBar(title = "Custom RSS Feeds", onBack = { navController.popBackStack() })
 
-                        // Settings List Container
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                        ) {
-                            // Menu 1: Preferences
-                            SettingsMenuItem(
-                                title = "Preferences",
-                                subtitle = "Feed region, system language, etc.",
-                                icon = Icons.Default.Tune,
-                                onClick = { activeSubPage = "preferences" }
-                            )
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            Text(
+                text = "Add public RSS feeds or OPML outline lists to your dashboard.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                modifier = Modifier.padding(bottom = 28.dp)
+            )
 
-                            // Menu 2: Topics & Categories
-                            SettingsMenuItem(
-                                title = "Topics & Categories",
-                                subtitle = "Manage active Google News topics",
-                                icon = Icons.Default.List,
-                                onClick = { activeSubPage = "categories" }
-                            )
-                            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-
-                            // Menu 3: Custom RSS Feeds
-                            SettingsMenuItem(
-                                title = "Custom RSS Feeds",
-                                subtitle = "Manage private RSS feed publishers",
-                                icon = Icons.Default.RssFeed,
-                                onClick = { activeSubPage = "feeds" }
-                            )
-                        }
-                    }
-                }
-                "preferences" -> {
-                    // Sub-Page: Preferences
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 120.dp)
-                    ) {
-                        SubPageHeader(
-                            title = "Preferences",
-                            onBack = { activeSubPage = null }
-                        )
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                                .padding(20.dp)
-                        ) {
-                            SelectorField(
-                                label = "Language",
-                                value = languages[selectedLang] ?: "English",
-                                icon = Icons.Default.Language,
-                                options = languages,
-                                onSelected = {
-                                    selectedLang = it
-                                    viewModel.updatePreferences(it, selectedRegion)
-                                }
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            SelectorField(
-                                label = "Region",
-                                value = regions[selectedRegion] ?: "United States",
-                                icon = Icons.Default.Place,
-                                options = regions,
-                                onSelected = {
-                                    selectedRegion = it
-                                    viewModel.updatePreferences(selectedLang, it)
-                                }
-                            )
-                        }
-                    }
-                }
-                "categories" -> {
-                    // Sub-Page: Categories
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 120.dp)
-                    ) {
-                        SubPageHeader(
-                            title = "Topics & Categories",
-                            onBack = { activeSubPage = null }
-                        )
-
-                        var isGoogleNewsEnabled by remember { mutableStateOf(viewModel.prefs.isGoogleNewsEnabled) }
-                        val availableCategories = listOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
-                        var selectedCats by remember { mutableStateOf(viewModel.prefs.selectedCategories) }
-
-                        // Switch to completely toggle Google News
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                                .padding(20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Enable Google News Feeds",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "Toggle standard news categories globally",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                    )
-                                }
-                                Switch(
-                                    checked = isGoogleNewsEnabled,
-                                    onCheckedChange = { checked ->
-                                        isGoogleNewsEnabled = checked
-                                        viewModel.prefs.isGoogleNewsEnabled = checked
-                                        viewModel.refreshCurrentFeed()
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = MaterialTheme.colorScheme.primary
-                                    )
-                                )
-                            }
-
-                            AnimatedVisibility(visible = isGoogleNewsEnabled) {
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    Spacer(modifier = Modifier.height(20.dp))
-                                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
-                                    Spacer(modifier = Modifier.height(16.dp))
-
-                                    Text(
-                                        text = "Topics of Interest",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(bottom = 12.dp)
-                                    )
-
-                                    availableCategories.forEach { cat ->
-                                        val isCatSelected = selectedCats.contains(cat)
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .clickable {
-                                                    val updated = if (isCatSelected) {
-                                                        if (selectedCats.size > 1) selectedCats - cat else selectedCats
-                                                    } else {
-                                                        selectedCats + cat
-                                                    }
-                                                    selectedCats = updated
-                                                    viewModel.prefs.selectedCategories = updated
-                                                    viewModel.refreshCurrentFeed()
-                                                }
-                                                .padding(vertical = 8.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = cat,
-                                                fontSize = 14.sp,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Checkbox(
-                                                checked = isCatSelected,
-                                                onCheckedChange = { checked ->
-                                                    val updated = if (!checked) {
-                                                        if (selectedCats.size > 1) selectedCats - cat else selectedCats
-                                                    } else {
-                                                        selectedCats + cat
-                                                    }
-                                                    selectedCats = updated
-                                                    viewModel.prefs.selectedCategories = updated
-                                                    viewModel.refreshCurrentFeed()
-                                                },
-                                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                "feeds" -> {
-                    // Sub-Page: Custom RSS Feeds
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = 120.dp)
-                    ) {
-                        SubPageHeader(
-                            title = "Custom RSS Feeds",
-                            onBack = { activeSubPage = null }
-                        )
-
-                        // Adder Card
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                                .padding(20.dp)
-                        ) {
-                            Text(
-                                text = "Add New RSS Feed",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 16.dp)
-                            )
-
-                            OutlinedTextField(
-                                value = feedTitle,
-                                onValueChange = { feedTitle = it },
-                                label = { Text("Feed Name (e.g. Wired Tech)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            OutlinedTextField(
-                                value = feedUrl,
-                                onValueChange = { feedUrl = it },
-                                label = { Text("RSS Feed URL") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            OutlinedTextField(
-                                value = feedCategory,
-                                onValueChange = { feedCategory = it },
-                                label = { Text("Category (e.g. Tech, Finance)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            Button(
-                                onClick = {
-                                    if (feedTitle.isNotBlank() && feedUrl.isNotBlank() && feedCategory.isNotBlank()) {
-                                        var formattedUrl = feedUrl.trim()
-                                        if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                                            formattedUrl = "https://$formattedUrl"
-                                        }
-                                        viewModel.addCustomRssFeed(
-                                            title = feedTitle.trim(),
-                                            url = formattedUrl,
-                                            category = feedCategory.trim()
-                                        )
-                                        feedTitle = ""
-                                        feedUrl = ""
-                                        feedCategory = ""
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Text(text = "Add Custom Feed", fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        // Feeds List Card
-                        if (customFeeds.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
-                                    .padding(20.dp)
-                            ) {
-                                Text(
-                                    text = "Active Custom Feeds",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
-
-                                customFeeds.forEach { feed ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 8.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = feed.title,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = feed.url,
-                                                fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                                                maxLines = 1
-                                            )
-                                        }
-                                        IconButton(onClick = { viewModel.removeCustomRssFeed(feed) }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingsMenuItem(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
+            // Add Custom Feed form card
+            Column(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(20.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF59E0B)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Add New Feed",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedTextField(
+                    value = feedTitle,
+                    onValueChange = { feedTitle = it },
+                    label = { Text("Feed Name  e.g. Wired Tech") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = feedUrl,
+                    onValueChange = { feedUrl = it },
+                    label = { Text("RSS Feed or OPML URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = feedCategory,
+                    onValueChange = { feedCategory = it },
+                    label = { Text("Tab Label  e.g. Tech, Finance") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                val canAdd = feedTitle.isNotBlank() && feedUrl.isNotBlank() && feedCategory.isNotBlank()
+                Button(
+                    onClick = {
+                        if (canAdd) {
+                            var formattedUrl = feedUrl.trim()
+                            if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                                formattedUrl = "https://$formattedUrl"
+                            }
+                            viewModel.addCustomRssFeed(
+                                title = feedTitle.trim(),
+                                url = formattedUrl,
+                                category = feedCategory.trim()
+                            )
+                            feedTitle = ""; feedUrl = ""; feedCategory = ""
+                        }
+                    },
+                    enabled = canAdd,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = EmeraldPrimary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Add Feed", fontWeight = FontWeight.Bold)
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+
+            // Custom feeds list
+            if (customFeeds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(28.dp))
+                SectionLabel("Active Feeds  ·  ${customFeeds.size}")
+                Spacer(modifier = Modifier.height(10.dp))
+                SettingsCard {
+                    customFeeds.forEachIndexed { index, feed ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.RssFeed, null, tint = EmeraldPrimary, modifier = Modifier.size(18.dp))
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(feed.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(
+                                        feed.url,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        "Tab: ${feed.category}",
+                                        fontSize = 11.sp,
+                                        color = EmeraldPrimary.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { viewModel.removeCustomRssFeed(feed) }) {
+                                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                        if (index < customFeeds.lastIndex) CardDivider()
+                    }
+                }
+            } else {
+                Spacer(modifier = Modifier.height(28.dp))
+                InfoNote("No custom feeds yet. Add one above to create custom category tabs on the home screen.")
             }
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-            modifier = Modifier.size(20.dp)
-        )
     }
 }
 
+// ─── Shared Components ───────────────────────────────────────────────────────
+
 @Composable
-fun SubPageHeader(
-    title: String,
-    onBack: () -> Unit
-) {
+private fun SubPageTopBar(title: String, onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(start = 12.dp, end = 24.dp, top = 16.dp, bottom = 24.dp),
+            .padding(top = 8.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
@@ -543,12 +602,221 @@ fun SubPageHeader(
                 tint = MaterialTheme.colorScheme.onSurface
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = title,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Black,
-            color = MaterialTheme.colorScheme.onSurface
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = 4.dp)
         )
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.sp,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+    )
+}
+
+@Composable
+private fun SettingsCard(content: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f), RoundedCornerShape(20.dp))
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun CardDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 18.dp),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+    )
+}
+
+@Composable
+private fun SettingsRow(
+    icon: ImageVector,
+    iconBg: Color,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(iconBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            }
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun InfoNote(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text("ℹ️", fontSize = 14.sp)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            lineHeight = 18.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+private fun CategoryToggleChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .border(1.dp, if (isSelected) EmeraldPrimary else Color.Transparent, RoundedCornerShape(12.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+        )
+        if (isSelected) {
+            Icon(Icons.Default.CheckCircle, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
+        }
+    }
+}
+
+@Composable
+private fun SettingsSelectorField(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    options: Map<String, String>,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Box {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                        RoundedCornerShape(16.dp)
+                    )
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = value,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                options.forEach { (code, name) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = name,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        onClick = {
+                            onSelected(code)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +32,7 @@ fun ShimmerBrush(
         Brush.linearGradient(
             colors = listOf(
                 Color.LightGray.copy(alpha = 0.5f),
-                Color.LightGray.copy(alpha = 0.2f),
+                Color.LightGray.copy(alpha = 0.15f),
                 Color.LightGray.copy(alpha = 0.5f)
             ),
             start = Offset.Zero,
@@ -46,18 +47,112 @@ fun ShimmerBrush(
     }
 }
 
+/**
+ * List skeleton loader designed to perfectly mirror the ArticleListItem layout
+ */
 @Composable
 fun SkeletonLoader(modifier: Modifier = Modifier) {
     val brush = ShimmerBrush()
-    Column(modifier = modifier.padding(16.dp)) {
-        repeat(3) {
-            Box(
+    Column(modifier = modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
+        repeat(4) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(brush)
-            )
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Image Box skeleton
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(brush)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                // Detail lines skeleton
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.35f)
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(brush)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(brush)
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(brush)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.25f)
+                            .height(11.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(brush)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Paragraph text skeleton loader used when parsing detail screen body texts
+ */
+@Composable
+fun TextSkeletonLoader(modifier: Modifier = Modifier) {
+    val brush = ShimmerBrush()
+    Column(modifier = modifier.fillMaxWidth()) {
+        repeat(3) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.88f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.94f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.65f)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(brush)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
         }
     }

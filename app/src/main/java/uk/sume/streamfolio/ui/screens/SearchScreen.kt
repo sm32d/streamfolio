@@ -13,13 +13,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.DarkGradient
+import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLEncoder
@@ -40,17 +40,26 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
             .background(bgBrush)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            
-            // Header Title
-            Text(
-                text = "Search",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                color = MaterialTheme.colorScheme.onSurface,
+
+            // Header
+            Column(
                 modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp)
-            )
+                    .statusBarsPadding()
+                    .padding(start = 24.dp, end = 24.dp, top = 24.dp)
+            ) {
+                Text(
+                    text = "Search",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Search articles and topics",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                )
+            }
 
             // Search Bar Input
             OutlinedTextField(
@@ -69,7 +78,7 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = EmeraldPrimary
                     )
                 },
                 trailingIcon = {
@@ -84,47 +93,83 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(18.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    focusedBorderColor = EmeraldPrimary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
-                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+                    focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 )
             )
-            
+
             if (isLoadingSearch) {
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                    color = EmeraldPrimary,
+                    trackColor = EmeraldPrimary.copy(alpha = 0.2f)
                 )
             }
 
             // Results Listing
             if (searchQuery.isBlank()) {
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Try searching for 'Technology', 'Science', or 'Global'...",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
+                    Column(
+                        modifier = Modifier.padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "\uD83D\uDD0D", fontSize = 48.sp)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Start searching",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Try topics like Technology, Science, or Climate",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             } else if (searchResults.isEmpty()) {
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (isLoadingSearch) "Searching online..." else "No articles found.",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
+                    if (!isLoadingSearch) {
+                        Column(
+                            modifier = Modifier.padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "\uD83D\uDCF0", fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "No articles found",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Try a different keyword or broaden your search",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             } else {
                 LazyColumn(

@@ -39,6 +39,8 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.LightGradient
+import uk.sume.streamfolio.ui.theme.EmeraldPrimary
+import uk.sume.streamfolio.ui.components.TextSkeletonLoader
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -296,10 +298,7 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                 .padding(horizontal = 24.dp, vertical = 12.dp)
                         ) {
                             if (isLoadingBody) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.align(Alignment.Center).padding(24.dp),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                TextSkeletonLoader()
                             } else {
                                 val bodyToShow = if (articleBody.length < 150 || articleBody.startsWith("Failed to load")) {
                                     article.description.takeIf { it.isNotBlank() } ?: articleBody
@@ -405,14 +404,14 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                     )
                     
                     if (isWebViewLoading) {
-                        Box(
+                        LinearProgressIndicator(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        }
+                                .fillMaxWidth()
+                                .align(Alignment.TopCenter)
+                                .height(3.dp),
+                            color = EmeraldPrimary,
+                            trackColor = Color.Transparent
+                        )
                     }
                 }
             }

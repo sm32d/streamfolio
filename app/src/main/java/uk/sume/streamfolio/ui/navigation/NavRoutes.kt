@@ -73,6 +73,93 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 SettingsScreen(navController = navController, viewModel = viewModel)
             }
             composable(
+                route = "settings_preferences",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsPreferencesScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
+                route = "settings_categories",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsCategoriesScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
+                route = "settings_feeds",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsFeedsScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
                 route = "detail_screen/{url}",
                 arguments = listOf(navArgument("url") { type = NavType.StringType }),
                 enterTransition = {

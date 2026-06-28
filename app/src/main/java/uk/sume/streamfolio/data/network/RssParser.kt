@@ -6,6 +6,45 @@ import uk.sume.streamfolio.data.model.Article
 import java.io.StringReader
 
 class RssParser {
+
+    /**
+     * Checks if the XML document is an OPML list
+     */
+    fun isOpml(xmlContent: String): Boolean {
+        val trimmed = xmlContent.trimStart()
+        return trimmed.startsWith("<opml", ignoreCase = true) || 
+               trimmed.contains("<opml", ignoreCase = true)
+    }
+
+    /**
+     * Parses OPML xml content and returns a list of nested feed xmlUrls
+     */
+    fun parseOpmlUrls(xmlContent: String): List<String> {
+        val urls = mutableListOf<String>()
+        try {
+            val factory = XmlPullParserFactory.newInstance()
+            factory.isNamespaceAware = false
+            val parser = factory.newPullParser()
+            parser.setInput(StringReader(xmlContent))
+            var eventType = parser.eventType
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                if (eventType == XmlPullParser.START_TAG && parser.name.equals("outline", ignoreCase = true)) {
+                    val xmlUrl = parser.getAttributeValue(null, "xmlUrl")
+                    if (!xmlUrl.isNullOrBlank()) {
+                        urls.add(xmlUrl)
+                    }
+                }
+                eventType = parser.next()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return urls
+    }
+
+    /**
+     * Unified parser supporting standard RSS (<channel>/<item>) and Atom (<feed>/<entry>) formats.
+     */
     fun parse(xmlContent: String, category: String, customFeedId: Int? = null): List<Article> {
         val articles = mutableListOf<Article>()
         var channelTitle = "Unknown Source"
@@ -16,15 +55,13 @@ class RssParser {
             parser.setInput(StringReader(xmlContent))
             var eventType = parser.eventType
             var currentArticleBuilder: ArticleBuilder? = null
-            var insideChannel = false
 
             while (eventType != XmlPullParser.END_DOCUMENT) {
                 val name = parser.name
                 when (eventType) {
                     XmlPullParser.START_TAG -> {
-                        if (name.equals("channel", ignoreCase = true)) {
-                            insideChannel = true
-                        } else if (name.equals("item", ignoreCase = true)) {
+                        // Detect start of RSS item or Atom entry
+                        if (name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) {
                             currentArticleBuilder = ArticleBuilder()
                         } else if (currentArticleBuilder != null) {
                             when {
@@ -32,12 +69,31 @@ class RssParser {
                                     currentArticleBuilder.title = parser.nextText()
                                 }
                                 name.equals("link", ignoreCase = true) -> {
-                                    currentArticleBuilder.link = parser.nextText()
+                                    val href = parser.getAttributeValue(null, "href")
+                                    if (!href.isNullOrBlank()) {
+                                        currentArticleBuilder.link = href
+                                    } else {
+                                        currentArticleBuilder.link = parser.nextText()
+                                    }
                                 }
-                                name.equals("description", ignoreCase = true) -> {
+                                name.equals("description", ignoreCase = true) || 
+                                name.equals("summary", ignoreCase = true) -> {
                                     currentArticleBuilder.description = parser.nextText()
                                 }
-                                name.equals("pubDate", ignoreCase = true) -> {
+                                name.equals("content", ignoreCase = true) || 
+                                name.equals("content:encoded", ignoreCase = true) -> {
+                                    val url = parser.getAttributeValue(null, "url")
+                                    if (url != null) {
+                                        // Media content (image)
+                                        currentArticleBuilder.thumbnailUrl = url
+                                    } else {
+                                        // Atom content tag (HTML body)
+                                        currentArticleBuilder.description = parser.nextText()
+                                    }
+                                }
+                                name.equals("pubDate", ignoreCase = true) || 
+                                name.equals("published", ignoreCase = true) || 
+                                name.equals("updated", ignoreCase = true) -> {
                                     currentArticleBuilder.pubDate = parser.nextText()
                                 }
                                 name.equals("source", ignoreCase = true) -> {
@@ -50,7 +106,7 @@ class RssParser {
                                         currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")
                                     }
                                 }
-                                name.equals("media:content", ignoreCase = true) || name.equals("content", ignoreCase = true) -> {
+                                name.equals("media:content", ignoreCase = true) -> {
                                     val type = parser.getAttributeValue(null, "type") ?: ""
                                     val url = parser.getAttributeValue(null, "url")
                                     if (url != null && (type.isEmpty() || type.startsWith("image/") || type.contains("image"))) {
@@ -61,14 +117,14 @@ class RssParser {
                                     currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")
                                 }
                             }
-                        } else if (insideChannel && name.equals("title", ignoreCase = true)) {
+                        } else if (name.equals("title", ignoreCase = true)) {
+                            // Main channel/feed title
                             channelTitle = parser.nextText()
                         }
                     }
                     XmlPullParser.END_TAG -> {
-                        if (name.equals("channel", ignoreCase = true)) {
-                            insideChannel = false
-                        } else if (name.equals("item", ignoreCase = true) && currentArticleBuilder != null) {
+                        if ((name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) && 
+                            currentArticleBuilder != null) {
                             val article = currentArticleBuilder.build(category, customFeedId, channelTitle)
                             if (article != null) {
                                 articles.add(article)
@@ -122,7 +178,7 @@ class RssParser {
                 sourceName = cleanSource,
                 sourceUrl = sourceUrl ?: "",
                 category = category,
-                thumbnailUrl = thumbnailUrl, // Use XML parsed thumbnail if available!
+                thumbnailUrl = thumbnailUrl,
                 isBookmarked = false,
                 customFeedId = customFeedId
             )

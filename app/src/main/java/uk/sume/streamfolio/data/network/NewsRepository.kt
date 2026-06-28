@@ -77,7 +77,34 @@ class NewsRepository(context: Context) {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val xml = response.body?.string() ?: ""
-                    val articles = parser.parse(xml, feed.category, feed.id)
+                    val articles = if (parser.isOpml(xml)) {
+                        val urls = parser.parseOpmlUrls(xml)
+                        val aggregated = mutableListOf<Article>()
+                        for (childUrl in urls) {
+                            try {
+                                var formattedChildUrl = childUrl.trim()
+                                if (!formattedChildUrl.startsWith("http://") && !formattedChildUrl.startsWith("https://")) {
+                                    formattedChildUrl = "https://$formattedChildUrl"
+                                }
+                                val childRequest = Request.Builder()
+                                    .url(formattedChildUrl)
+                                    .header("User-Agent", userAgent)
+                                    .build()
+                                client.newCall(childRequest).execute().use { childResponse ->
+                                    if (childResponse.isSuccessful) {
+                                        val childXml = childResponse.body?.string() ?: ""
+                                        val childArticles = parser.parse(childXml, feed.category, feed.id)
+                                        aggregated.addAll(childArticles)
+                                    }
+                                }
+                            } catch (childEx: Exception) {
+                                Log.e("NewsRepository", "Error fetching OPML child feed $childUrl", childEx)
+                            }
+                        }
+                        aggregated
+                    } else {
+                        parser.parse(xml, feed.category, feed.id)
+                    }
                     articleDao.clearNonBookmarkedArticlesByCategory(feed.category)
                     articleDao.insertArticles(articles)
                     triggerThumbnailResolution(articles)
