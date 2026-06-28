@@ -44,32 +44,38 @@ class NewsRepository(context: Context) {
             .build()
     }
 
-    // Fetch Google News RSS feed
-    suspend fun fetchGoogleNews(category: String, language: String, region: String) = withContext(Dispatchers.IO) {
-        val topic = category.uppercase()
-        val url = if (topic == "FOR YOU" || topic == "LATEST" || topic == "TOP STORIES") {
-            "https://news.google.com/rss?hl=$language&gl=$region&ceid=$region:$language"
-        } else {
-            "https://news.google.com/rss/headlines/section/topic/$topic?hl=$language&gl=$region&ceid=$region:$language"
-        }
-
-        try {
-            val request = buildBrowserRequest(url)
-
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val xml = response.body?.string() ?: ""
-                    val articles = parser.parse(xml, category)
-                    articleDao.clearNonBookmarkedArticlesByCategory(category)
-                    articleDao.insertArticles(articles)
-                    
-                    // Trigger asynchronous thumbnail parsing for the newly fetched articles
-                    triggerThumbnailResolution(articles)
+    // Fetch Default Curated RSS Feeds
+    suspend fun fetchDefaultFeeds(category: String, language: String, region: String) = withContext(Dispatchers.IO) {
+        val feedUrls = DefaultFeedsConfig.getFeedsFor(region, category)
+        val allArticles = mutableListOf<Article>()
+        
+        val jobs = feedUrls.map { url ->
+            async {
+                val feedArticles = mutableListOf<Article>()
+                try {
+                    val request = buildBrowserRequest(url)
+                    client.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val xml = response.body?.string() ?: ""
+                            val parsed = parser.parse(xml, category)
+                            feedArticles.addAll(parsed)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("NewsRepository", "Error fetching default feed: $url", e)
                 }
+                feedArticles
             }
-        } catch (e: Exception) {
-            Log.e("NewsRepository", "Error fetching google news", e)
         }
+        
+        val results = jobs.awaitAll()
+        for (list in results) {
+            allArticles.addAll(list)
+        }
+        
+        articleDao.clearNonBookmarkedArticlesByCategory(category)
+        articleDao.insertArticles(allArticles)
+        triggerThumbnailResolution(allArticles)
     }
 
     // Fetch multiple Custom RSS Feeds for a single category/tab in parallel
@@ -132,24 +138,91 @@ class NewsRepository(context: Context) {
         triggerThumbnailResolution(allArticles)
     }
 
-    // Search news online using Google News RSS search endpoint
-    suspend fun searchNewsOnline(query: String, language: String, region: String, category: String = "SEARCH") = withContext(Dispatchers.IO) {
+    // Search news online by querying active default and custom feeds, and filtering results locally
+    suspend fun searchNewsOnline(
+        query: String,
+        language: String,
+        region: String,
+        category: String = "SEARCH",
+        activeCategories: Set<String>,
+        customFeeds: List<CustomFeed>
+    ) = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext
-        val url = "https://news.google.com/rss/search?q=$query&hl=$language&gl=$region&ceid=$region:$language"
-        try {
-            val request = buildBrowserRequest(url)
-
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val xml = response.body?.string() ?: ""
-                    val articles = parser.parse(xml, category)
-                    articleDao.insertArticles(articles)
-                    triggerThumbnailResolution(articles)
-                }
+        val allArticles = mutableListOf<Article>()
+        val urlsToSearch = mutableListOf<Pair<String, String>>()
+        
+        for (cat in activeCategories) {
+            val feeds = DefaultFeedsConfig.getFeedsFor(region, cat)
+            for (url in feeds) {
+                urlsToSearch.add(Pair(url, cat))
             }
-        } catch (e: Exception) {
-            Log.e("NewsRepository", "Error searching news online", e)
         }
+        
+        for (feed in customFeeds) {
+            urlsToSearch.add(Pair(feed.url, feed.category))
+        }
+        
+        val distinctUrls = urlsToSearch.distinctBy { it.first }
+        val jobs = distinctUrls.map { (url, cat) ->
+            async {
+                val matchingArticles = mutableListOf<Article>()
+                try {
+                    var formattedUrl = url.trim()
+                    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                        formattedUrl = "https://$formattedUrl"
+                    }
+                    val request = buildBrowserRequest(formattedUrl)
+                    client.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val xml = response.body?.string() ?: ""
+                            val parsed = if (parser.isOpml(xml)) {
+                                val childUrls = parser.parseOpmlUrls(xml)
+                                val aggregated = mutableListOf<Article>()
+                                for (childUrl in childUrls) {
+                                    try {
+                                        var fc = childUrl.trim()
+                                        if (!fc.startsWith("http://") && !fc.startsWith("https://")) fc = "https://$fc"
+                                        val childReq = buildBrowserRequest(fc)
+                                        client.newCall(childReq).execute().use { childResp ->
+                                            if (childResp.isSuccessful) {
+                                                val childXml = childResp.body?.string() ?: ""
+                                                val childParsed = parser.parse(childXml, cat)
+                                                aggregated.addAll(childParsed)
+                                            }
+                                        }
+                                    } catch (ex: Exception) {
+                                        // Ignore child failures
+                                    }
+                                }
+                                aggregated
+                            } else {
+                                parser.parse(xml, cat)
+                            }
+                            
+                            val cleanQuery = query.replace("\"", "").lowercase()
+                            val filtered = parsed.filter {
+                                it.title.lowercase().contains(cleanQuery) || 
+                                it.description.lowercase().contains(cleanQuery) ||
+                                it.sourceName.lowercase().contains(cleanQuery)
+                            }
+                            matchingArticles.addAll(filtered)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("NewsRepository", "Error searching feed: $url", e)
+                }
+                matchingArticles
+            }
+        }
+        
+        val results = jobs.awaitAll()
+        for (list in results) {
+            allArticles.addAll(list)
+        }
+        
+        articleDao.clearNonBookmarkedArticlesByCategory(category)
+        articleDao.insertArticles(allArticles)
+        triggerThumbnailResolution(allArticles)
     }
 
     private fun isGibberishOrPromo(line: String): Boolean {

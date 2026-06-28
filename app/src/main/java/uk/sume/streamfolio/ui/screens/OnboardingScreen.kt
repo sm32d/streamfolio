@@ -92,9 +92,9 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
 
     var selectedLang by rememberSaveable { mutableStateOf(defaultLang) }
     var selectedRegion by rememberSaveable { mutableStateOf(defaultRegion) }
-    var isGoogleNewsEnabled by rememberSaveable { mutableStateOf(true) }
+    var isDefaultFeedsEnabled by rememberSaveable { mutableStateOf(true) }
     var selectedCats by rememberSaveable {
-        mutableStateOf(setOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment"))
+        mutableStateOf(setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment"))
     }
 
     var currentStep by rememberSaveable { mutableStateOf(0) }
@@ -109,7 +109,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
             animation = tween(900, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "buttonScale"
+        label = "pulse_scale"
     )
 
     val isDark = isSystemInDarkTheme()
@@ -119,39 +119,42 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .background(bgBrush)
+            .statusBarsPadding()
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.TopCenter
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Step indicator at the top
+            // Steps indicator
             StepIndicator(currentStep = currentStep, totalSteps = totalSteps)
 
-            // Animated page content
-            AnimatedContent(
-                targetState = currentStep,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        (slideInHorizontally { it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { -it } + fadeOut())
-                    } else {
-                        (slideInHorizontally { -it } + fadeIn()) togetherWith
-                                (slideOutHorizontally { it } + fadeOut())
-                    }
-                },
+            // Dynamic Step Content
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                label = "StepContent"
-            ) { step ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 28.dp)
-                        .padding(top = 16.dp, bottom = 24.dp)
-                ) {
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                contentAlignment = Alignment.TopStart
+            ) {
+                AnimatedContent(
+                    targetState = currentStep,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> -width } + fadeOut()
+                            )
+                        } else {
+                            (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> width } + fadeOut()
+                            )
+                        }
+                    },
+                    label = "step_transition"
+                ) { step ->
                     when (step) {
                         0 -> WelcomeStep(systemLocale)
                         1 -> LanguageRegionStep(
@@ -160,9 +163,9 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             selectedRegion = selectedRegion,
                             onRegionSelected = { selectedRegion = it }
                         )
-                        2 -> GoogleNewsStep(
-                            isEnabled = isGoogleNewsEnabled,
-                            onToggle = { isGoogleNewsEnabled = it },
+                        2 -> DefaultFeedsStep(
+                            isEnabled = isDefaultFeedsEnabled,
+                            onToggle = { isDefaultFeedsEnabled = it },
                             selectedCats = selectedCats,
                             onCatsChanged = { selectedCats = it }
                         )
@@ -181,7 +184,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                         currentStep++
                     } else {
                         viewModel.updatePreferences(selectedLang, selectedRegion)
-                        viewModel.prefs.isGoogleNewsEnabled = isGoogleNewsEnabled
+                        viewModel.prefs.isDefaultFeedsEnabled = isDefaultFeedsEnabled
                         viewModel.prefs.selectedCategories = selectedCats
                         viewModel.prefs.isCompletedOnboarding = true
                         viewModel.refreshCurrentFeed()
@@ -461,10 +464,10 @@ private fun LanguageRegionStep(
     }
 }
 
-/** Step 2 – Google News & categories */
+/** Step 2 – Default Curated Feeds & categories */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GoogleNewsStep(
+private fun DefaultFeedsStep(
     isEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
     selectedCats: Set<String>,
@@ -472,6 +475,7 @@ private fun GoogleNewsStep(
 ) {
     val availableCategories = listOf(
         "🗞️ Top Stories" to "Top Stories",
+        "🌍 World" to "World",
         "💼 Business" to "Business",
         "💻 Technology" to "Technology",
         "🔬 Science" to "Science",
@@ -490,7 +494,7 @@ private fun GoogleNewsStep(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Enable Google News categories and pick your interests.",
+            text = "Enable default curated categories and pick your interests.",
             fontSize = 15.sp,
             lineHeight = 22.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -498,7 +502,7 @@ private fun GoogleNewsStep(
 
         Spacer(modifier = Modifier.height(36.dp))
 
-        // Google News toggle card
+        // Default Feeds toggle card
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -542,13 +546,13 @@ private fun GoogleNewsStep(
                 Spacer(modifier = Modifier.width(14.dp))
                 Column {
                     Text(
-                        text = "Google News",
+                        text = "Default Curated Feeds",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "RSS categories from Google News",
+                        text = "Direct RSS/Atom news categories",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )

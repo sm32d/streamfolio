@@ -19,10 +19,10 @@ class PreferencesHelper(context: Context) {
         set(value) = prefs.edit().putString("region", value).apply()
 
     var selectedCategories: Set<String>
-        get() = prefs.getStringSet("selected_categories", setOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")) ?: setOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+        get() = prefs.getStringSet("selected_categories", setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")) ?: setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
         set(value) = prefs.edit().putStringSet("selected_categories", value).apply()
 
-    var isGoogleNewsEnabled: Boolean
+    var isDefaultFeedsEnabled: Boolean
         get() = prefs.getBoolean("google_news_enabled", true)
         set(value) = prefs.edit().putBoolean("google_news_enabled", value).apply()
 }

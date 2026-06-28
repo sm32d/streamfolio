@@ -242,9 +242,10 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewModel) {
-    var isGoogleNewsEnabled by remember { mutableStateOf(viewModel.prefs.isGoogleNewsEnabled) }
+    var isDefaultFeedsEnabled by remember { mutableStateOf(viewModel.prefs.isDefaultFeedsEnabled) }
     val availableCategories = listOf(
         "🗞️ Top Stories" to "Top Stories",
+        "🌍 World" to "World",
         "💼 Business" to "Business",
         "💻 Technology" to "Technology",
         "🔬 Science" to "Science",
@@ -274,34 +275,34 @@ fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewMo
             SubPageTopBar(title = "Topics & Categories", onBack = { navController.popBackStack() })
 
             Text(
-                text = "Control which Google News topic categories appear in your feed.",
+                text = "Control which default curated topic categories appear in your feed.",
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                 modifier = Modifier.padding(bottom = 28.dp)
             )
 
-            // Google News toggle card
+            // Default Feeds toggle card
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(
-                        if (isGoogleNewsEnabled) EmeraldPrimary.copy(alpha = 0.08f)
+                        if (isDefaultFeedsEnabled) EmeraldPrimary.copy(alpha = 0.08f)
                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                     )
                     .border(
                         1.dp,
-                        if (isGoogleNewsEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+                        if (isDefaultFeedsEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
                         RoundedCornerShape(18.dp)
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {
-                            val newVal = !isGoogleNewsEnabled
-                            isGoogleNewsEnabled = newVal
-                            viewModel.prefs.isGoogleNewsEnabled = newVal
+                            val newVal = !isDefaultFeedsEnabled
+                            isDefaultFeedsEnabled = newVal
+                            viewModel.prefs.isDefaultFeedsEnabled = newVal
                             viewModel.refreshCurrentFeed()
                         }
                     )
@@ -315,7 +316,7 @@ fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewMo
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isGoogleNewsEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                if (isDefaultFeedsEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -329,23 +330,23 @@ fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewMo
                     Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "Google News",
+                            text = "Default Curated Feeds",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "RSS categories from Google News",
+                            text = "Direct RSS/Atom news categories",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
                 }
                 Switch(
-                    checked = isGoogleNewsEnabled,
+                    checked = isDefaultFeedsEnabled,
                     onCheckedChange = { checked ->
-                        isGoogleNewsEnabled = checked
-                        viewModel.prefs.isGoogleNewsEnabled = checked
+                        isDefaultFeedsEnabled = checked
+                        viewModel.prefs.isDefaultFeedsEnabled = checked
                         viewModel.refreshCurrentFeed()
                     },
                     colors = SwitchDefaults.colors(
@@ -355,7 +356,7 @@ fun SettingsCategoriesScreen(navController: NavController, viewModel: NewsViewMo
                 )
             }
 
-            AnimatedVisibility(visible = isGoogleNewsEnabled) {
+            AnimatedVisibility(visible = isDefaultFeedsEnabled) {
                 Column {
                     Spacer(modifier = Modifier.height(28.dp))
                     Text(

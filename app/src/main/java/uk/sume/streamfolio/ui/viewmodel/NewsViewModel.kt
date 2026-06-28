@@ -88,18 +88,6 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectPublisher(publisher: String?) {
         _selectedPublisher.value = publisher
-        if (publisher != null) {
-            viewModelScope.launch {
-                _isRefreshing.value = true
-                repository.searchNewsOnline(
-                    query = "\"$publisher\"",
-                    language = prefs.language,
-                    region = prefs.region,
-                    category = _selectedCategory.value
-                )
-                _isRefreshing.value = false
-            }
-        }
     }
 
     fun refreshCurrentFeed() {
@@ -112,7 +100,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             if (matchingFeeds.isNotEmpty()) {
                 repository.fetchCustomFeeds(matchingFeeds, currentCat)
             } else {
-                repository.fetchGoogleNews(
+                repository.fetchDefaultFeeds(
                     category = currentCat,
                     language = prefs.language,
                     region = prefs.region
@@ -127,7 +115,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         if (query.isNotBlank()) {
             viewModelScope.launch {
                 _isLoadingSearch.value = true
-                repository.searchNewsOnline(query, prefs.language, prefs.region)
+                val enabledCats = if (prefs.isDefaultFeedsEnabled) prefs.selectedCategories else emptySet()
+                repository.searchNewsOnline(
+                    query = query,
+                    language = prefs.language,
+                    region = prefs.region,
+                    activeCategories = enabledCats,
+                    customFeeds = customFeeds.value
+                )
                 _isLoadingSearch.value = false
             }
         } else {

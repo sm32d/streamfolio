@@ -58,10 +58,10 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
 
     val selectedCategoriesPref = remember { viewModel.prefs.selectedCategories }
-    val isGoogleNewsEnabled = remember { viewModel.prefs.isGoogleNewsEnabled }
-    val categories = remember(customFeeds, selectedCategoriesPref, isGoogleNewsEnabled) {
-        val defaultCategories = listOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
-        val googleCategories = if (isGoogleNewsEnabled) {
+    val isDefaultFeedsEnabled = remember { viewModel.prefs.isDefaultFeedsEnabled }
+    val categories = remember(customFeeds, selectedCategoriesPref, isDefaultFeedsEnabled) {
+        val defaultCategories = listOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+        val googleCategories = if (isDefaultFeedsEnabled) {
             val filteredDefaults = defaultCategories.filter { selectedCategoriesPref.contains(it) }
             if (filteredDefaults.isEmpty()) listOf("Top Stories") else filteredDefaults
         } else {
