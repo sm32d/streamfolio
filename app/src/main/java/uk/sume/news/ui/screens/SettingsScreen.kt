@@ -74,7 +74,9 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 48.dp, bottom = 16.dp)
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp)
             )
 
             // Section 1: Custom Region & Language

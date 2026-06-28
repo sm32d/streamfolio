@@ -30,6 +30,9 @@ interface ArticleDao {
 
     @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 50")
     fun getAllArticles(): Flow<List<Article>>
+
+    @Query("DELETE FROM articles WHERE category = :category AND isBookmarked = 0")
+    suspend fun clearNonBookmarkedArticlesByCategory(category: String)
 }
 
 @Dao

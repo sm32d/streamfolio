@@ -87,7 +87,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                 .padding(32.dp)
         ) {
             Text(
-                text = "Welcome to Koran",
+                text = "Welcome to PrimeFeed",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

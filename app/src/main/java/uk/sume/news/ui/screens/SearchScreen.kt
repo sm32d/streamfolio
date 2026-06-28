@@ -29,6 +29,7 @@ import java.net.URLEncoder
 fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val isLoadingSearch by viewModel.isLoadingSearch.collectAsState()
 
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
@@ -46,7 +47,9 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 48.dp, bottom = 16.dp)
+                modifier = Modifier
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp)
             )
 
             // Search Bar Input
@@ -89,6 +92,16 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
                 )
             )
+            
+            if (isLoadingSearch) {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                )
+            }
 
             // Results Listing
             if (searchQuery.isBlank()) {
@@ -108,7 +121,7 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Searching online...",
+                        text = if (isLoadingSearch) "Searching online..." else "No articles found.",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )

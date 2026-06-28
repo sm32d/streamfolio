@@ -91,7 +91,8 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 48.dp, bottom = 8.dp),
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -162,11 +163,15 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(bottom = 100.dp)
                     ) {
                         // Hero Thumbnail
                         val thumbnail = article.thumbnailUrl
-                        if (thumbnail != null && thumbnail != "failed") {
+                        val isGoogleLogo = thumbnail?.let {
+                            it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
+                        } ?: false
+                        val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+
+                        if (hasValidThumbnail) {
                             AsyncImage(
                                 model = thumbnail,
                                 contentDescription = null,
@@ -296,8 +301,46 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
-                                val paragraphs = articleBody.split("\n\n").filter { it.isNotBlank() }
+                                val bodyToShow = if (articleBody.length < 150 || articleBody.startsWith("Failed to load")) {
+                                    article.description.takeIf { it.isNotBlank() } ?: articleBody
+                                } else {
+                                    articleBody
+                                }
+                                
+                                val showSuggestionBanner = articleBody.length < 150 || articleBody.startsWith("Failed to load")
+
+                                val paragraphs = bodyToShow.split("\n\n").filter { it.isNotBlank() }
                                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    if (showSuggestionBanner) {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                            ),
+                                            shape = RoundedCornerShape(16.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(16.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Info,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(
+                                                    text = "Full-text parsing is restricted by this publisher. Tap 'Web View' above to read the complete article.",
+                                                    fontSize = 13.sp,
+                                                    lineHeight = 18.sp,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
+
                                     paragraphs.forEachIndexed { index, paragraph ->
                                         val isHighlighted = isTtsPlaying && index == ttsParagraphIndex
                                         val textColor = if (isHighlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -323,6 +366,8 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                 }
                             }
                         }
+                        
+                        Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
             } else {
@@ -336,9 +381,7 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                             loadUrl(url)
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = 80.dp)
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }

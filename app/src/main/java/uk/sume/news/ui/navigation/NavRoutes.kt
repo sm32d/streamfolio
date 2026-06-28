@@ -3,14 +3,13 @@ package uk.sume.news.ui.navigation
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -45,41 +44,18 @@ fun AppNavigation(viewModel: NewsViewModel) {
     }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        bottomBar = {
-            if (showBottomBar) {
-                val selectedTab = when (currentRoute) {
-                    BottomTab.SEARCH.route -> BottomTab.SEARCH
-                    BottomTab.BOOKMARKS.route -> BottomTab.BOOKMARKS
-                    BottomTab.SETTINGS.route -> BottomTab.SETTINGS
-                    else -> BottomTab.HOME
-                }
-                GlassmorphicNavBar(
-                    selectedTab = selectedTab,
-                    onTabSelected = { tab ->
-                        if (currentRoute != tab.route) {
-                            navController.navigate(tab.route) {
-                                popUpTo(BottomTab.HOME.route) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
+        modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = if (showBottomBar) innerPadding.calculateBottomPadding() else innerPadding.calculateTopPadding()),
-            enterTransition = { fadeIn(animationSpec = tween(250)) },
-            exitTransition = { fadeOut(animationSpec = tween(250)) }
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
+            NavHost(
+                navController = navController,
+                startDestination = startDestination,
+                modifier = Modifier.fillMaxSize(),
+                enterTransition = { fadeIn(animationSpec = tween(250)) },
+                exitTransition = { fadeOut(animationSpec = tween(250)) }
+            ) {
             composable("onboarding") {
                 OnboardingScreen(navController = navController, viewModel = viewModel)
             }
@@ -128,5 +104,36 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 DetailScreen(navController = navController, viewModel = viewModel, url = decodedUrl)
             }
         }
+
+        if (showBottomBar) {
+            val selectedTab = when (currentRoute) {
+                BottomTab.SEARCH.route -> BottomTab.SEARCH
+                BottomTab.BOOKMARKS.route -> BottomTab.BOOKMARKS
+                BottomTab.SETTINGS.route -> BottomTab.SETTINGS
+                else -> BottomTab.HOME
+            }
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = 8.dp)
+            ) {
+                GlassmorphicNavBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { tab ->
+                        if (currentRoute != tab.route) {
+                            navController.navigate(tab.route) {
+                                popUpTo(BottomTab.HOME.route) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
+}
 }

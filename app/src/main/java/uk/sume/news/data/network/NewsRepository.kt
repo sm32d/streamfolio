@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import kotlinx.coroutines.launch
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import uk.sume.news.data.local.AppDatabase
@@ -49,6 +50,7 @@ class NewsRepository(context: Context) {
                 if (response.isSuccessful) {
                     val xml = response.body?.string() ?: ""
                     val articles = parser.parse(xml, category)
+                    articleDao.clearNonBookmarkedArticlesByCategory(category)
                     articleDao.insertArticles(articles)
                     
                     // Trigger asynchronous thumbnail parsing for the newly fetched articles
@@ -72,6 +74,7 @@ class NewsRepository(context: Context) {
                 if (response.isSuccessful) {
                     val xml = response.body?.string() ?: ""
                     val articles = parser.parse(xml, feed.category, feed.id)
+                    articleDao.clearNonBookmarkedArticlesByCategory(feed.category)
                     articleDao.insertArticles(articles)
                     triggerThumbnailResolution(articles)
                 }
@@ -82,7 +85,7 @@ class NewsRepository(context: Context) {
     }
 
     // Search news online using Google News RSS search endpoint
-    suspend fun searchNewsOnline(query: String, language: String, region: String) = withContext(Dispatchers.IO) {
+    suspend fun searchNewsOnline(query: String, language: String, region: String, category: String = "SEARCH") = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext
         val url = "https://news.google.com/rss/search?q=$query&hl=$language&gl=$region&ceid=$region:$language"
         try {
@@ -94,7 +97,7 @@ class NewsRepository(context: Context) {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val xml = response.body?.string() ?: ""
-                    val articles = parser.parse(xml, "SEARCH")
+                    val articles = parser.parse(xml, category)
                     articleDao.insertArticles(articles)
                     triggerThumbnailResolution(articles)
                 }
@@ -104,13 +107,40 @@ class NewsRepository(context: Context) {
         }
     }
 
-    // Resolve thumbnails asynchronously for a list of articles
+    private fun isGibberishOrPromo(line: String): Boolean {
+        val lower = line.lowercase()
+        val blacklistedKeywords = listOf(
+            "subscribe", "subscription", "sign up", "sign-up", "register for free",
+            "read more", "related story:", "related article:", "download the app",
+            "follow us", "join our channel", "telegram", "whatsapp", "newsletter",
+            "copyright", "all rights reserved", "sph media", "terms of use", "privacy policy",
+            "advertisement", "ad blocker", "cookies help us", "enable javascript",
+            "you do not have an active", "please log in", "already a subscriber",
+            "read also:", "photo:", "image:", "source:", "follow us on", "read the full",
+            "get a subscription", "this story is for", "all rights reserved"
+        )
+        
+        for (keyword in blacklistedKeywords) {
+            if (lower.contains(keyword)) {
+                return true
+            }
+        }
+        
+        if (line.length < 25) {
+            return true
+        }
+        
+        return false
+    }
+
+    // Resolve thumbnails asynchronously for a list of articles in parallel
     private suspend fun triggerThumbnailResolution(articles: List<Article>) {
         withContext(Dispatchers.IO) {
-            // Resolve up to 10 articles concurrently or sequentially
-            for (article in articles.take(15)) {
+            articles.take(15).forEach { article ->
                 if (article.thumbnailUrl == null) {
-                    resolveThumbnail(article.link)
+                    launch {
+                        resolveThumbnail(article.link)
+                    }
                 }
             }
         }
@@ -173,11 +203,16 @@ class NewsRepository(context: Context) {
                 return@withContext
             }
 
-            // Second step: Connect to actual article source page
+            // Second step: Connect to actual article source page with browser-like headers
             val doc = Jsoup.connect(realUrl)
                 .userAgent(userAgent)
                 .referrer("https://www.google.com")
-                .timeout(5000)
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Cache-Control", "max-age=0")
+                .header("Connection", "keep-alive")
+                .ignoreHttpErrors(true)
+                .timeout(6000)
                 .get()
 
             var imageUrl = doc.select("meta[property=og:image]").attr("content")
@@ -187,6 +222,13 @@ class NewsRepository(context: Context) {
             if (imageUrl.isBlank()) {
                 // Fallback to first large image in article if meta tags are missing
                 imageUrl = doc.select("article img, main img").firstOrNull()?.attr("abs:src") ?: ""
+            }
+
+            // Exclude Google News logo/branding placeholders
+            if (imageUrl.contains("googleusercontent.com") || 
+                imageUrl.contains("gstatic.com") || 
+                imageUrl.contains("google.com")) {
+                imageUrl = ""
             }
 
             if (imageUrl.isNotBlank()) {
@@ -209,15 +251,24 @@ class NewsRepository(context: Context) {
             val doc = Jsoup.connect(realUrl)
                 .userAgent(userAgent)
                 .referrer("https://www.google.com")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .header("Cache-Control", "max-age=0")
+                .header("Connection", "keep-alive")
+                .ignoreHttpErrors(true)
                 .timeout(8000)
                 .get()
 
             // Try to extract readable article content by selecting paragraphs inside article/main or standard div blocks
             val paragraphs = doc.select("article p, main p, .post-content p, .article-content p, .story-body p")
             val rawText = if (paragraphs.isNotEmpty()) {
-                paragraphs.joinToString("\n\n") { it.text().trim() }
+                paragraphs.map { it.text().trim() }
+                    .filter { it.isNotBlank() && !isGibberishOrPromo(it) }
+                    .joinToString("\n\n")
             } else {
-                doc.select("p").joinToString("\n\n") { it.text().trim() }
+                doc.select("p").map { it.text().trim() }
+                    .filter { it.isNotBlank() && !isGibberishOrPromo(it) }
+                    .joinToString("\n\n")
             }
 
             // Cleanup text (remove extremely short paragraphs or cookie prompts)

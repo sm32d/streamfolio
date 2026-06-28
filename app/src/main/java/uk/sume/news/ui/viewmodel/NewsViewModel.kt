@@ -25,6 +25,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedCategory = MutableStateFlow("Top Stories")
     val selectedCategory: StateFlow<String> = _selectedCategory
 
+    // Current publisher filter
+    private val _selectedPublisher = MutableStateFlow<String?>(null)
+    val selectedPublisher: StateFlow<String?> = _selectedPublisher
+
     // Articles flow
     val articles: StateFlow<List<Article>> = _selectedCategory
         .flatMapLatest { category ->
@@ -43,6 +47,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     // Local & Remote search flows
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _isLoadingSearch = MutableStateFlow(false)
+    val isLoadingSearch: StateFlow<Boolean> = _isLoadingSearch
 
     val searchResults: StateFlow<List<Article>> = _searchQuery
         .debounce(500)
@@ -75,7 +82,24 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectCategory(category: String) {
         _selectedCategory.value = category
+        _selectedPublisher.value = null
         refreshCurrentFeed()
+    }
+
+    fun selectPublisher(publisher: String?) {
+        _selectedPublisher.value = publisher
+        if (publisher != null) {
+            viewModelScope.launch {
+                _isRefreshing.value = true
+                repository.searchNewsOnline(
+                    query = "\"$publisher\"",
+                    language = prefs.language,
+                    region = prefs.region,
+                    category = _selectedCategory.value
+                )
+                _isRefreshing.value = false
+            }
+        }
     }
 
     fun refreshCurrentFeed() {
@@ -100,8 +124,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
-        viewModelScope.launch {
-            repository.searchNewsOnline(query, prefs.language, prefs.region)
+        if (query.isNotBlank()) {
+            viewModelScope.launch {
+                _isLoadingSearch.value = true
+                repository.searchNewsOnline(query, prefs.language, prefs.region)
+                _isLoadingSearch.value = false
+            }
+        } else {
+            _isLoadingSearch.value = false
         }
     }
 
@@ -130,15 +160,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     // TTS Actions
     fun speakArticle() {
-        if (ttsHelper.isPlaying.value) {
-            ttsHelper.pause()
-        } else {
-            if (ttsHelper.currentParagraphIndex.value > 0) {
-                ttsHelper.resume()
-            } else {
-                ttsHelper.play(_articleBody.value)
-            }
-        }
+        ttsHelper.playOrPause(_articleBody.value)
     }
 
     fun stopSpeaking() {

@@ -66,6 +66,24 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
+    fun playOrPause(text: String) {
+        if (!isInitialized) return
+        if (_isPlaying.value) {
+            pause()
+        } else {
+            val paragraphs = text.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }
+            if (paragraphs.isEmpty()) return
+            
+            if (paragraphsList == paragraphs) {
+                resume()
+            } else {
+                paragraphsList = paragraphs
+                _currentParagraphIndex.value = 0
+                speakParagraph(0)
+            }
+        }
+    }
+
     fun play(text: String) {
         if (!isInitialized) return
         val paragraphs = text.split("\n\n").map { it.trim() }.filter { it.isNotBlank() }

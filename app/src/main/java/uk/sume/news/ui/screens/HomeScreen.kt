@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +52,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
+    val selectedPublisher by viewModel.selectedPublisher.collectAsState()
 
     val categories = remember(customFeeds) {
         listOf("Top Stories", "Business", "Technology", "Science", "Sports", "Health", "Entertainment") + 
@@ -67,20 +69,18 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
             .take(10)
     }
 
-    var selectedPublisher by remember { mutableStateOf<String?>(null) }
-
     val filteredArticles = remember(articles, selectedPublisher) {
         if (selectedPublisher == null) articles else articles.filter { it.sourceName == selectedPublisher }
     }
 
     // Split trending (first 3 articles) and regular list
     val trendingArticles = remember(filteredArticles) {
-        filteredArticles.filter { it.thumbnailUrl != null && it.thumbnailUrl != "failed" }.take(3)
+        filteredArticles.take(3)
     }
     
     // Remaining articles
-    val listArticles = remember(filteredArticles, trendingArticles) {
-        filteredArticles.filter { it !in trendingArticles }
+    val listArticles = remember(filteredArticles) {
+        filteredArticles.drop(3)
     }
 
     // Track active swipe deck index (if swiped away, index increases)
@@ -97,12 +97,13 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = 48.dp, bottom = 16.dp),
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(start = 24.dp, end = 24.dp, top = 16.dp, bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "koran",
+                    text = "PrimeFeed",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.primary
@@ -131,7 +132,6 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                     Tab(
                         selected = isSelected,
                         onClick = {
-                            selectedPublisher = null
                             swipeIndex = 0
                             viewModel.selectCategory(category)
                         },
@@ -155,10 +155,15 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
             if (isRefreshing && articles.isEmpty()) {
                 SkeletonLoader(modifier = Modifier.weight(1f))
             } else {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 96.dp)
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refreshCurrentFeed() },
+                    modifier = Modifier.weight(1f)
                 ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 96.dp)
+                    ) {
                     
                     // Publisher Favicon filter carousel
                     if (publishers.isNotEmpty()) {
@@ -183,7 +188,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         modifier = Modifier
                                             .clickable {
-                                                selectedPublisher = if (isPubSelected) null else name
+                                                viewModel.selectPublisher(if (isPubSelected) null else name)
                                                 swipeIndex = 0
                                             }
                                     ) {
@@ -324,22 +329,50 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
         }
     }
 }
+}
 
 @Composable
 fun TrendingCard(article: Article, onTap: () -> Unit) {
+    val thumbnail = article.thumbnailUrl
+    val isGoogleLogo = thumbnail?.let {
+        it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
+    } ?: false
+    val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onTap)
     ) {
-        // Thumbnail Image
-        AsyncImage(
-            model = article.thumbnailUrl,
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        if (hasValidThumbnail) {
+            // Thumbnail Image
+            AsyncImage(
+                model = thumbnail,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            // Fallback gradient background with publisher's initial watermark
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = article.sourceName.firstOrNull()?.toString() ?: "?",
+                    color = Color.White.copy(alpha = 0.15f),
+                    fontSize = 120.sp,
+                    fontWeight = FontWeight.Black
+                )
+            }
+        }
 
         // Gradient overlay for readability
         Box(
@@ -437,7 +470,12 @@ fun ArticleListItem(
         ) {
             // Thumbnail with fallback gradient helper
             val thumbnail = article.thumbnailUrl
-            if (thumbnail != null && thumbnail != "failed") {
+            val isGoogleLogo = thumbnail?.let {
+                it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
+            } ?: false
+            val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+
+            if (hasValidThumbnail) {
                 AsyncImage(
                     model = thumbnail,
                     contentDescription = null,
