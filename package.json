@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "google-news-url-decoder": "^1.2.2"
+  }
+}
