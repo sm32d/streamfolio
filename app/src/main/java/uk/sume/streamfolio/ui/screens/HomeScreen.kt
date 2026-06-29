@@ -3,6 +3,10 @@ package uk.sume.streamfolio.ui.screens
 import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlin.math.absoluteValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -105,9 +109,6 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
         filteredArticles.drop(3)
     }
 
-    // Track active swipe deck index (if swiped away, index increases)
-    var swipeIndex by remember(trendingArticles) { mutableStateOf(0) }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -154,7 +155,6 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                     Tab(
                         selected = isSelected,
                         onClick = {
-                            swipeIndex = 0
                             viewModel.selectCategory(category)
                         },
                         modifier = Modifier
@@ -235,7 +235,6 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                                         modifier = Modifier
                                             .clickable {
                                                 viewModel.selectPublisher(if (isPubSelected) null else name)
-                                                swipeIndex = 0
                                             }
                                     ) {
                                         Box(
@@ -261,7 +260,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = name.take(10),
+                                            text = name,
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                             maxLines = 1,
@@ -273,60 +272,88 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                         }
                     }
 
-                    // Stacked card news deck (Trending Highlights)
-                    if (trendingArticles.isNotEmpty() && swipeIndex < trendingArticles.size) {
+                    // Horizontal Carousel for Trending Highlights
+                    if (trendingArticles.isNotEmpty()) {
                         item {
-                            Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp)
+                            ) {
                                 Text(
                                     text = "Trending Highlights",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(bottom = 12.dp)
+                                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
                                 )
 
-                                Box(
+                                val pagerState = rememberPagerState(pageCount = { trendingArticles.size })
+
+                                HorizontalPager(
+                                    state = pagerState,
+                                    contentPadding = PaddingValues(horizontal = 24.dp),
+                                    pageSpacing = 12.dp,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(260.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    // Render stacked cards bottom-up
-                                    val topCardIndex = swipeIndex
-                                    for (i in (trendingArticles.size - 1) downTo topCardIndex) {
-                                        val article = trendingArticles[i]
-                                        val isTop = i == topCardIndex
-                                        val cardScale = if (isTop) 1f else (1f - (i - topCardIndex) * 0.05f)
-                                        val cardOffsetY = if (isTop) 0.dp else ((i - topCardIndex) * 12).dp
+                                        .height(260.dp)
+                                ) { page ->
+                                    val article = trendingArticles[page]
+                                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                                    val scale = (1f - (pageOffset.absoluteValue * 0.15f)).coerceIn(0.85f, 1f)
+                                    val alpha = (1f - (pageOffset.absoluteValue * 0.3f)).coerceIn(0.5f, 1f)
 
-                                        if (isTop) {
-                                            SwipeableCard(
-                                                onSwipeRight = {
-                                                    viewModel.toggleBookmark(article)
-                                                    swipeIndex++
-                                                },
-                                                onSwipeLeft = {
-                                                    swipeIndex++
-                                                }
-                                            ) {
-                                                TrendingCard(
-                                                    article = article,
-                                                    onTap = {
-                                                        val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                                        navController.navigate("detail_screen/$encodedUrl")
-                                                    }
-                                                )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer {
+                                                scaleX = scale
+                                                scaleY = scale
+                                                this.alpha = alpha
                                             }
-                                        } else {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .offset(y = cardOffsetY)
-                                                    .scale(cardScale)
-                                            ) {
-                                                TrendingCard(article = article, onTap = {})
+                                            .shadow(
+                                                elevation = 8.dp,
+                                                shape = RoundedCornerShape(24.dp),
+                                                clip = false
+                                            )
+                                    ) {
+                                        TrendingCard(
+                                            article = article,
+                                            onBookmarkClick = {
+                                                viewModel.toggleBookmark(article)
+                                            },
+                                            onTap = {
+                                                val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                                navController.navigate("detail_screen/$encodedUrl")
                                             }
-                                        }
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .align(Alignment.CenterHorizontally),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    for (i in 0 until trendingArticles.size) {
+                                        val isActive = pagerState.currentPage == i
+                                        val indicatorWidth = if (isActive) 24.dp else 8.dp
+                                        val indicatorAlpha = if (isActive) 1f else 0.4f
+                                        val indicatorColor = if (isActive) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(horizontal = 4.dp)
+                                                .height(8.dp)
+                                                .width(indicatorWidth)
+                                                .clip(CircleShape)
+                                                .background(indicatorColor.copy(alpha = indicatorAlpha))
+                                                .animateContentSize()
+                                        )
                                     }
                                 }
                             }
@@ -344,7 +371,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                         )
                     }
 
-                    if (listArticles.isEmpty() && (trendingArticles.isEmpty() || swipeIndex >= trendingArticles.size)) {
+                    if (listArticles.isEmpty() && trendingArticles.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -379,7 +406,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
 }
 
 @Composable
-fun TrendingCard(article: Article, onTap: () -> Unit) {
+fun TrendingCard(article: Article, onBookmarkClick: () -> Unit, onTap: () -> Unit) {
     val thumbnail = article.thumbnailUrl
     val isGoogleLogo = thumbnail?.let {
         it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
@@ -487,6 +514,31 @@ fun TrendingCard(article: Article, onTap: () -> Unit) {
                     text = formatPubDate(article.pubDate),
                     fontSize = 11.sp,
                     color = Color.White.copy(alpha = 0.5f)
+                )
+            }
+        }
+
+        // Floating bookmark button at the top-right
+        var isBookmarked by remember(article.isBookmarked) { mutableStateOf(article.isBookmarked) }
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    onBookmarkClick()
+                    isBookmarked = !isBookmarked
+                },
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = if (isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkAdd,
+                    contentDescription = "Bookmark",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

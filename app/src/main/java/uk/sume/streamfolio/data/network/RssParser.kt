@@ -166,9 +166,13 @@ class RssParser {
             
             val lastDashIndex = rawTitle.lastIndexOf(" - ")
             if (lastDashIndex != -1 && lastDashIndex > rawTitle.length - 40) {
-                cleanTitle = rawTitle.substring(0, lastDashIndex).trim()
-                if (sourceName == null || sourceName!!.isEmpty()) {
-                    cleanSource = rawTitle.substring(lastDashIndex + 3).trim()
+                val suffix = rawTitle.substring(lastDashIndex + 3).trim()
+                // Only split if the suffix is capitalized (likely a publisher name)
+                if (suffix.isNotEmpty() && suffix[0].isUpperCase()) {
+                    cleanTitle = rawTitle.substring(0, lastDashIndex).trim()
+                    if (sourceName == null || sourceName!!.isEmpty()) {
+                        cleanSource = suffix
+                    }
                 }
             }
 
