@@ -65,6 +65,9 @@ dependencies {
     // Parsing & Networking
     implementation(libs.jsoup)
     implementation(libs.okhttp)
+    
+    // On-Device GenAI Summarization (Gemini Nano via AICore)
+    implementation("com.google.mlkit:genai-summarization:1.0.0-beta1")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

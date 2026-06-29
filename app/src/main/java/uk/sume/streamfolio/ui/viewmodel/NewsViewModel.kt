@@ -150,6 +150,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoadingBody.value = true
             _articleBody.value = ""
+            resetAiSummary()
             ttsHelper.stop() // Stop playing previous article
             val body = repository.fetchArticleBody(url)
             _articleBody.value = body
@@ -193,8 +194,62 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         refreshCurrentFeed()
     }
 
+    // On-Device AI Summarization
+    private val aiSummaryHelper by lazy { uk.sume.streamfolio.data.network.AiSummaryHelper(getApplication()) }
+    private val _aiSummaryState = MutableStateFlow<AiSummaryState>(AiSummaryState.Idle)
+    val aiSummaryState: StateFlow<AiSummaryState> = _aiSummaryState
+
+    fun generateAiSummary(text: String) {
+        if (text.isBlank()) {
+            _aiSummaryState.value = AiSummaryState.Error("Article body is empty.")
+            return
+        }
+        _aiSummaryState.value = AiSummaryState.Loading
+        
+        viewModelScope.launch {
+            try {
+                val status = aiSummaryHelper.checkFeatureStatus()
+                if (status == com.google.mlkit.genai.common.FeatureStatus.DOWNLOADABLE) {
+                    _aiSummaryState.value = AiSummaryState.DownloadingModel
+                    aiSummaryHelper.downloadFeature()
+                    val result = aiSummaryHelper.summarizeText(text)
+                    _aiSummaryState.value = AiSummaryState.Success(result.summary)
+                    return@launch
+                } else if (status == com.google.mlkit.genai.common.FeatureStatus.DOWNLOADING) {
+                    _aiSummaryState.value = AiSummaryState.DownloadingModel
+                    return@launch
+                } else if (status == com.google.mlkit.genai.common.FeatureStatus.UNAVAILABLE) {
+                    _aiSummaryState.value = AiSummaryState.Error("This feature requires Gemini Nano (AICore), which is not available on this device.")
+                    return@launch
+                }
+                
+                val result = aiSummaryHelper.summarizeText(text)
+                _aiSummaryState.value = AiSummaryState.Success(result.summary)
+            } catch (e: Exception) {
+                val msg = e.message ?: "Failed to generate summary."
+                if (msg.contains("AICore", ignoreCase = true)) {
+                    _aiSummaryState.value = AiSummaryState.Error("Gemini Nano (AICore) is not available or requires update on this device.")
+                } else {
+                    _aiSummaryState.value = AiSummaryState.Error(msg)
+                }
+            }
+        }
+    }
+
+    fun resetAiSummary() {
+        _aiSummaryState.value = AiSummaryState.Idle
+    }
+
     override fun onCleared() {
         super.onCleared()
         ttsHelper.shutdown()
     }
+}
+
+sealed interface AiSummaryState {
+    object Idle : AiSummaryState
+    object Loading : AiSummaryState
+    object DownloadingModel : AiSummaryState
+    data class Success(val summary: String) : AiSummaryState
+    data class Error(val message: String) : AiSummaryState
 }

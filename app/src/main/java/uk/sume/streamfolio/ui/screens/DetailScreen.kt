@@ -42,6 +42,8 @@ import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.components.TextSkeletonLoader
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import androidx.compose.foundation.BorderStroke
+import uk.sume.streamfolio.ui.viewmodel.AiSummaryState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -287,6 +289,169 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                         color = MaterialTheme.colorScheme.primary,
                                         fontSize = 14.sp
                                     )
+                                }
+                            }
+                        }
+
+                        // AI Summary Card
+                        if (articleBody.isNotBlank() && articleBody != "Unable to parse article text. Please open in WebView to read the full story.") {
+                            val aiSummaryState by viewModel.aiSummaryState.collectAsState()
+                            
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                                shape = RoundedCornerShape(24.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.AutoAwesome,
+                                                contentDescription = "AI",
+                                                tint = EmeraldPrimary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "AI Key Insights",
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                        
+                                        // On-Device AI Badge
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = EmeraldPrimary.copy(alpha = 0.15f),
+                                            border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.3f))
+                                        ) {
+                                            Text(
+                                                text = "On-Device",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = EmeraldPrimary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    when (val state = aiSummaryState) {
+                                        is AiSummaryState.Idle -> {
+                                            Button(
+                                                onClick = { viewModel.generateAiSummary(articleBody) },
+                                                modifier = Modifier.fillMaxWidth(),
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = EmeraldPrimary
+                                                )
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.AutoAwesome,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text("Generate Summary", fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                        is AiSummaryState.Loading -> {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = EmeraldPrimary
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(
+                                                    text = "Gemini is summarizing...",
+                                                    fontSize = 13.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                        }
+                                        is AiSummaryState.DownloadingModel -> {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = EmeraldPrimary
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(
+                                                    text = "Initializing local AI model (this may take a while depending on your internet connection)...",
+                                                    fontSize = 13.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                        }
+                                        is AiSummaryState.Success -> {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                val bullets = state.summary.split("\n")
+                                                    .map { it.trim().removePrefix("*").trim() }
+                                                    .filter { it.isNotBlank() }
+                                                
+                                                if (bullets.isNotEmpty()) {
+                                                    for (bullet in bullets) {
+                                                        Row(modifier = Modifier.fillMaxWidth()) {
+                                                            Text(
+                                                                text = "•",
+                                                                color = EmeraldPrimary,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 15.sp,
+                                                                modifier = Modifier.padding(end = 8.dp)
+                                                            )
+                                                            Text(
+                                                                text = bullet,
+                                                                fontSize = 13.sp,
+                                                                lineHeight = 18.sp,
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                            )
+                                                        }
+                                                    }
+                                                } else {
+                                                    Text(
+                                                        text = state.summary,
+                                                        fontSize = 13.sp,
+                                                        lineHeight = 18.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        is AiSummaryState.Error -> {
+                                            Text(
+                                                text = state.message,
+                                                fontSize = 12.sp,
+                                                lineHeight = 16.sp,
+                                                color = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.padding(vertical = 4.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
