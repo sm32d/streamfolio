@@ -33,6 +33,9 @@ interface ArticleDao {
 
     @Query("DELETE FROM articles WHERE category = :category AND isBookmarked = 0")
     suspend fun clearNonBookmarkedArticlesByCategory(category: String)
+
+    @Query("DELETE FROM articles WHERE isBookmarked = 0 AND pubDate < :expiryDate")
+    suspend fun pruneOldArticles(expiryDate: String)
 }
 
 @Dao

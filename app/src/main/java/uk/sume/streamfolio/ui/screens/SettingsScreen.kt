@@ -147,7 +147,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Version 1.0 · Free forever",
+                            text = "Version 1.1.3-beta · Free forever",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )
@@ -185,6 +185,15 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
         "AU" to "🇦🇺 Australia",
         "SG" to "🇸🇬 Singapore"
     )
+    val cacheOptions = mapOf(
+        "1" to "1 Day",
+        "3" to "3 Days",
+        "7" to "7 Days",
+        "14" to "14 Days",
+        "30" to "30 Days",
+        "36500" to "Keep All"
+    )
+    var cacheDays by remember { mutableStateOf(viewModel.prefs.cacheHistoryDays.toString()) }
 
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
@@ -234,6 +243,19 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 onSelected = {
                     selectedRegion = it
                     viewModel.updatePreferences(selectedLang, it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsSelectorField(
+                label = "Offline Cache History",
+                icon = Icons.Default.History,
+                value = cacheOptions[cacheDays] ?: "7 Days",
+                options = cacheOptions,
+                onSelected = {
+                    cacheDays = it
+                    viewModel.prefs.cacheHistoryDays = it.toInt()
                 }
             )
 

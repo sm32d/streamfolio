@@ -13,6 +13,7 @@ import kotlinx.coroutines.awaitAll
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import uk.sume.streamfolio.data.local.AppDatabase
+import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import java.util.concurrent.TimeUnit
@@ -22,6 +23,7 @@ class NewsRepository(context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val articleDao = db.articleDao()
     private val customFeedDao = db.customFeedDao()
+    private val prefs = PreferencesHelper(context)
     private val parser = RssParser()
 
     private val client = OkHttpClient.Builder()
@@ -79,8 +81,7 @@ class NewsRepository(context: Context) {
             allArticles.addAll(list)
         }
         
-        articleDao.clearNonBookmarkedArticlesByCategory(category)
-        articleDao.insertArticles(allArticles)
+        insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
     }
 
@@ -139,9 +140,22 @@ class NewsRepository(context: Context) {
             allArticles.addAll(list)
         }
         
-        articleDao.clearNonBookmarkedArticlesByCategory(category)
-        articleDao.insertArticles(allArticles)
+        insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+    }
+
+    private suspend fun insertAndPruneArticles(allArticles: List<Article>, category: String) {
+        articleDao.insertArticles(allArticles)
+        val historyDays = prefs.cacheHistoryDays
+        if (historyDays < 36500) {
+            val cal = java.util.Calendar.getInstance()
+            cal.add(java.util.Calendar.DAY_OF_YEAR, -historyDays)
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            val expiryDate = sdf.format(cal.time)
+            articleDao.pruneOldArticles(expiryDate)
+        }
     }
 
     // Search news online by querying active default and custom feeds, and filtering results locally

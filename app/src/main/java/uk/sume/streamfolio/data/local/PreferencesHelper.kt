@@ -40,4 +40,8 @@ class PreferencesHelper(context: Context) {
     var enabledCrossRegionFeeds: Set<String>
         get() = prefs.getStringSet("enabled_cross_region_feeds", emptySet()) ?: emptySet()
         set(value) = prefs.edit().putStringSet("enabled_cross_region_feeds", value).apply()
+
+    var cacheHistoryDays: Int
+        get() = prefs.getInt("cache_history_days", 7)
+        set(value) = prefs.edit().putInt("cache_history_days", value).apply()
 }
