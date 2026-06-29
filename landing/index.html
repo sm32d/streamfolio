@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamFolio — Premium Curated News Aggregator</title>
+    <meta name="description" content="StreamFolio is a private, on-device news reader for Android. Custom category reordering, regional feeds, and upcoming Gemini Nano key insights.">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="canonical" href="https://streamfolio.sume.uk/">
+    
+    <!-- Open Graph / Facebook SEO Meta -->
+    <meta property="og:title" content="StreamFolio — Premium Curated News Aggregator">
+    <meta property="og:description" content="StreamFolio is a private, on-device news reader for Android. Custom category reordering, regional feeds, and upcoming Gemini Nano key insights.">
+    <meta property="og:image" content="https://streamfolio.sume.uk/logo.png">
+    <meta property="og:url" content="https://streamfolio.sume.uk/">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter SEO Meta -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="StreamFolio — Premium Curated News Aggregator">
+    <meta name="twitter:description" content="StreamFolio is a private, on-device news reader for Android. Custom category reordering, regional feeds, and upcoming Gemini Nano key insights.">
+    <meta name="twitter:image" content="https://streamfolio.sume.uk/logo.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <header class="navbar">
+        <div class="container navbar-container">
+            <a href="#" class="logo" id="logo-link">
+                <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
+                StreamFolio
+            </a>
+            <nav class="nav-links">
+                <a href="#features">Features</a>
+                <button class="nav-btn" onclick="openModal('privacy-modal')">Privacy Policy</button>
+                <button class="nav-btn" onclick="openModal('tos-modal')">Terms of Service</button>
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank">Download v1.0</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="badge">✨ v1.0 Live &bull; v1.1-Beta (AI) Coming Soon</div>
+                <h1>Your News. <br><span class="gradient-text">Locally Curated.</span> <br>Completely Private.</h1>
+                <p>StreamFolio is a premium RSS reader for Android that keeps you informed without clutter. Combine regional feeds, toggle cross-regional publishers, and organize tabs dynamically.</p>
+                <div class="cta-group-container">
+                    <div class="cta-group">
+                        <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank">Download v1.0 on GitHub</a>
+                        <a href="#features" class="btn-secondary">Explore Features</a>
+                    </div>
+                    <div class="store-badge-container">
+                        <span class="store-badge"><span class="badge-icon">🤖</span> Coming soon to Google Play Store</span>
+                        <span class="store-badge"><span class="badge-icon">✨</span> AI Insights coming in v1.1</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-preview">
+                <img src="feed_screenshot.png" alt="StreamFolio Feed Screenshot" class="feed-screenshot">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title">Designed for Power Readers</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">✨</div>
+                    <h3>On-Device AI Summaries <span class="feature-tag">Coming in v1.1</span></h3>
+                    <p>Get instant bullet-point insights using local Gemini Nano processing. Zero remote server calls means 100% data privacy and offline access.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Cross-Regional Feeds <span class="feature-tag active">v1.0 Live</span></h3>
+                    <p>Subscribe to top publishers from the US, GB, SG, IN, CA, AU, and more. Easily toggle cross-regional sources while maintaining your main regional feed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Drag-and-Drop Curation <span class="feature-tag active">v1.0 Live</span></h3>
+                    <p>Take control of your feed tabs. Drag, drop, and reorder categories or custom RSS folders through our interactive Settings dashboard.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Legal Privacy Modal -->
+    <div class="modal-overlay" id="privacy-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Privacy Policy</h2>
+                <button class="close-btn" onclick="closeModal('privacy-modal')">&times;</button>
+            </div>
+            <div class="modal-body font-legal">
+                <p class="legal-date">Last Updated: June 29, 2026</p>
+                
+                <h3>1. Overview and Core Principle</h3>
+                <p>StreamFolio ("the Application") is built from the ground up to respect user privacy. <strong>We do not collect, store, transmit, or share any personal data.</strong> The Application functions primarily as a local client that fetches public RSS/Atom XML feeds directly from publisher websites and parses them locally on your device.</p>
+
+                <h3>2. On-Device Local Processing</h3>
+                <p>All core actions are performed locally on your physical device, ensuring maximum security and data privacy:</p>
+                <ul>
+                    <li><strong>Local Caching:</strong> Article entries, bookmarks, custom RSS URLs, and categories are saved directly in a local database (Android Room SQLite) on your device. This data never leaves your device.</li>
+                    <li><strong>On-Device AI Summarization:</strong> Article text summarization (available in v1.1) is performed strictly locally using Google's <strong>ML Kit GenAI Summarization API</strong> (powered by Gemini Nano and the AICore system service). The full text of the articles is processed entirely on your physical hardware. No article bodies, query parameters, or parsed logs are transmitted to any cloud servers for summarization.</li>
+                    <li><strong>Text-to-Speech (TTS):</strong> Article listening uses the built-in Android TextToSpeech engine on your device.</li>
+                </ul>
+
+                <h3>3. Third-Party Websites and Services</h3>
+                <p>When you click on an article to read the full story in Web View mode, the Application loads the publisher's public webpage within a standard Android WebView component. We do not control and are not responsible for the privacy practices, tracking cookies, or contents of third-party publisher websites. We recommend reviewing the privacy statements of those websites.</p>
+
+                <h3>4. Network Access and Operations</h3>
+                <p>The Application requests standard Internet permissions solely to download the XML feeds of publishers you select. We do not use proprietary tracking metrics or analytics engines (such as Google Analytics or Firebase Analytics) inside the client app.</p>
+
+                <h3>5. Policy Revisions</h3>
+                <p>We may update this Privacy Policy to reflect changes in local device capabilities. Continued use of the Application signifies your agreement to local-only processing principles.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal ToS Modal -->
+    <div class="modal-overlay" id="tos-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Terms of Service</h2>
+                <button class="close-btn" onclick="closeModal('tos-modal')">&times;</button>
+            </div>
+            <div class="modal-body font-legal">
+                <p class="legal-date">Last Updated: June 29, 2026</p>
+
+                <h3>1. Acceptance of Terms</h3>
+                <p>By downloading, installing, or using StreamFolio ("the Application"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not install or use the Application.</p>
+
+                <h3>2. Permitted Use</h3>
+                <p>The Application is provided for personal, non-commercial use as an aggregator client. You are solely responsible for all RSS/Atom feed URLs you manually add to the Application. You agree not to use the Application for any unlawful activities or in a manner that disrupts publisher servers.</p>
+
+                <h3>3. Intellectual Property and Content Ownership</h3>
+                <p>StreamFolio does not own the text, images, or articles displayed within the RSS feeds. All headlines, summaries, and full articles parsed from RSS feeds are the intellectual property of their respective publishers. The Application merely renders public content feeds for convenient personal reading.</p>
+
+                <h3>4. Disclaimer of Warranties</h3>
+                <p>THE APPLICATION IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE PARSING OF FEED ENDPOINTS WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPATIBLE WITH ALL CUSTOM RSS FORMATS.</p>
+
+                <h3>5. Limitation of Liability</h3>
+                <p>IN NO EVENT SHALL THE DEVELOPERS, AUTHORS, OR CONTRIBUTING MAINTAINERS OF STREAMFOLIO BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF OR INABILITY TO USE THE APPLICATION, INCLUDING DATABASE LOSSES, DEVICE HARDWARE INCOMPATIBILITY WITH AICORE/GEMINI NANO, OR NETWORK FEES incurred while downloading model weights.</p>
+
+                <h3>6. Governing Law</h3>
+                <p>These terms shall be governed by and construed in accordance with the laws of your local jurisdiction, without regard to conflict of law provisions.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <p>&copy; 2026 StreamFolio. All rights reserved. Built for absolute privacy.</p>
+            <div class="footer-links">
+                <button class="footer-btn" onclick="openModal('privacy-modal')">Privacy Policy</button>
+                <span>&bull;</span>
+                <button class="footer-btn" onclick="openModal('tos-modal')">Terms of Service</button>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
