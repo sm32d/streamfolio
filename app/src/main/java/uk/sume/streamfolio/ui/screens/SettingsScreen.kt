@@ -652,6 +652,25 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
         })
     }
     
+    // Smart navigation filters
+    var categoryFilter by remember { mutableStateOf(viewModel.filterCategoryOnSettings) }
+    
+    // Smart initialization: default to category grouping if active region lacks default feeds, or if forced via empty feed navigation
+    val currentCategory = viewModel.selectedCategory.value
+    val hasFeedsInActiveRegion = remember(activeRegion, currentCategory) {
+        DefaultFeedsConfig.getFeedsFor(
+            region = activeRegion,
+            category = currentCategory,
+            disabledFeedUrls = emptySet(),
+            enabledCrossRegionFeeds = emptySet()
+        ).isNotEmpty()
+    }
+    var groupByCategory by remember { mutableStateOf(categoryFilter != null || !hasFeedsInActiveRegion) }
+    
+    LaunchedEffect(Unit) {
+        viewModel.filterCategoryOnSettings = null
+    }
+    
     var disabledUrls by remember { mutableStateOf(viewModel.prefs.disabledFeedUrls) }
     var enabledCrossRegion by remember { mutableStateOf(viewModel.prefs.enabledCrossRegionFeeds) }
 
@@ -670,12 +689,90 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
             SubPageTopBar(title = "Default Feed Providers", onBack = { navController.popBackStack() })
 
             Text(
-                text = "Control exactly which curated news publishers are enabled. Grouped by region and category.",
+                text = "Control exactly which curated news publishers are enabled. Grouped by region or category.",
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                 modifier = Modifier.padding(bottom = 16.dp)
             )
+
+            // Category Filter Active Banner
+            if (categoryFilter != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = EmeraldPrimary.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.25f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Showing category: $categoryFilter",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = EmeraldPrimary
+                        )
+                        Text(
+                            text = "Show All",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldPrimary,
+                            modifier = Modifier.clickable { categoryFilter = null }
+                        )
+                    }
+                }
+            }
+
+            // Segmented-style toggle button row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { groupByCategory = false }
+                        .background(if (!groupByCategory) EmeraldPrimary else Color.Transparent)
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Group by Region",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (!groupByCategory) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { groupByCategory = true }
+                        .background(if (groupByCategory) EmeraldPrimary else Color.Transparent)
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Group by Category",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (groupByCategory) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -683,145 +780,284 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 120.dp)
             ) {
-                for (regionCode in sortedRegions) {
-                    val providersInRegion = groupedProviders[regionCode] ?: emptyList()
-                    val isActiveRegion = regionCode == activeRegion
-                    
-                    val regionName = when (regionCode) {
-                        "US" -> "🇺🇸 United States"
-                        "GB" -> "🇬🇧 United Kingdom"
-                        "SG" -> "🇸🇬 Singapore"
-                        "IN" -> "🇮🇳 India"
-                        "CA" -> "🇨🇦 Canada"
-                        "AU" -> "🇦🇺 Australia"
-                        "FR" -> "🇫🇷 France"
-                        "DE" -> "🇩🇪 Germany"
-                        else -> regionCode
-                    }
-                    
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 24.dp, bottom = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = regionName,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldPrimary
-                        )
-                        
-                        // Active / Inactive Region Badge
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                            border = BorderStroke(1.dp, if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-                        ) {
-                            Text(
-                                text = if (isActiveRegion) "Active Region" else "Inactive",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isActiveRegion) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                if (!groupByCategory) {
+                    for (regionCode in sortedRegions) {
+                        val providersInRegion = (groupedProviders[regionCode] ?: emptyList()).filter {
+                            categoryFilter == null || it.category.equals(categoryFilter, ignoreCase = true)
                         }
-                    }
-                    
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                    ) {
-                        val sortedProviders = providersInRegion.sortedBy { it.category }
-                        for (i in sortedProviders.indices) {
-                            val provider = sortedProviders[i]
-                            val isEnabled = if (isActiveRegion) {
-                                !disabledUrls.contains(provider.url)
-                            } else {
-                                enabledCrossRegion.contains(provider.url)
+                        val isActiveRegion = regionCode == activeRegion
+                        
+                        if (providersInRegion.isNotEmpty()) {
+                            val regionName = when (regionCode) {
+                                "US" -> "🇺🇸 United States"
+                                "GB" -> "🇬🇧 United Kingdom"
+                                "SG" -> "🇸🇬 Singapore"
+                                "IN" -> "🇮🇳 India"
+                                "CA" -> "🇨🇦 Canada"
+                                "AU" -> "🇦🇺 Australia"
+                                "FR" -> "🇫🇷 France"
+                                "DE" -> "🇩🇪 Germany"
+                                else -> regionCode
                             }
+                            
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable {
-                                        if (isActiveRegion) {
-                                            val isCurrentlyEnabled = !disabledUrls.contains(provider.url)
-                                            val newDisabled = if (isCurrentlyEnabled) {
-                                                disabledUrls + provider.url
-                                            } else {
-                                                disabledUrls - provider.url
-                                            }
-                                            disabledUrls = newDisabled
-                                            viewModel.prefs.disabledFeedUrls = newDisabled
-                                        } else {
-                                            val isCurrentlyEnabled = enabledCrossRegion.contains(provider.url)
-                                            val newEnabled = if (isCurrentlyEnabled) {
-                                                enabledCrossRegion - provider.url
-                                            } else {
-                                                enabledCrossRegion + provider.url
-                                            }
-                                            enabledCrossRegion = newEnabled
-                                            viewModel.prefs.enabledCrossRegionFeeds = newEnabled
-                                        }
-                                        viewModel.refreshCurrentFeed()
-                                    }
-                                    .graphicsLayer {
-                                        alpha = if (isEnabled) 1f else 0.6f
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    .padding(top = 24.dp, bottom = 12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = provider.publisherName,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = provider.category,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                Text(
+                                    text = regionName,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EmeraldPrimary
+                                )
+                                
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                                    border = BorderStroke(1.dp, if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                ) {
+                                      Text(
+                                          text = if (isActiveRegion) "Active Region" else "Inactive",
+                                          fontSize = 11.sp,
+                                          fontWeight = FontWeight.SemiBold,
+                                          color = if (isActiveRegion) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                          modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                      )
+                                }
+                            }
+                            
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                            ) {
+                                val sortedProviders = providersInRegion.sortedBy { it.category }
+                                for (i in sortedProviders.indices) {
+                                    val provider = sortedProviders[i]
+                                    val isEnabled = if (isActiveRegion) {
+                                        !disabledUrls.contains(provider.url)
+                                    } else {
+                                        enabledCrossRegion.contains(provider.url)
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                if (isActiveRegion) {
+                                                    val isCurrentlyEnabled = !disabledUrls.contains(provider.url)
+                                                    val newDisabled = if (isCurrentlyEnabled) {
+                                                        disabledUrls + provider.url
+                                                    } else {
+                                                        disabledUrls - provider.url
+                                                    }
+                                                    disabledUrls = newDisabled
+                                                    viewModel.prefs.disabledFeedUrls = newDisabled
+                                                } else {
+                                                    val isCurrentlyEnabled = enabledCrossRegion.contains(provider.url)
+                                                    val newEnabled = if (isCurrentlyEnabled) {
+                                                        enabledCrossRegion - provider.url
+                                                    } else {
+                                                        enabledCrossRegion + provider.url
+                                                    }
+                                                    enabledCrossRegion = newEnabled
+                                                    viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                }
+                                                viewModel.refreshCurrentFeed()
+                                            }
+                                            .graphicsLayer {
+                                                alpha = if (isEnabled) 1f else 0.6f
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = provider.publisherName,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = provider.category,
+                                                fontSize = 12.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                            )
+                                        }
+                                        Switch(
+                                            checked = isEnabled,
+                                            onCheckedChange = { checked ->
+                                                if (isActiveRegion) {
+                                                    val newDisabled = if (checked) {
+                                                        disabledUrls - provider.url
+                                                    } else {
+                                                        disabledUrls + provider.url
+                                                    }
+                                                    disabledUrls = newDisabled
+                                                    viewModel.prefs.disabledFeedUrls = newDisabled
+                                                } else {
+                                                    val newEnabled = if (checked) {
+                                                        enabledCrossRegion + provider.url
+                                                    } else {
+                                                        enabledCrossRegion - provider.url
+                                                    }
+                                                    enabledCrossRegion = newEnabled
+                                                    viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                }
+                                                viewModel.refreshCurrentFeed()
+                                            },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = Color.White,
+                                                checkedTrackColor = EmeraldPrimary
+                                            )
+                                        )
+                                    }
+                                    if (i < sortedProviders.size - 1) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 16.dp),
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    val groupedByCategory = allProviders.groupBy { it.category }
+                    val sortedCategories = groupedByCategory.keys.sorted().filter {
+                        categoryFilter == null || it.equals(categoryFilter, ignoreCase = true)
+                    }
+                    
+                    for (categoryName in sortedCategories) {
+                        val providersInCat = groupedByCategory[categoryName] ?: emptyList()
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 24.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = categoryName,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = EmeraldPrimary
+                            )
+                        }
+                        
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                        ) {
+                            val sortedProviders = providersInCat.sortedBy { it.publisherName }
+                            for (i in sortedProviders.indices) {
+                                val provider = sortedProviders[i]
+                                val isProviderActiveRegion = provider.region == activeRegion
+                                val isEnabled = if (isProviderActiveRegion) {
+                                    !disabledUrls.contains(provider.url)
+                                } else {
+                                    enabledCrossRegion.contains(provider.url)
+                                }
+                                
+                                val regionNameText = when (provider.region) {
+                                    "US" -> "🇺🇸 United States"
+                                    "GB" -> "🇬🇧 United Kingdom"
+                                    "SG" -> "🇸🇬 Singapore"
+                                    "IN" -> "🇮🇳 India"
+                                    "CA" -> "🇨🇦 Canada"
+                                    "AU" -> "🇦🇺 Australia"
+                                    "FR" -> "🇫🇷 France"
+                                    "DE" -> "🇩🇪 Germany"
+                                    else -> provider.region
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (isProviderActiveRegion) {
+                                                val isCurrentlyEnabled = !disabledUrls.contains(provider.url)
+                                                val newDisabled = if (isCurrentlyEnabled) {
+                                                    disabledUrls + provider.url
+                                                } else {
+                                                    disabledUrls - provider.url
+                                                }
+                                                disabledUrls = newDisabled
+                                                viewModel.prefs.disabledFeedUrls = newDisabled
+                                            } else {
+                                                val isCurrentlyEnabled = enabledCrossRegion.contains(provider.url)
+                                                val newEnabled = if (isCurrentlyEnabled) {
+                                                    enabledCrossRegion - provider.url
+                                                } else {
+                                                    enabledCrossRegion + provider.url
+                                                }
+                                                enabledCrossRegion = newEnabled
+                                                viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                            }
+                                            viewModel.refreshCurrentFeed()
+                                        }
+                                        .graphicsLayer {
+                                            alpha = if (isEnabled) 1f else 0.6f
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = provider.publisherName,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = regionNameText,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                        )
+                                    }
+                                    Switch(
+                                        checked = isEnabled,
+                                        onCheckedChange = { checked ->
+                                            if (isProviderActiveRegion) {
+                                                val newDisabled = if (checked) {
+                                                    disabledUrls - provider.url
+                                                } else {
+                                                    disabledUrls + provider.url
+                                                }
+                                                disabledUrls = newDisabled
+                                                viewModel.prefs.disabledFeedUrls = newDisabled
+                                            } else {
+                                                val newEnabled = if (checked) {
+                                                    enabledCrossRegion + provider.url
+                                                } else {
+                                                    enabledCrossRegion - provider.url
+                                                }
+                                                enabledCrossRegion = newEnabled
+                                                viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                            }
+                                            viewModel.refreshCurrentFeed()
+                                        },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = EmeraldPrimary
+                                        )
                                     )
                                 }
-                                Switch(
-                                    checked = isEnabled,
-                                    onCheckedChange = { checked ->
-                                        if (isActiveRegion) {
-                                            val newDisabled = if (checked) {
-                                                disabledUrls - provider.url
-                                            } else {
-                                                disabledUrls + provider.url
-                                            }
-                                            disabledUrls = newDisabled
-                                            viewModel.prefs.disabledFeedUrls = newDisabled
-                                        } else {
-                                            val newEnabled = if (checked) {
-                                                enabledCrossRegion + provider.url
-                                            } else {
-                                                enabledCrossRegion - provider.url
-                                            }
-                                            enabledCrossRegion = newEnabled
-                                            viewModel.prefs.enabledCrossRegionFeeds = newEnabled
-                                        }
-                                        viewModel.refreshCurrentFeed()
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = EmeraldPrimary
+                                if (i < sortedProviders.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                     )
-                                )
-                            }
-                            if (i < sortedProviders.size - 1) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                )
+                                }
                             }
                         }
                     }

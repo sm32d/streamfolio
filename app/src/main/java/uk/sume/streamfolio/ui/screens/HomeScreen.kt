@@ -47,6 +47,7 @@ import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import androidx.compose.ui.draw.shadow
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -60,6 +61,33 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
+
+    val activeRegion = remember(viewModel.prefs.region) { viewModel.prefs.region.uppercase() }
+    val hasCuratedFeeds = remember(activeRegion, selectedCategory) {
+        DefaultFeedsConfig.getFeedsFor(
+            region = activeRegion,
+            category = selectedCategory,
+            disabledFeedUrls = emptySet(),
+            enabledCrossRegionFeeds = emptySet()
+        ).isNotEmpty()
+    }
+    
+    val enabledFeeds = remember(activeRegion, selectedCategory, viewModel.prefs.disabledFeedUrls, viewModel.prefs.enabledCrossRegionFeeds) {
+        DefaultFeedsConfig.getFeedsFor(
+            region = activeRegion,
+            category = selectedCategory,
+            disabledFeedUrls = viewModel.prefs.disabledFeedUrls,
+            enabledCrossRegionFeeds = viewModel.prefs.enabledCrossRegionFeeds
+        )
+    }
+    
+    val emptyFeedDescription = remember(hasCuratedFeeds, enabledFeeds, selectedCategory, activeRegion) {
+        when {
+            !hasCuratedFeeds -> "There are no default curated feeds for the \"$selectedCategory\" category in your active region ($activeRegion). You can enable sources from other regions or add a custom feed."
+            enabledFeeds.isEmpty() -> "All curation sources for the \"$selectedCategory\" category are currently disabled. Tap below to enable them."
+            else -> "No articles found for \"$selectedCategory\". Drag down to refresh or verify your connection."
+        }
+    }
 
     val selectedCategoriesPref = remember { viewModel.prefs.selectedCategories }
     val isDefaultFeedsEnabled = remember { viewModel.prefs.isDefaultFeedsEnabled }
@@ -373,17 +401,65 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
 
                     if (listArticles.isEmpty() && trendingArticles.isEmpty()) {
                         item {
-                            Box(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(48.dp),
-                                contentAlignment = Alignment.Center
+                                    .padding(horizontal = 32.dp, vertical = 64.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    text = "No articles found. Drag to refresh or select another category.",
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    text = "No Articles Available",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = emptyFeedDescription,
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 18.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Button(
+                                    onClick = {
+                                        viewModel.filterCategoryOnSettings = selectedCategory
+                                        navController.navigate("settings_providers")
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                                    modifier = Modifier.fillMaxWidth(0.85f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Bookmark,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Manage Curation Sources", fontWeight = FontWeight.Bold)
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        navController.navigate("settings_feeds")
+                                    },
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary),
+                                    shape = RoundedCornerShape(12.dp),
+                                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                                    modifier = Modifier.fillMaxWidth(0.85f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.BookmarkAdd,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = EmeraldPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Add Custom RSS Feed", fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                                }
                             }
                         }
                     } else {

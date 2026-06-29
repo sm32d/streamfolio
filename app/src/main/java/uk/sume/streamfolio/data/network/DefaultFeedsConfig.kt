@@ -98,12 +98,12 @@ object DefaultFeedsConfig {
         ),
         "IN" to mapOf(
             "Top Stories" to listOf(
-                "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
+                "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
                 "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml"
             ),
             "World" to listOf(
-                "https://www.ndtv.com/rss/world-news",
-                "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml"
+                "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
+                "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml"
             ),
             "Business" to listOf(
                 "https://www.moneycontrol.com/rss/latestnews.xml"
@@ -198,9 +198,9 @@ object DefaultFeedsConfig {
 
     fun getPublisherName(url: String): String {
         return when {
-            url.contains("ap.xml") -> "Associated Press (AP)"
+            url.contains("apnews.com") || url.contains("ap.xml") -> "Associated Press (AP)"
             url.contains("nytimes.com") -> "The New York Times"
-            url.contains("bbci.co.uk") -> "BBC News"
+            url.contains("bbc.co.uk") || url.contains("bbc.com") || url.contains("bbci.co.uk") -> "BBC News"
             url.contains("theguardian.com") -> "The Guardian"
             url.contains("cnbc.com") -> "CNBC"
             url.contains("marketwatch.com") -> "MarketWatch"
