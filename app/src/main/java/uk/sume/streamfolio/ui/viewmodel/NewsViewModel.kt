@@ -73,6 +73,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
+    // Navigation parameter helper for curation filtering
+    var filterCategoryOnSettings: String? = null
+
     init {
         // Fetch top stories initially if onboarding is done
         if (prefs.isCompletedOnboarding) {

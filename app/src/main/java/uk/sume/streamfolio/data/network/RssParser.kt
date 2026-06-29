@@ -154,6 +154,31 @@ class RssParser {
         var sourceUrl: String? = null
         var thumbnailUrl: String? = null
 
+        private fun cleanPublisherName(rawName: String): String {
+            val name = rawName.trim()
+            val separators = listOf(" - ", " | ", " : ")
+            for (sep in separators) {
+                if (name.contains(sep)) {
+                    val parts = name.split(sep)
+                    val part1 = parts[0].trim()
+                    val part2 = parts[parts.size - 1].trim()
+                    
+                    val keywords = listOf("times", "news", "post", "daily", "herald", "today", "guardian", "journal")
+                    val p1Lower = part1.lowercase()
+                    val p2Lower = part2.lowercase()
+                    
+                    return when {
+                        keywords.any { p1Lower.contains(it) } -> part1
+                        keywords.any { p2Lower.contains(it) } -> part2
+                        part1.length in 3..25 -> part1
+                        part2.length in 3..25 -> part2
+                        else -> part1
+                    }
+                }
+            }
+            return name
+        }
+
         fun build(category: String, customFeedId: Int? = null, channelFallback: String = "Unknown Source"): Article? {
             val articleLink = link ?: return null
             val rawTitle = title ?: "No Title"
@@ -162,6 +187,14 @@ class RssParser {
             var cleanSource = sourceName ?: channelFallback
             if (cleanSource.isBlank()) {
                 cleanSource = channelFallback
+            }
+            
+            // Try resolving publisher from URL domains (robust for curated feeds)
+            val resolvedName = DefaultFeedsConfig.getPublisherName(articleLink)
+            if (resolvedName != "Unknown Source") {
+                cleanSource = resolvedName
+            } else {
+                cleanSource = cleanPublisherName(cleanSource)
             }
             
             val lastDashIndex = rawTitle.lastIndexOf(" - ")
