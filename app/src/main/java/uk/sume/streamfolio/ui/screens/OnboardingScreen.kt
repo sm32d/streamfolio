@@ -296,7 +296,9 @@ private fun BottomNavigation(
 @Composable
 private fun WelcomeStep(systemLocale: Locale) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start
     ) {
         // App icon badge
@@ -426,7 +428,12 @@ private fun LanguageRegionStep(
         "SG" to "🇸🇬 Singapore"
     )
 
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.Start
+    ) {
         Text(
             text = "Language &\nRegion",
             fontSize = 34.sp,
@@ -484,7 +491,12 @@ private fun DefaultFeedsStep(
         "🎬 Entertainment" to "Entertainment"
     )
 
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.Start
+    ) {
         Text(
             text = "Personalise\nYour Feed",
             fontSize = 34.sp,
