@@ -240,7 +240,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                     ) {
                     
                     // Publisher Favicon filter carousel
-                    if (publishers.isNotEmpty()) {
+                    if (publishers.size > 1) {
                         item {
                             Text(
                                 text = "Publishers",
@@ -737,8 +737,9 @@ fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: Strin
     if (sourceUrl.isNotBlank()) {
         try {
             val uri = Uri.parse(sourceUrl)
-            val host = uri.host
+            var host = uri.host
             if (!host.isNullOrEmpty() && !host.contains("google.com")) {
+                if (host.startsWith("www.")) host = host.substring(4)
                 return host
             }
         } catch (e: Exception) {
@@ -748,8 +749,9 @@ fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: Strin
     if (articleLink.isNotBlank()) {
         try {
             val uri = Uri.parse(articleLink)
-            val host = uri.host
+            var host = uri.host
             if (!host.isNullOrEmpty() && !host.contains("google.com")) {
+                if (host.startsWith("www.")) host = host.substring(4)
                 return host
             }
         } catch (e: Exception) {

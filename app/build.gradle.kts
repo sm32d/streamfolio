@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.okhttp)
 
     testImplementation(libs.junit)
+    testImplementation("xmlpull:xmlpull:1.1.3.4a")
+    testImplementation("xpp3:xpp3:1.1.4c")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

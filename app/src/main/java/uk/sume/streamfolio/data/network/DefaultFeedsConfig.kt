@@ -32,7 +32,7 @@ object DefaultFeedsConfig {
                 "https://www.nasa.gov/news-release/feed/"
             ),
             "Sports" to listOf(
-                "https://www.espn.com/espn/rss/news",
+                "https://www.cbssports.com/rss/headlines/",
                 "https://sports.yahoo.com/rss/"
             ),
             "Health" to listOf(
@@ -205,6 +205,9 @@ object DefaultFeedsConfig {
             url.contains("nasa.gov") -> "NASA"
             url.contains("espn.com") -> "ESPN"
             url.contains("yahoo.com") -> "Yahoo Sports"
+            url.contains("cbssports.com") -> "CBS Sports"
+            url.contains("hollywoodreporter.com") -> "The Hollywood Reporter"
+            url.contains("variety.com") -> "Variety"
             url.contains("channelnewsasia.com") -> "CNA"
             url.contains("straitstimes.com") -> "The Straits Times"
             url.contains("techinasia.com") -> "Tech in Asia"
