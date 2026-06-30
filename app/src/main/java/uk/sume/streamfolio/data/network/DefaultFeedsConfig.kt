@@ -11,7 +11,7 @@ object DefaultFeedsConfig {
     private val FEEDS = mapOf(
         "US" to mapOf(
             "Top Stories" to listOf(
-                "https://feedx.net/rss/ap.xml",
+                "https://feeds.npr.org/1001/rss.xml",
                 "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
                 "https://feeds.bbci.co.uk/news/world/rss.xml"
             ),
@@ -94,21 +94,21 @@ object DefaultFeedsConfig {
         "IN" to mapOf(
             "Top Stories" to listOf(
                 "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
-                "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml"
+                "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"
             ),
             "World" to listOf(
                 "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
                 "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml"
             ),
             "Business" to listOf(
-                "https://www.moneycontrol.com/rss/latestnews.xml"
+                "https://www.livemint.com/rss/markets"
             ),
             "Technology" to listOf(
                 "https://feeds.feedburner.com/gadgets360-latest"
             ),
             "Sports" to listOf(
-                "https://www.ndtv.com/rss/sports",
-                "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml"
+                "https://www.hindustantimes.com/feeds/rss/sports/rssfeed.xml",
+                "https://www.livemint.com/rss/sports"
             )
         ),
         "CA" to mapOf(
@@ -193,6 +193,7 @@ object DefaultFeedsConfig {
 
     fun getPublisherName(url: String): String {
         return when {
+            url.contains("npr.org") -> "NPR"
             url.contains("apnews.com") || url.contains("ap.xml") -> "Associated Press (AP)"
             url.contains("nytimes.com") -> "The New York Times"
             url.contains("bbc.co.uk") || url.contains("bbc.com") || url.contains("bbci.co.uk") -> "BBC News"
@@ -214,6 +215,7 @@ object DefaultFeedsConfig {
             url.contains("timesofindia") -> "Times of India"
             url.contains("hindustantimes.com") -> "Hindustan Times"
             url.contains("moneycontrol.com") -> "Moneycontrol"
+            url.contains("livemint.com") -> "Livemint"
             url.contains("gadgets360") -> "Gadgets360"
             url.contains("ndtv.com") -> "NDTV"
             url.contains("cbc.ca") -> "CBC News"

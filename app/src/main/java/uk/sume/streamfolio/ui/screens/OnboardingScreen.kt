@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -92,6 +93,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
 
     var selectedLang by rememberSaveable { mutableStateOf(defaultLang) }
     var selectedRegion by rememberSaveable { mutableStateOf(defaultRegion) }
+    var selectedCacheDays by rememberSaveable { mutableStateOf("36500") }
     var isDefaultFeedsEnabled by rememberSaveable { mutableStateOf(true) }
     var selectedCats by rememberSaveable {
         mutableStateOf(setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment"))
@@ -161,7 +163,9 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             selectedLang = selectedLang,
                             onLangSelected = { selectedLang = it },
                             selectedRegion = selectedRegion,
-                            onRegionSelected = { selectedRegion = it }
+                            onRegionSelected = { selectedRegion = it },
+                            selectedCacheDays = selectedCacheDays,
+                            onCacheDaysSelected = { selectedCacheDays = it }
                         )
                         2 -> DefaultFeedsStep(
                             isEnabled = isDefaultFeedsEnabled,
@@ -184,6 +188,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                         currentStep++
                     } else {
                         viewModel.updatePreferences(selectedLang, selectedRegion)
+                        viewModel.prefs.cacheHistoryDays = selectedCacheDays.toInt()
                         viewModel.prefs.isDefaultFeedsEnabled = isDefaultFeedsEnabled
                         viewModel.prefs.selectedCategories = selectedCats
                         viewModel.prefs.isCompletedOnboarding = true
@@ -407,7 +412,9 @@ private fun LanguageRegionStep(
     selectedLang: String,
     onLangSelected: (String) -> Unit,
     selectedRegion: String,
-    onRegionSelected: (String) -> Unit
+    onRegionSelected: (String) -> Unit,
+    selectedCacheDays: String,
+    onCacheDaysSelected: (String) -> Unit
 ) {
     val languages = mapOf(
         "en" to "🇬🇧 English",
@@ -426,6 +433,14 @@ private fun LanguageRegionStep(
         "IN" to "🇮🇳 India",
         "AU" to "🇦🇺 Australia",
         "SG" to "🇸🇬 Singapore"
+    )
+    val cacheOptions = mapOf(
+        "1" to "1 Day",
+        "3" to "3 Days",
+        "7" to "7 Days",
+        "14" to "14 Days",
+        "30" to "30 Days",
+        "36500" to "Keep All"
     )
 
     Column(
@@ -467,6 +482,16 @@ private fun LanguageRegionStep(
             value = regions[selectedRegion] ?: "United States",
             options = regions,
             onSelected = onRegionSelected
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        SelectorField(
+            label = "Offline Cache History",
+            icon = Icons.Default.History,
+            value = cacheOptions[selectedCacheDays] ?: "Keep All",
+            options = cacheOptions,
+            onSelected = onCacheDaysSelected
         )
     }
 }
