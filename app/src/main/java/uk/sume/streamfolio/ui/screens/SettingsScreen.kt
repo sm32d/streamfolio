@@ -861,7 +861,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                 val sortedProviders = providersInRegion.sortedBy { it.category }
                                 for (i in sortedProviders.indices) {
                                     val provider = sortedProviders[i]
-                                    val compositeKey = "${provider.category}|${provider.url}"
+                                    val compositeKey = "${provider.region}|${provider.category}|${provider.url}"
                                     val isEnabled = if (isActiveRegion) {
                                         !disabledUrls.contains(compositeKey)
                                     } else {
@@ -996,7 +996,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                             for (i in sortedProviders.indices) {
                                 val provider = sortedProviders[i]
                                 val isProviderActiveRegion = provider.region == activeRegion
-                                val compositeKey = "${provider.category}|${provider.url}"
+                                val compositeKey = "${provider.region}|${provider.category}|${provider.url}"
                                 val isEnabled = if (isProviderActiveRegion) {
                                     !disabledUrls.contains(compositeKey)
                                 } else {

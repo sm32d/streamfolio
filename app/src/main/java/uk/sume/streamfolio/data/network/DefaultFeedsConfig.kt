@@ -175,14 +175,14 @@ object DefaultFeedsConfig {
         val regionUpper = region.uppercase()
         val regionMap = FEEDS[regionUpper] ?: FEEDS["US"]!!
         val standardFeeds = regionMap[category] ?: emptyList()
-        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains("$category|$it") }
+        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains("$regionUpper|$category|$it") }
         
         val manuallyEnabledCrossFeeds = mutableListOf<String>()
         for ((r, categoryMap) in FEEDS) {
             if (r != regionUpper) {
                 val urls = categoryMap[category] ?: emptyList()
                 for (url in urls) {
-                    if (enabledCrossRegionFeeds.contains("$category|$url")) {
+                    if (enabledCrossRegionFeeds.contains("$r|$category|$url")) {
                         manuallyEnabledCrossFeeds.add(url)
                     }
                 }
