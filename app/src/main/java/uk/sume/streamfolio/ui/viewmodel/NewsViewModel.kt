@@ -11,6 +11,7 @@ import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.data.network.NewsRepository
+import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import uk.sume.streamfolio.ui.components.TtsHelper
 import java.net.URLEncoder
 
@@ -29,10 +30,25 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedPublisher = MutableStateFlow<String?>(null)
     val selectedPublisher: StateFlow<String?> = _selectedPublisher
 
+    private val _prefsChangedSignal = MutableStateFlow(0)
+
     // Articles flow
-    val articles: StateFlow<List<Article>> = _selectedCategory
+    val articles: StateFlow<List<Article>> = combine(_selectedCategory, _prefsChangedSignal) { category, _ ->
+        category
+    }
         .flatMapLatest { category ->
-            repository.getArticlesByCategory(category)
+            repository.getArticlesByCategory(category).map { list ->
+                val enabledUrls = DefaultFeedsConfig.getFeedsFor(
+                    region = prefs.region,
+                    category = category,
+                    disabledFeedUrls = prefs.disabledFeedUrls,
+                    enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
+                ).toSet()
+                
+                list.filter { article ->
+                    article.customFeedId != null || enabledUrls.contains(article.sourceUrl)
+                }
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -194,6 +210,22 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         prefs.language = language
         prefs.region = region
         refreshCurrentFeed()
+    }
+
+    fun deleteArticlesForFeed(sourceUrl: String) {
+        viewModelScope.launch {
+            repository.deleteArticlesForFeed(sourceUrl)
+        }
+    }
+
+    fun fetchSingleFeed(url: String, category: String) {
+        viewModelScope.launch {
+            repository.fetchSingleFeed(url, category)
+        }
+    }
+
+    fun triggerPrefsChanged() {
+        _prefsChangedSignal.value = _prefsChangedSignal.value + 1
     }
 
     override fun onCleared() {

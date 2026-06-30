@@ -147,7 +147,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Version 1.1.3-beta · Free forever",
+                            text = "Version 1.1.4-beta · Free forever",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )
@@ -861,35 +861,42 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                 val sortedProviders = providersInRegion.sortedBy { it.category }
                                 for (i in sortedProviders.indices) {
                                     val provider = sortedProviders[i]
+                                    val compositeKey = "${provider.category}|${provider.url}"
                                     val isEnabled = if (isActiveRegion) {
-                                        !disabledUrls.contains(provider.url)
+                                        !disabledUrls.contains(compositeKey)
                                     } else {
-                                        enabledCrossRegion.contains(provider.url)
+                                        enabledCrossRegion.contains(compositeKey)
                                     }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
                                                 if (isActiveRegion) {
-                                                    val isCurrentlyEnabled = !disabledUrls.contains(provider.url)
+                                                    val isCurrentlyEnabled = !disabledUrls.contains(compositeKey)
                                                     val newDisabled = if (isCurrentlyEnabled) {
-                                                        disabledUrls + provider.url
+                                                        disabledUrls + compositeKey
                                                     } else {
-                                                        disabledUrls - provider.url
+                                                        disabledUrls - compositeKey
                                                     }
                                                     disabledUrls = newDisabled
                                                     viewModel.prefs.disabledFeedUrls = newDisabled
+                                                    if (!isCurrentlyEnabled) {
+                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                    }
                                                 } else {
-                                                    val isCurrentlyEnabled = enabledCrossRegion.contains(provider.url)
+                                                    val isCurrentlyEnabled = enabledCrossRegion.contains(compositeKey)
                                                     val newEnabled = if (isCurrentlyEnabled) {
-                                                        enabledCrossRegion - provider.url
+                                                        enabledCrossRegion - compositeKey
                                                     } else {
-                                                        enabledCrossRegion + provider.url
+                                                        enabledCrossRegion + compositeKey
                                                     }
                                                     enabledCrossRegion = newEnabled
                                                     viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                    if (!isCurrentlyEnabled) {
+                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                    }
                                                 }
-                                                viewModel.refreshCurrentFeed()
+                                                viewModel.triggerPrefsChanged()
                                             }
                                             .graphicsLayer {
                                                 alpha = if (isEnabled) 1f else 0.6f
@@ -916,22 +923,28 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                             onCheckedChange = { checked ->
                                                 if (isActiveRegion) {
                                                     val newDisabled = if (checked) {
-                                                        disabledUrls - provider.url
+                                                        disabledUrls - compositeKey
                                                     } else {
-                                                        disabledUrls + provider.url
+                                                        disabledUrls + compositeKey
                                                     }
                                                     disabledUrls = newDisabled
                                                     viewModel.prefs.disabledFeedUrls = newDisabled
+                                                    if (checked) {
+                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                    }
                                                 } else {
                                                     val newEnabled = if (checked) {
-                                                        enabledCrossRegion + provider.url
+                                                        enabledCrossRegion + compositeKey
                                                     } else {
-                                                        enabledCrossRegion - provider.url
+                                                        enabledCrossRegion - compositeKey
                                                     }
                                                     enabledCrossRegion = newEnabled
                                                     viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                    if (checked) {
+                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                    }
                                                 }
-                                                viewModel.refreshCurrentFeed()
+                                                viewModel.triggerPrefsChanged()
                                             },
                                             colors = SwitchDefaults.colors(
                                                 checkedThumbColor = Color.White,
@@ -983,10 +996,11 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                             for (i in sortedProviders.indices) {
                                 val provider = sortedProviders[i]
                                 val isProviderActiveRegion = provider.region == activeRegion
+                                val compositeKey = "${provider.category}|${provider.url}"
                                 val isEnabled = if (isProviderActiveRegion) {
-                                    !disabledUrls.contains(provider.url)
+                                    !disabledUrls.contains(compositeKey)
                                 } else {
-                                    enabledCrossRegion.contains(provider.url)
+                                    enabledCrossRegion.contains(compositeKey)
                                 }
                                 
                                 val regionNameText = when (provider.region) {
@@ -1006,25 +1020,31 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                         .fillMaxWidth()
                                         .clickable {
                                             if (isProviderActiveRegion) {
-                                                val isCurrentlyEnabled = !disabledUrls.contains(provider.url)
+                                                val isCurrentlyEnabled = !disabledUrls.contains(compositeKey)
                                                 val newDisabled = if (isCurrentlyEnabled) {
-                                                    disabledUrls + provider.url
+                                                    disabledUrls + compositeKey
                                                 } else {
-                                                    disabledUrls - provider.url
+                                                    disabledUrls - compositeKey
                                                 }
                                                 disabledUrls = newDisabled
                                                 viewModel.prefs.disabledFeedUrls = newDisabled
+                                                if (!isCurrentlyEnabled) {
+                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                }
                                             } else {
-                                                val isCurrentlyEnabled = enabledCrossRegion.contains(provider.url)
+                                                val isCurrentlyEnabled = enabledCrossRegion.contains(compositeKey)
                                                 val newEnabled = if (isCurrentlyEnabled) {
-                                                    enabledCrossRegion - provider.url
+                                                    enabledCrossRegion - compositeKey
                                                 } else {
-                                                    enabledCrossRegion + provider.url
+                                                    enabledCrossRegion + compositeKey
                                                 }
                                                 enabledCrossRegion = newEnabled
                                                 viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                if (!isCurrentlyEnabled) {
+                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                }
                                             }
-                                            viewModel.refreshCurrentFeed()
+                                            viewModel.triggerPrefsChanged()
                                         }
                                         .graphicsLayer {
                                             alpha = if (isEnabled) 1f else 0.6f
@@ -1051,22 +1071,28 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                         onCheckedChange = { checked ->
                                             if (isProviderActiveRegion) {
                                                 val newDisabled = if (checked) {
-                                                    disabledUrls - provider.url
+                                                    disabledUrls - compositeKey
                                                 } else {
-                                                    disabledUrls + provider.url
+                                                    disabledUrls + compositeKey
                                                 }
                                                 disabledUrls = newDisabled
                                                 viewModel.prefs.disabledFeedUrls = newDisabled
+                                                if (checked) {
+                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                }
                                             } else {
                                                 val newEnabled = if (checked) {
-                                                    enabledCrossRegion + provider.url
+                                                    enabledCrossRegion + compositeKey
                                                 } else {
-                                                    enabledCrossRegion - provider.url
+                                                    enabledCrossRegion - compositeKey
                                                 }
                                                 enabledCrossRegion = newEnabled
                                                 viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                if (checked) {
+                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                }
                                             }
-                                            viewModel.refreshCurrentFeed()
+                                            viewModel.triggerPrefsChanged()
                                         },
                                         colors = SwitchDefaults.colors(
                                             checkedThumbColor = Color.White,

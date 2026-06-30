@@ -81,19 +81,14 @@ object DefaultFeedsConfig {
                 "https://www.straitstimes.com/news/business/rss.xml"
             ),
             "Technology" to listOf(
-                "https://www.techinasia.com/feed",
-                "https://www.straitstimes.com/news/life/rss.xml"
+                "https://www.techinasia.com/feed"
             ),
             "Sports" to listOf(
                 "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10296",
                 "https://www.straitstimes.com/news/sport/rss.xml"
             ),
             "Health" to listOf(
-                "https://www.straitstimes.com/news/life/rss.xml",
                 "https://www.sciencedaily.com/rss/health_medicine.xml"
-            ),
-            "Entertainment" to listOf(
-                "https://www.straitstimes.com/news/life/rss.xml"
             )
         ),
         "IN" to mapOf(
@@ -180,14 +175,14 @@ object DefaultFeedsConfig {
         val regionUpper = region.uppercase()
         val regionMap = FEEDS[regionUpper] ?: FEEDS["US"]!!
         val standardFeeds = regionMap[category] ?: emptyList()
-        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains(it) }
+        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains("$category|$it") }
         
         val manuallyEnabledCrossFeeds = mutableListOf<String>()
         for ((r, categoryMap) in FEEDS) {
             if (r != regionUpper) {
                 val urls = categoryMap[category] ?: emptyList()
                 for (url in urls) {
-                    if (enabledCrossRegionFeeds.contains(url)) {
+                    if (enabledCrossRegionFeeds.contains("$category|$url")) {
                         manuallyEnabledCrossFeeds.add(url)
                     }
                 }

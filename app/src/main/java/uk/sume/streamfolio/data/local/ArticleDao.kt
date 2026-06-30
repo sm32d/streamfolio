@@ -8,7 +8,26 @@ import uk.sume.streamfolio.data.model.CustomFeed
 @Dao
 interface ArticleDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertArticles(articles: List<Article>)
+    suspend fun insertArticle(article: Article)
+
+    @Update
+    suspend fun updateArticle(article: Article)
+
+    @Query("SELECT * FROM articles WHERE link = :link")
+    suspend fun getArticleByLink(link: String): Article?
+
+    @Transaction
+    suspend fun insertOrUpdateArticles(articles: List<Article>) {
+        for (article in articles) {
+            val existing = getArticleByLink(article.link)
+            if (existing != null) {
+                val updated = article.copy(isBookmarked = existing.isBookmarked)
+                updateArticle(updated)
+            } else {
+                insertArticle(article)
+            }
+        }
+    }
 
     @Query("UPDATE articles SET isBookmarked = :isBookmarked WHERE link = :link")
     suspend fun updateBookmarkStatus(link: String, isBookmarked: Boolean)
@@ -36,6 +55,9 @@ interface ArticleDao {
 
     @Query("DELETE FROM articles WHERE isBookmarked = 0 AND pubDate < :expiryDate")
     suspend fun pruneOldArticles(expiryDate: String)
+
+    @Query("DELETE FROM articles WHERE sourceUrl = :sourceUrl AND isBookmarked = 0")
+    suspend fun deleteArticlesBySourceUrl(sourceUrl: String)
 }
 
 @Dao

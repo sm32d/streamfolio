@@ -14,8 +14,8 @@ android {
         applicationId = "uk.sume.streamfolio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.1.3-beta"
+        versionCode = 6
+        versionName = "1.1.4-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

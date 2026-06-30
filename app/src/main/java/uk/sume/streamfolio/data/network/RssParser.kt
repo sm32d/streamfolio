@@ -49,7 +49,7 @@ class RssParser {
     /**
      * Unified parser supporting standard RSS (<channel>/<item>) and Atom (<feed>/<entry>) formats.
      */
-    fun parse(xmlContent: String, category: String, customFeedId: Int? = null): List<Article> {
+    fun parse(xmlContent: String, category: String, customFeedId: Int? = null, feedUrl: String? = null): List<Article> {
         val articles = mutableListOf<Article>()
         var channelTitle = "Unknown Source"
         try {
@@ -66,7 +66,9 @@ class RssParser {
                     XmlPullParser.START_TAG -> {
                         // Detect start of RSS item or Atom entry
                         if (name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) {
-                            currentArticleBuilder = ArticleBuilder()
+                            currentArticleBuilder = ArticleBuilder().apply {
+                                sourceUrl = feedUrl
+                            }
                         } else if (currentArticleBuilder != null) {
                             when {
                                 name.equals("title", ignoreCase = true) -> {

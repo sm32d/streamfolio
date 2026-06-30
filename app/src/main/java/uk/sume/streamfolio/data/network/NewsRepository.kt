@@ -65,7 +65,7 @@ class NewsRepository(context: Context) {
                     client.newCall(request).execute().use { response ->
                         if (response.isSuccessful) {
                             val xml = response.body?.string() ?: ""
-                            val parsed = parser.parse(xml, category)
+                            val parsed = parser.parse(xml, category, feedUrl = url)
                             feedArticles.addAll(parsed)
                         }
                     }
@@ -114,7 +114,7 @@ class NewsRepository(context: Context) {
                                         client.newCall(childRequest).execute().use { childResponse ->
                                             if (childResponse.isSuccessful) {
                                                 val childXml = childResponse.body?.string() ?: ""
-                                                val childArticles = parser.parse(childXml, feed.category, feed.id)
+                                                val childArticles = parser.parse(childXml, feed.category, feed.id, feedUrl = formattedChildUrl)
                                                 aggregated.addAll(childArticles)
                                             }
                                         }
@@ -124,7 +124,7 @@ class NewsRepository(context: Context) {
                                 }
                                 aggregated
                             } else {
-                                parser.parse(xml, feed.category, feed.id)
+                                parser.parse(xml, feed.category, feed.id, feedUrl = url)
                             }
                             feedArticles.addAll(parsed)
                         }
@@ -145,7 +145,7 @@ class NewsRepository(context: Context) {
     }
 
     private suspend fun insertAndPruneArticles(allArticles: List<Article>, category: String) {
-        articleDao.insertArticles(allArticles)
+        articleDao.insertOrUpdateArticles(allArticles)
         val historyDays = prefs.cacheHistoryDays
         if (historyDays < 36500) {
             val cal = java.util.Calendar.getInstance()
@@ -208,7 +208,7 @@ class NewsRepository(context: Context) {
                                         client.newCall(childReq).execute().use { childResp ->
                                             if (childResp.isSuccessful) {
                                                 val childXml = childResp.body?.string() ?: ""
-                                                val childParsed = parser.parse(childXml, cat)
+                                                val childParsed = parser.parse(childXml, cat, feedUrl = fc)
                                                 aggregated.addAll(childParsed)
                                             }
                                         }
@@ -218,7 +218,7 @@ class NewsRepository(context: Context) {
                                 }
                                 aggregated
                             } else {
-                                parser.parse(xml, cat)
+                                parser.parse(xml, cat, feedUrl = formattedUrl)
                             }
                             
                             val cleanQuery = query.replace("\"", "").lowercase()
@@ -243,7 +243,7 @@ class NewsRepository(context: Context) {
         }
         
         articleDao.clearNonBookmarkedArticlesByCategory(category)
-        articleDao.insertArticles(allArticles)
+        articleDao.insertOrUpdateArticles(allArticles)
         triggerThumbnailResolution(allArticles)
     }
 
@@ -442,4 +442,27 @@ class NewsRepository(context: Context) {
     fun getCustomFeeds(): Flow<List<CustomFeed>> = customFeedDao.getAllFeeds()
     suspend fun addCustomFeed(feed: CustomFeed) = customFeedDao.insertFeed(feed)
     suspend fun deleteCustomFeed(feed: CustomFeed) = customFeedDao.deleteFeed(feed)
+
+    suspend fun deleteArticlesForFeed(sourceUrl: String) = withContext(Dispatchers.IO) {
+        articleDao.deleteArticlesBySourceUrl(sourceUrl)
+    }
+
+    suspend fun fetchSingleFeed(url: String, category: String) = withContext(Dispatchers.IO) {
+        val allArticles = mutableListOf<Article>()
+        try {
+            val request = buildBrowserRequest(url)
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val xml = response.body?.string() ?: ""
+                    val parsed = parser.parse(xml, category, feedUrl = url)
+                    allArticles.addAll(parsed)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NewsRepository", "Error fetching single feed: $url", e)
+        }
+        if (allArticles.isNotEmpty()) {
+            insertAndPruneArticles(allArticles, category)
+        }
+    }
 }
