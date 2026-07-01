@@ -5,6 +5,9 @@ import android.net.Uri
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,9 +46,15 @@ import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.components.TextSkeletonLoader
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: String) {
+fun DetailScreen(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    url: String,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val articles by viewModel.articles.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
@@ -174,36 +183,48 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                         val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
 
                         if (hasValidThumbnail) {
-                            AsyncImage(
-                                model = thumbnail,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(240.dp)
-                                    .padding(horizontal = 24.dp)
-                                    .clip(RoundedCornerShape(24.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .padding(horizontal = 24.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = article.sourceName,
-                                    color = Color.White,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold
+                            with(sharedTransitionScope) {
+                                AsyncImage(
+                                    model = thumbnail,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp)
+                                        .padding(horizontal = 24.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        ),
+                                    contentScale = ContentScale.Crop
                                 )
+                            }
+                        } else {
+                            with(sharedTransitionScope) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .padding(horizontal = 24.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope
+                                        )
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = article.sourceName,
+                                        color = Color.White,
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
@@ -216,13 +237,19 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = article.title,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 28.sp
-                            )
+                            with(sharedTransitionScope) {
+                                Text(
+                                    text = article.title,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = 28.sp,
+                                    modifier = Modifier.sharedElement(
+                                        rememberSharedContentState(key = "title_${article.link}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    )
+                                )
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(

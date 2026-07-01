@@ -92,6 +92,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     // Navigation parameter helper for curation filtering
     var filterCategoryOnSettings: String? = null
 
+    // Pending article URL clicked from widget
+    var pendingArticleUrl: String? = null
+
     init {
         // Fetch top stories initially if onboarding is done
         if (prefs.isCompletedOnboarding) {

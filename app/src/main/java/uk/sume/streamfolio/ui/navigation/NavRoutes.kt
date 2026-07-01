@@ -1,6 +1,9 @@
 package uk.sume.streamfolio.ui.navigation
 
 import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.layout.*
@@ -16,15 +19,26 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.runtime.LaunchedEffect
 import uk.sume.streamfolio.ui.components.BottomTab
 import uk.sume.streamfolio.ui.components.GlassmorphicNavBar
 import uk.sume.streamfolio.ui.screens.*
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLDecoder
+import java.net.URLEncoder
 
 @Composable
 fun AppNavigation(viewModel: NewsViewModel) {
     val navController = rememberNavController()
+
+    LaunchedEffect(viewModel.pendingArticleUrl) {
+        viewModel.pendingArticleUrl?.let { url ->
+            viewModel.pendingArticleUrl = null
+            val encodedUrl = URLEncoder.encode(url, "UTF-8")
+            navController.navigate("detail_screen/$encodedUrl")
+        }
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -50,28 +64,45 @@ fun AppNavigation(viewModel: NewsViewModel) {
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
-            NavHost(
-                navController = navController,
-                startDestination = startDestination,
-                modifier = Modifier.fillMaxSize(),
-                enterTransition = { fadeIn(animationSpec = tween(250)) },
-                exitTransition = { fadeOut(animationSpec = tween(250)) }
-            ) {
-            composable("onboarding") {
-                OnboardingScreen(navController = navController, viewModel = viewModel)
-            }
-            composable(BottomTab.HOME.route) {
-                HomeScreen(navController = navController, viewModel = viewModel)
-            }
-            composable(BottomTab.SEARCH.route) {
-                SearchScreen(navController = navController, viewModel = viewModel)
-            }
-            composable(BottomTab.BOOKMARKS.route) {
-                BookmarkScreen(navController = navController, viewModel = viewModel)
-            }
-            composable(BottomTab.SETTINGS.route) {
-                SettingsScreen(navController = navController, viewModel = viewModel)
-            }
+            @OptIn(ExperimentalSharedTransitionApi::class)
+            SharedTransitionLayout {
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination,
+                    modifier = Modifier.fillMaxSize(),
+                    enterTransition = { fadeIn(animationSpec = tween(250)) },
+                    exitTransition = { fadeOut(animationSpec = tween(250)) }
+                ) {
+                composable("onboarding") {
+                    OnboardingScreen(navController = navController, viewModel = viewModel)
+                }
+                composable(BottomTab.HOME.route) {
+                    HomeScreen(
+                        navController = navController,
+                        viewModel = viewModel,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedVisibilityScope = this
+                    )
+                }
+                composable(BottomTab.SEARCH.route) {
+                    SearchScreen(
+                        navController = navController,
+                        viewModel = viewModel,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedVisibilityScope = this
+                    )
+                }
+                composable(BottomTab.BOOKMARKS.route) {
+                    BookmarkScreen(
+                        navController = navController,
+                        viewModel = viewModel,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedVisibilityScope = this
+                    )
+                }
+                composable(BottomTab.SETTINGS.route) {
+                    SettingsScreen(navController = navController, viewModel = viewModel)
+                }
             composable(
                 route = "settings_preferences",
                 enterTransition = {
@@ -247,9 +278,16 @@ fun AppNavigation(viewModel: NewsViewModel) {
             ) { backStackEntry ->
                 val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""
                 val decodedUrl = URLDecoder.decode(encodedUrl, "UTF-8")
-                DetailScreen(navController = navController, viewModel = viewModel, url = decodedUrl)
+                DetailScreen(
+                    navController = navController,
+                    viewModel = viewModel,
+                    url = decodedUrl,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this
+                )
             }
         }
+    }
 
         if (showBottomBar) {
             val selectedTab = when (currentRoute) {

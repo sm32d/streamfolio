@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_glass_bg"
+    android:padding="16dp">
+
+    <!-- Top Header Bar -->
+    <LinearLayout
+        android:id="@+id/header_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_alignParentTop="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="StreamFolio"
+            android:textColor="#00B0FF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:text="•"
+            android:textColor="#40FFFFFF"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/widget_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Latest Headline"
+            android:textColor="#80FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Main Headline Content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_below="@id/header_layout"
+        android:layout_centerInParent="true"
+        android:layout_marginTop="8dp">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add the StreamFolio widget to see your bookmarks and trending headlines!"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/widget_source"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="StreamFolio News"
+            android:textColor="#A0FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+</RelativeLayout>

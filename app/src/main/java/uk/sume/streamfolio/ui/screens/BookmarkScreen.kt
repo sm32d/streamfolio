@@ -19,10 +19,19 @@ import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import java.net.URLEncoder
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun BookmarkScreen(navController: NavController, viewModel: NewsViewModel) {
+fun BookmarkScreen(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
 
     val isDark = isSystemInDarkTheme()
@@ -91,6 +100,8 @@ fun BookmarkScreen(navController: NavController, viewModel: NewsViewModel) {
                     items(bookmarkedArticles) { article ->
                         ArticleListItem(
                             article = article,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
                             onTap = {
                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                 navController.navigate("detail_screen/$encodedUrl")

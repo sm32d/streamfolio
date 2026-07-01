@@ -24,9 +24,18 @@ import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLEncoder
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
+fun SearchScreen(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val isLoadingSearch by viewModel.isLoadingSearch.collectAsState()
@@ -179,6 +188,8 @@ fun SearchScreen(navController: NavController, viewModel: NewsViewModel) {
                     items(searchResults) { article ->
                         ArticleListItem(
                             article = article,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
                             onTap = {
                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                 navController.navigate("detail_screen/$encodedUrl")
