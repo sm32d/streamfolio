@@ -51,6 +51,15 @@
             android:padding="2dp"
             android:focusable="true"
             android:clickable="true" />
+
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center_vertical"
+            android:visibility="gone"
+            android:indeterminate="true"
+            style="?android:attr/progressBarStyleSmall" />
     </LinearLayout>
 
     <!-- Main Headline Content -->

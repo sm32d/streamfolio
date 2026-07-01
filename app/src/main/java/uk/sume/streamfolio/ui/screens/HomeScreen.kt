@@ -530,7 +530,8 @@ fun TrendingCard(
                         .fillMaxSize()
                         .sharedElement(
                             rememberSharedContentState(key = "image_${article.link}"),
-                            animatedVisibilityScope = animatedVisibilityScope
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
                         ),
                     contentScale = ContentScale.Crop
                 )
@@ -543,7 +544,8 @@ fun TrendingCard(
                         .fillMaxSize()
                         .sharedElement(
                             rememberSharedContentState(key = "image_${article.link}"),
-                            animatedVisibilityScope = animatedVisibilityScope
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
                         )
                         .background(
                             Brush.linearGradient(
@@ -804,7 +806,8 @@ fun ArticleListItem(
                                     .clip(RoundedCornerShape(16.dp))
                                     .sharedElement(
                                         rememberSharedContentState(key = "image_${article.link}"),
-                                        animatedVisibilityScope = animatedVisibilityScope
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
                                     ),
                                 contentScale = ContentScale.Crop
                             )
@@ -817,7 +820,8 @@ fun ArticleListItem(
                                     .clip(RoundedCornerShape(16.dp))
                                     .sharedElement(
                                         rememberSharedContentState(key = "image_${article.link}"),
-                                        animatedVisibilityScope = animatedVisibilityScope
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
                                     )
                                     .background(
                                         Brush.linearGradient(

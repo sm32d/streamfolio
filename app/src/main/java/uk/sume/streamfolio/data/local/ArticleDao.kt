@@ -79,4 +79,7 @@ interface CustomFeedDao {
 
     @Query("SELECT * FROM custom_feeds ORDER BY id DESC")
     fun getAllFeeds(): Flow<List<CustomFeed>>
+
+    @Query("SELECT * FROM custom_feeds ORDER BY id DESC")
+    suspend fun getAllFeedsSync(): List<CustomFeed>
 }

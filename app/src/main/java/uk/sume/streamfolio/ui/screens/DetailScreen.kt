@@ -194,7 +194,8 @@ fun DetailScreen(
                                         .clip(RoundedCornerShape(24.dp))
                                         .sharedElement(
                                             rememberSharedContentState(key = "image_${article.link}"),
-                                            animatedVisibilityScope = animatedVisibilityScope
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
                                         ),
                                     contentScale = ContentScale.Crop
                                 )
@@ -209,7 +210,8 @@ fun DetailScreen(
                                         .clip(RoundedCornerShape(24.dp))
                                         .sharedElement(
                                             rememberSharedContentState(key = "image_${article.link}"),
-                                            animatedVisibilityScope = animatedVisibilityScope
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
                                         )
                                         .background(
                                             Brush.linearGradient(
