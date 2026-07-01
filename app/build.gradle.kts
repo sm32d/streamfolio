@@ -61,6 +61,7 @@ dependencies {
     // Navigation & Image Loading
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     
     // Parsing & Networking
     implementation(libs.jsoup)

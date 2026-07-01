@@ -44,6 +44,11 @@ import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import uk.sume.streamfolio.data.network.CuratedProvider
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 // ─── Main Settings Screen ───────────────────────────────────────────────────
 
@@ -152,6 +157,98 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+            SectionLabel("More from Dominik Studios")
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            val context = LocalContext.current
+            val imageLoader = remember {
+                coil.ImageLoader.Builder(context)
+                    .components {
+                        if (android.os.Build.VERSION.SDK_INT >= 28) {
+                            add(coil.decode.ImageDecoderDecoder.Factory())
+                        } else {
+                            add(coil.decode.GifDecoder.Factory())
+                        }
+                    }
+                    .okHttpClient {
+                        okhttp3.OkHttpClient.Builder()
+                            .addInterceptor { chain ->
+                                val request = chain.request().newBuilder()
+                                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                                    .build()
+                                chain.proceed(request)
+                            }
+                            .build()
+                    }
+                    .build()
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.thejoblog.com"))
+                        context.startActivity(intent)
+                    },
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = "https://www.thejoblog.com/tjl.gif",
+                            contentDescription = "The Job Log Logo",
+                            imageLoader = imageLoader,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(16.dp))
+                    
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "The Job Log",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Your ultimate professional job hunting companion. Track application progress, interview schedules, and follow-ups elegantly.",
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
+                    
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }

@@ -59,11 +59,14 @@ interface ArticleDao {
     @Query("DELETE FROM articles WHERE sourceUrl = :sourceUrl AND isBookmarked = 0")
     suspend fun deleteArticlesBySourceUrl(sourceUrl: String)
 
-    @Query("SELECT * FROM articles WHERE isBookmarked = 1 ORDER BY pubDate DESC LIMIT 5")
+    @Query("SELECT * FROM articles WHERE isBookmarked = 1 ORDER BY pubDate DESC LIMIT 50")
     suspend fun getBookmarkedArticlesSync(): List<Article>
 
-    @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 5")
+    @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 50")
     suspend fun getLatestArticlesSync(): List<Article>
+
+    @Query("SELECT * FROM articles WHERE category = :category ORDER BY pubDate DESC LIMIT 50")
+    suspend fun getArticlesByCategorySync(category: String): List<Article>
 }
 
 @Dao

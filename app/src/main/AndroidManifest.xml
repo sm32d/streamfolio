@@ -27,6 +27,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".WidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.News">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name=".StreamFolioWidgetProvider"
             android:exported="false">
@@ -37,6 +46,11 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/streamfolio_widget_info" />
         </receiver>
+
+        <service
+            android:name=".StreamFolioWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
     </application>
 
 </manifest>
