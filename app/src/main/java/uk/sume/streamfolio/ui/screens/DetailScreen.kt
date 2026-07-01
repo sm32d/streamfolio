@@ -340,7 +340,7 @@ fun DetailScreen(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     lineHeight = (fontSize * 1.3f * 1.25f).sp,
-                                    fontFamily = if (fontFamily == "serif") FontFamily.Serif else FontFamily.SansSerif,
+                                    fontFamily = if (fontFamily == "serif") FontFamily(android.graphics.Typeface.SERIF) else FontFamily(android.graphics.Typeface.SANS_SERIF),
                                     modifier = Modifier.sharedElement(
                                         rememberSharedContentState(key = "title_${article.link}"),
                                         animatedVisibilityScope = animatedVisibilityScope
@@ -477,7 +477,7 @@ fun DetailScreen(
                                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = cardAlpha))
                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                         ) {
-                                            val currentFont = if (fontFamily == "serif") androidx.compose.ui.text.font.FontFamily.Serif else androidx.compose.ui.text.font.FontFamily.SansSerif
+                                            val currentFont = if (fontFamily == "serif") FontFamily(android.graphics.Typeface.SERIF) else FontFamily(android.graphics.Typeface.SANS_SERIF)
                                             Text(
                                                 text = paragraph,
                                                 fontSize = fontSize.sp,

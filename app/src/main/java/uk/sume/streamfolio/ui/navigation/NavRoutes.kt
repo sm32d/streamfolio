@@ -6,6 +6,9 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -324,14 +327,34 @@ fun AppNavigation(viewModel: NewsViewModel) {
 
         val hiddenRoutes = listOf("onboarding", "settings_screen", "settings_preferences", "settings_categories")
         val showMiniPlayer = currentRoute !in hiddenRoutes
-        if (showMiniPlayer) {
-            val bottomOffset = if (showBottomBar) 96.dp else 20.dp
+
+        val animatedBottomOffset by animateDpAsState(
+            targetValue = if (showBottomBar) 108.dp else 20.dp,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessLow
+            ),
+            label = "miniPlayerBottomOffset"
+        )
+
+        AnimatedVisibility(
+            visible = showMiniPlayer,
+            enter = fadeIn(animationSpec = tween(300)) + slideInVertically(
+                initialOffsetY = { it / 2 },
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            ),
+            exit = fadeOut(animationSpec = tween(300)) + slideOutVertically(
+                targetOffsetY = { it / 2 },
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            ),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
             TtsMiniPlayer(
                 viewModel = viewModel,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(bottom = bottomOffset)
+                    .padding(bottom = animatedBottomOffset)
             )
         }
 

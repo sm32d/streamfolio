@@ -851,52 +851,74 @@ fun ArticleListItem(
                     } ?: false
                     val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
 
-                    if (hasValidThumbnail) {
-                        with(sharedTransitionScope) {
-                            AsyncImage(
-                                model = thumbnail,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .sharedElement(
-                                        rememberSharedContentState(key = "image_${article.link}"),
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
-                                    ),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    } else {
-                        with(sharedTransitionScope) {
-                            Box(
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .sharedElement(
-                                        rememberSharedContentState(key = "image_${article.link}"),
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
-                                    )
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = article.sourceName.firstOrNull()?.toString() ?: "?",
-                                    color = Color.White,
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Bold
+                    // Left Thumbnail Area with Overlaid Play Button
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        if (hasValidThumbnail) {
+                            with(sharedTransitionScope) {
+                                AsyncImage(
+                                    model = thumbnail,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
+                                        ),
+                                    contentScale = ContentScale.Crop
                                 )
                             }
+                        } else {
+                            with(sharedTransitionScope) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
+                                        )
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = article.sourceName.firstOrNull()?.toString() ?: "?",
+                                        color = Color.White,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        // Overlaid Play Button
+                        IconButton(
+                            onClick = onPlayClick,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(36.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = "Play Now",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
+                    // Text & Actions Column
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = article.sourceName,
@@ -919,7 +941,10 @@ fun ArticleListItem(
                                 )
                             )
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Bottom Row: Date on Left, Secondary Actions on Right
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -932,20 +957,6 @@ fun ArticleListItem(
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(
-                                    onClick = onPlayClick,
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "Play Now",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(10.dp))
-
-                                IconButton(
                                     onClick = onQueueClick,
                                     modifier = Modifier.size(24.dp)
                                 ) {
@@ -957,7 +968,7 @@ fun ArticleListItem(
                                     )
                                 }
                                 
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
 
                                 IconButton(
                                     onClick = onBookmarkToggle,
