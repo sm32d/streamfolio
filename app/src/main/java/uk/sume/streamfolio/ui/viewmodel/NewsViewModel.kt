@@ -22,6 +22,170 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val prefs = PreferencesHelper(application)
     val ttsHelper = TtsHelper(application)
 
+    init {
+        ttsHelper.onArticleCompleted = {
+            advanceTtsPlaylist()
+        }
+    }
+
+    // Typography States
+    val readerFontFamily = MutableStateFlow(prefs.readerFontFamily)
+    val readerFontSize = MutableStateFlow(prefs.readerFontSize)
+    val readerLineSpacing = MutableStateFlow(prefs.readerLineSpacing)
+
+    // TTS Word Range & Seek
+    val currentWordRange: StateFlow<Pair<Int, Int>?> = ttsHelper.currentWordRange
+
+    private val _showLyricsVisualizer = MutableStateFlow(false)
+    val showLyricsVisualizer: StateFlow<Boolean> = _showLyricsVisualizer
+
+    fun setShowLyricsVisualizer(show: Boolean) {
+        _showLyricsVisualizer.value = show
+    }
+
+    fun seekTtsToParagraph(index: Int) {
+        ttsHelper.seekToParagraph(index)
+    }
+
+    fun updateReaderFontFamily(font: String) {
+        prefs.readerFontFamily = font
+        readerFontFamily.value = font
+    }
+
+    fun updateReaderFontSize(size: Float) {
+        prefs.readerFontSize = size
+        readerFontSize.value = size
+    }
+
+    fun updateReaderLineSpacing(spacing: Float) {
+        prefs.readerLineSpacing = spacing
+        readerLineSpacing.value = spacing
+    }
+
+    // TTS Playlist state
+    private val _ttsPlaylist = MutableStateFlow<List<Article>>(emptyList())
+    val ttsPlaylist: StateFlow<List<Article>> = _ttsPlaylist
+
+    private val _currentTtsArticleIndex = MutableStateFlow<Int>(-1)
+    val currentTtsArticleIndex: StateFlow<Int> = _currentTtsArticleIndex
+
+    fun addToTtsPlaylist(article: Article) {
+        val current = _ttsPlaylist.value.toMutableList()
+        if (!current.any { it.link == article.link }) {
+            current.add(article)
+            _ttsPlaylist.value = current
+            if (_currentTtsArticleIndex.value == -1) {
+                _currentTtsArticleIndex.value = 0
+            }
+        }
+    }
+
+    fun removeFromTtsPlaylist(article: Article) {
+        val current = _ttsPlaylist.value.toMutableList()
+        val index = current.indexOfFirst { it.link == article.link }
+        if (index != -1) {
+            current.removeAt(index)
+            _ttsPlaylist.value = current
+            
+            val activeIdx = _currentTtsArticleIndex.value
+            if (activeIdx == index) {
+                if (current.isEmpty()) {
+                    stopSpeakingPlaylist()
+                } else {
+                    val nextIdx = if (index < current.size) index else current.size - 1
+                    playTtsPlaylist(nextIdx)
+                }
+            } else if (index < activeIdx) {
+                _currentTtsArticleIndex.value = activeIdx - 1
+            }
+        }
+    }
+
+    fun clearTtsPlaylist() {
+        stopSpeakingPlaylist()
+        _ttsPlaylist.value = emptyList()
+    }
+
+    fun moveTtsPlaylistItem(fromIndex: Int, toIndex: Int) {
+        val current = _ttsPlaylist.value.toMutableList()
+        if (fromIndex in current.indices && toIndex in current.indices) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            _ttsPlaylist.value = current
+            
+            // Adjust current playing index if it was moved
+            val activeIdx = _currentTtsArticleIndex.value
+            if (activeIdx == fromIndex) {
+                _currentTtsArticleIndex.value = toIndex
+            } else if (activeIdx in (fromIndex + 1)..toIndex) {
+                _currentTtsArticleIndex.value = activeIdx - 1
+            } else if (activeIdx in toIndex..<fromIndex) {
+                _currentTtsArticleIndex.value = activeIdx + 1
+            }
+        }
+    }
+
+    fun playTtsPlaylist(startIndex: Int) {
+        val list = _ttsPlaylist.value
+        if (startIndex < 0 || startIndex >= list.size) return
+        
+        _currentTtsArticleIndex.value = startIndex
+        val article = list[startIndex]
+        
+        viewModelScope.launch {
+            _isLoadingBody.value = true
+            _articleBody.value = ""
+            ttsHelper.stop()
+            
+            val cached = repository.getArticleByLink(article.link)
+            val textToSpeak = if (cached != null && cached.fullText != null) {
+                _articleBody.value = cached.fullText
+                cached.fullText
+            } else {
+                val body = repository.fetchArticleBody(article.link)
+                _articleBody.value = body
+                if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                    repository.updateFullText(article.link, body)
+                }
+                body
+            }
+            _isLoadingBody.value = false
+            ttsHelper.play(textToSpeak)
+        }
+    }
+
+    fun stopSpeakingPlaylist() {
+        ttsHelper.stop()
+        _currentTtsArticleIndex.value = -1
+        _articleBody.value = ""
+    }
+
+    fun playOrPausePlaylist() {
+        if (ttsHelper.isPlaying.value) {
+            ttsHelper.pause()
+        } else {
+            val idx = _currentTtsArticleIndex.value
+            if (idx != -1) {
+                if (_articleBody.value.isEmpty()) {
+                    playTtsPlaylist(idx)
+                } else {
+                    ttsHelper.resume()
+                }
+            } else if (_ttsPlaylist.value.isNotEmpty()) {
+                playTtsPlaylist(0)
+            }
+        }
+    }
+
+    fun advanceTtsPlaylist() {
+        val nextIndex = _currentTtsArticleIndex.value + 1
+        if (nextIndex < _ttsPlaylist.value.size) {
+            playTtsPlaylist(nextIndex)
+        } else {
+            stopSpeakingPlaylist()
+        }
+    }
+
     // Current category selector
     private val _selectedCategory = MutableStateFlow("Top Stories")
     val selectedCategory: StateFlow<String> = _selectedCategory
@@ -170,18 +334,43 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadArticleBody(url: String) {
         viewModelScope.launch {
+            // Check if this article is already active in the reader/speech playlist.
+            // If yes, do not clear the body or stop the playback.
+            val list = _ttsPlaylist.value
+            val activeIdx = _currentTtsArticleIndex.value
+            if (activeIdx != -1 && activeIdx < list.size && list[activeIdx].link == url) {
+                // Keep playing, do not stop!
+                return@launch
+            }
+
             _isLoadingBody.value = true
             _articleBody.value = ""
             ttsHelper.stop() // Stop playing previous article
-            val body = repository.fetchArticleBody(url)
-            _articleBody.value = body
-            _isLoadingBody.value = false
+            
+            val cachedArticle = repository.getArticleByLink(url)
+            if (cachedArticle != null && cachedArticle.fullText != null) {
+                _articleBody.value = cachedArticle.fullText
+                _isLoadingBody.value = false
+            } else {
+                val body = repository.fetchArticleBody(url)
+                _articleBody.value = body
+                _isLoadingBody.value = false
+                if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                    repository.updateFullText(url, body)
+                }
+            }
         }
     }
 
-    // TTS Actions
-    fun speakArticle() {
-        ttsHelper.playOrPause(_articleBody.value)
+    fun speakArticle(article: Article) {
+        val list = _ttsPlaylist.value
+        val activeIdx = _currentTtsArticleIndex.value
+        if (activeIdx != -1 && activeIdx < list.size && list[activeIdx].link == article.link) {
+            playOrPausePlaylist()
+        } else {
+            _ttsPlaylist.value = listOf(article)
+            playTtsPlaylist(0)
+        }
     }
 
     fun stopSpeaking() {

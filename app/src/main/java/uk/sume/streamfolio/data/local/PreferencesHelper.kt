@@ -44,4 +44,16 @@ class PreferencesHelper(context: Context) {
     var cacheHistoryDays: Int
         get() = prefs.getInt("cache_history_days", 36500)
         set(value) = prefs.edit().putInt("cache_history_days", value).apply()
+
+    var readerFontFamily: String
+        get() = prefs.getString("reader_font_family", "sans_serif") ?: "sans_serif"
+        set(value) = prefs.edit().putString("reader_font_family", value).apply()
+
+    var readerFontSize: Float
+        get() = prefs.getFloat("reader_font_size", 16f)
+        set(value) = prefs.edit().putFloat("reader_font_size", value).apply()
+
+    var readerLineSpacing: Float
+        get() = prefs.getFloat("reader_line_spacing", 1.5f)
+        set(value) = prefs.edit().putFloat("reader_line_spacing", value).apply()
 }

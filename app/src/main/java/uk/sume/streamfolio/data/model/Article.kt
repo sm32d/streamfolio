@@ -15,5 +15,6 @@ data class Article(
     val category: String,
     val thumbnailUrl: String? = null,
     val isBookmarked: Boolean = false,
-    val customFeedId: Int? = null
+    val customFeedId: Int? = null,
+    val fullText: String? = null
 )

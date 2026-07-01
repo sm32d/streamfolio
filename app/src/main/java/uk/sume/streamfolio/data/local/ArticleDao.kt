@@ -47,6 +47,12 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE thumbnailUrl IS NULL ORDER BY pubDate DESC LIMIT :limit")
     suspend fun getArticlesWithoutThumbnail(limit: Int): List<Article>
 
+    @Query("UPDATE articles SET fullText = :fullText WHERE link = :link")
+    suspend fun updateFullText(link: String, fullText: String?)
+
+    @Query("SELECT * FROM articles WHERE fullText IS NULL AND category != 'bookmarks' ORDER BY pubDate DESC LIMIT :limit")
+    suspend fun getArticlesWithoutFullText(limit: Int): List<Article>
+
     @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 50")
     fun getAllArticles(): Flow<List<Article>>
 

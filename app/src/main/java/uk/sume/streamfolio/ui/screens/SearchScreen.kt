@@ -23,6 +23,8 @@ import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLEncoder
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -38,6 +40,7 @@ fun SearchScreen(
 ) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val context = LocalContext.current
     val isLoadingSearch by viewModel.isLoadingSearch.collectAsState()
 
     val isDark = isSystemInDarkTheme()
@@ -194,7 +197,12 @@ fun SearchScreen(
                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                 navController.navigate("detail_screen/$encodedUrl")
                             },
-                            onBookmarkToggle = { viewModel.toggleBookmark(article) }
+                            onBookmarkToggle = { viewModel.toggleBookmark(article) },
+                            onPlayClick = { viewModel.speakArticle(article) },
+                            onQueueClick = {
+                                viewModel.addToTtsPlaylist(article)
+                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                 }

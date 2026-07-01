@@ -9,6 +9,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,8 @@ import androidx.navigation.navArgument
 import androidx.compose.runtime.LaunchedEffect
 import uk.sume.streamfolio.ui.components.BottomTab
 import uk.sume.streamfolio.ui.components.GlassmorphicNavBar
+import uk.sume.streamfolio.ui.components.TtsMiniPlayer
+import uk.sume.streamfolio.ui.components.TtsLyricsVisualizer
 import uk.sume.streamfolio.ui.screens.*
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLDecoder
@@ -317,6 +320,40 @@ fun AppNavigation(viewModel: NewsViewModel) {
                     }
                 )
             }
+        }
+
+        val hiddenRoutes = listOf("onboarding", "settings_screen", "settings_preferences", "settings_categories")
+        val showMiniPlayer = currentRoute !in hiddenRoutes
+        if (showMiniPlayer) {
+            val bottomOffset = if (showBottomBar) 96.dp else 20.dp
+            TtsMiniPlayer(
+                viewModel = viewModel,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = bottomOffset)
+            )
+        }
+
+        // Immersive Apple Music-style Lyrics Visualizer Overlay
+        val showLyricsVisualizer by viewModel.showLyricsVisualizer.collectAsState()
+        AnimatedVisibility(
+            visible = showLyricsVisualizer,
+            enter = slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(400)),
+            exit = slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(400)),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            TtsLyricsVisualizer(
+                viewModel = viewModel,
+                navController = navController,
+                onDismiss = { viewModel.setShowLyricsVisualizer(false) }
+            )
         }
     }
 }

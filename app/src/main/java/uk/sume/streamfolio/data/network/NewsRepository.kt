@@ -83,6 +83,7 @@ class NewsRepository(context: Context) {
         
         insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+        triggerArticleBodyPreScrape(allArticles)
     }
 
     // Fetch multiple Custom RSS Feeds for a single category/tab in parallel
@@ -142,6 +143,7 @@ class NewsRepository(context: Context) {
         
         insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+        triggerArticleBodyPreScrape(allArticles)
     }
 
     private suspend fun insertAndPruneArticles(allArticles: List<Article>, category: String) {
@@ -245,6 +247,7 @@ class NewsRepository(context: Context) {
         articleDao.clearNonBookmarkedArticlesByCategory(category)
         articleDao.insertOrUpdateArticles(allArticles)
         triggerThumbnailResolution(allArticles)
+        triggerArticleBodyPreScrape(allArticles)
     }
 
     private fun isGibberishOrPromo(line: String): Boolean {
@@ -285,6 +288,31 @@ class NewsRepository(context: Context) {
             }
         }
     }
+
+    // Pre-scrape full text for the top 10 articles in parallel in the background
+    private suspend fun triggerArticleBodyPreScrape(articles: List<Article>) {
+        withContext(Dispatchers.IO) {
+            articles.take(10).forEach { article ->
+                val existing = articleDao.getArticleByLink(article.link)
+                if (existing == null || existing.fullText == null) {
+                    launch {
+                        try {
+                            val body = fetchArticleBody(article.link)
+                            if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                                articleDao.updateFullText(article.link, body)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("NewsRepository", "Failed pre-scraping for ${article.link}", e)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun getArticleByLink(link: String): Article? = articleDao.getArticleByLink(link)
+
+    suspend fun updateFullText(link: String, fullText: String?) = articleDao.updateFullText(link, fullText)
 
     private fun resolveGoogleNewsUrl(googleUrl: String): String {
         try {

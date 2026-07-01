@@ -1,0 +1,674 @@
+package uk.sume.streamfolio.ui.components
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Hearing
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import uk.sume.streamfolio.data.model.Article
+import androidx.navigation.NavController
+import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TtsMiniPlayer(
+    viewModel: NewsViewModel,
+    modifier: Modifier = Modifier
+) {
+    val playlist by viewModel.ttsPlaylist.collectAsState()
+    val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+
+    if (playlist.isEmpty() || currentIndex == -1 || currentIndex >= playlist.size) {
+        return
+    }
+
+    val article = playlist[currentIndex]
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .height(64.dp)
+            .shadow(16.dp, RoundedCornerShape(32.dp))
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .clickable { viewModel.setShowLyricsVisualizer(true) }, // Primary CTA opens visualizer/full-player
+        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Article Thumbnail / Watermark
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+            ) {
+                if (article.thumbnailUrl != null && article.thumbnailUrl != "failed" && !article.thumbnailUrl.contains("google")) {
+                    AsyncImage(
+                        model = article.thumbnailUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Outlined.Hearing,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .align(Alignment.Center)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Title & Source Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = article.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = article.sourceName,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Play / Pause Button
+            IconButton(
+                onClick = { viewModel.playOrPausePlaylist() },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Skip Next Button
+            IconButton(
+                onClick = { viewModel.advanceTtsPlaylist() },
+                enabled = currentIndex < playlist.size - 1,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = "Next",
+                    tint = if (currentIndex < playlist.size - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TtsLyricsVisualizer(
+    viewModel: NewsViewModel,
+    navController: NavController,
+    onDismiss: () -> Unit
+) {
+    val playlist by viewModel.ttsPlaylist.collectAsState()
+    val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+    val articleBody by viewModel.articleBody.collectAsState()
+    val ttsParagraphIndex by viewModel.ttsHelper.currentParagraphIndex.collectAsState()
+    val currentWordRange by viewModel.currentWordRange.collectAsState()
+
+    if (playlist.isEmpty() || currentIndex == -1 || currentIndex >= playlist.size) {
+        onDismiss()
+        return
+    }
+
+    val article = playlist[currentIndex]
+    val paragraphs = remember(articleBody) { articleBody.split("\n\n").filter { it.isNotBlank() } }
+    val lazyListState = rememberLazyListState()
+
+    var showQueueInsideVisualizer by remember { mutableStateOf(false) }
+
+    // Auto-scroll centering
+    LaunchedEffect(ttsParagraphIndex, showQueueInsideVisualizer) {
+        if (!showQueueInsideVisualizer && ttsParagraphIndex >= 0 && ttsParagraphIndex < paragraphs.size) {
+            lazyListState.animateScrollToItem(ttsParagraphIndex, scrollOffset = -250)
+        }
+    }
+
+    BackHandler(enabled = true) {
+        onDismiss()
+    }
+
+    val isDark = isSystemInDarkTheme()
+    val visualizerBg = if (isDark) Color(0xFF070B13) else MaterialTheme.colorScheme.surface
+    val activeTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
+    val radialSpotColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.15f else 0.08f)
+    val controlBtnBg = if (isDark) Color.White.copy(alpha = 0.08f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+    val iconTint = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
+    val queueActiveBg = if (isDark) Color.White.copy(alpha = 0.08f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+    val queueInactiveBg = if (isDark) Color.White.copy(alpha = 0.03f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)
+    val bottomDockBg = if (isDark) Color(0xFF161E2E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
+    val dockIconTint = if (isDark) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(visualizerBg)
+    ) {
+        // Blur light ambient spot
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            radialSpotColor,
+                            Color.Transparent
+                        ),
+                        center = Offset(200f, 300f),
+                        radius = 1000f
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 24.dp)
+        ) {
+            // Header Area: Symmetric and Polished
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(72.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Left close button (chevron down matches up/down transition)
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(controlBtnBg, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Close",
+                        modifier = Modifier.size(24.dp),
+                        tint = iconTint
+                    )
+                }
+                
+                // Centered article metadata: Clickable CTA to Reader
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            onDismiss()
+                            val encodedUrl = java.net.URLEncoder.encode(article.link, "UTF-8")
+                            navController.navigate("detail_screen/$encodedUrl")
+                        }
+                        .padding(horizontal = 12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = article.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = activeTextColor,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = Icons.Default.OpenInNew,
+                            contentDescription = "Open Reader",
+                            tint = activeTextColor.copy(alpha = 0.6f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = article.sourceName + " • Tap to Read",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                
+                // Right queue toggle button
+                IconButton(
+                    onClick = { showQueueInsideVisualizer = !showQueueInsideVisualizer },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            if (showQueueInsideVisualizer) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            else controlBtnBg,
+                            CircleShape
+                        )
+                ) {
+                    Icon(
+                        imageVector = if (showQueueInsideVisualizer) Icons.Default.MenuBook else Icons.Default.QueueMusic,
+                        contentDescription = "Toggle Queue",
+                        tint = if (showQueueInsideVisualizer) MaterialTheme.colorScheme.primary else iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Immersive Crossfading Body Content
+            AnimatedContent(
+                targetState = showQueueInsideVisualizer,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                },
+                label = "VisualizerContent"
+            ) { showQueue ->
+                if (showQueue) {
+                    // Apple Music Drag to Reorder Queue List
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 16.dp, bottom = 120.dp)
+                    ) {
+                        Text(
+                            text = "Hold & drag to reorder queue",
+                            fontSize = 12.sp,
+                            color = activeTextColor.copy(alpha = 0.4f),
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        var draggingIndex by remember { mutableStateOf<Int?>(null) }
+                        var dragOffset by remember { mutableStateOf(0f) }
+
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            itemsIndexed(playlist, key = { _, item -> item.link }) { index, queuedArticle ->
+                                val isActive = index == currentIndex
+                                val itemBg = if (isActive) queueActiveBg else queueInactiveBg
+                                val activeColor = if (isActive) MaterialTheme.colorScheme.primary else activeTextColor
+
+                                var itemHeightPx by remember { mutableStateOf(0) }
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onGloballyPositioned { coordinates ->
+                                            itemHeightPx = coordinates.size.height
+                                        }
+                                        .graphicsLayer {
+                                            if (draggingIndex == index) {
+                                                translationY = dragOffset
+                                                alpha = 0.85f
+                                                shadowElevation = 8f
+                                            }
+                                        }
+                                        .pointerInput(index, itemHeightPx, playlist.size) {
+                                            if (itemHeightPx == 0) return@pointerInput
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = {
+                                                    draggingIndex = index
+                                                    dragOffset = 0f
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    change.consume()
+                                                    dragOffset += dragAmount.y
+                                                    val currentOffset = dragOffset
+                                                    val threshold = itemHeightPx / 2f
+
+                                                    if (currentOffset > threshold && index < playlist.size - 1) {
+                                                        viewModel.moveTtsPlaylistItem(index, index + 1)
+                                                        dragOffset = currentOffset - itemHeightPx
+                                                        draggingIndex = index + 1
+                                                    } else if (currentOffset < -threshold && index > 0) {
+                                                        viewModel.moveTtsPlaylistItem(index, index - 1)
+                                                        dragOffset = currentOffset + itemHeightPx
+                                                        draggingIndex = index - 1
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    draggingIndex = null
+                                                    dragOffset = 0f
+                                                },
+                                                onDragCancel = {
+                                                    draggingIndex = null
+                                                    dragOffset = 0f
+                                                }
+                                            )
+                                        },
+                                    colors = CardDefaults.cardColors(containerColor = itemBg),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        // Left Card Thumbnail
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(activeTextColor.copy(alpha = 0.05f))
+                                        ) {
+                                            if (queuedArticle.thumbnailUrl != null && queuedArticle.thumbnailUrl != "failed" && !queuedArticle.thumbnailUrl.contains("google")) {
+                                                AsyncImage(
+                                                    model = queuedArticle.thumbnailUrl,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Hearing,
+                                                    contentDescription = null,
+                                                    tint = activeTextColor.copy(alpha = 0.3f),
+                                                    modifier = Modifier.size(20.dp).align(Alignment.Center)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Row(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { viewModel.playTtsPlaylist(index) },
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = queuedArticle.title,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = activeColor
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = queuedArticle.sourceName,
+                                                    fontSize = 11.sp,
+                                                    color = activeTextColor.copy(alpha = 0.5f)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Grab Handle
+                                        Icon(
+                                            imageVector = Icons.Default.Reorder,
+                                            contentDescription = "Drag to Reorder",
+                                            tint = activeTextColor.copy(alpha = 0.3f),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        IconButton(
+                                            onClick = { viewModel.removeFromTtsPlaylist(queuedArticle) },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Remove",
+                                                tint = activeTextColor.copy(alpha = 0.4f),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Scrolling Lyrics List
+                    if (paragraphs.isEmpty() || paragraphs[0].startsWith("Failed to load") || paragraphs[0].startsWith("Unable to parse")) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (paragraphs.isEmpty()) "Parsing article body..." else "This publisher restricts word-by-word viewing.",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center,
+                                color = activeTextColor.copy(alpha = 0.5f)
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            state = lazyListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 100.dp, bottom = 220.dp),
+                            verticalArrangement = Arrangement.spacedBy(28.dp)
+                        ) {
+                            itemsIndexed(paragraphs) { index, paragraph ->
+                                val isActive = index == ttsParagraphIndex
+                                val alpha = if (isActive) 1f else 0.35f
+                                val size = if (isActive) 23.sp else 19.sp
+                                val weight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                                val color = if (isActive) activeTextColor else activeTextColor.copy(alpha = alpha)
+
+                                val annotatedText = remember(paragraph, isActive, currentWordRange) {
+                                    buildAnnotatedString {
+                                        if (isActive && currentWordRange != null) {
+                                            val (start, end) = currentWordRange!!
+                                            if (start >= 0 && end <= paragraph.length && start <= end) {
+                                                append(paragraph.substring(0, start))
+                                                withStyle(
+                                                    SpanStyle(
+                                                        color = Color(0xFF10B981), // Premium emerald green spoken highlighting
+                                                        fontWeight = FontWeight.Black
+                                                    )
+                                                ) {
+                                                    append(paragraph.substring(start, end))
+                                                }
+                                                append(paragraph.substring(end))
+                                            } else {
+                                                append(paragraph)
+                                            }
+                                        } else {
+                                            append(paragraph)
+                                        }
+                                    }
+                                }
+
+                                Text(
+                                    text = annotatedText,
+                                    fontSize = size,
+                                    lineHeight = (size.value * 1.5).sp,
+                                    fontWeight = weight,
+                                    color = color,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.seekTtsToParagraph(index) }
+                                        .padding(vertical = 4.dp),
+                                    textAlign = TextAlign.Start
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Timeline Progress & Audio controls
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+            ) {
+                // Progress timeline
+                if (paragraphs.isNotEmpty()) {
+                    val progressValue = (ttsParagraphIndex.toFloat() + 1) / paragraphs.size.coerceAtLeast(1)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        LinearProgressIndicator(
+                            progress = { progressValue },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = activeTextColor.copy(alpha = 0.1f)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
+                            fontSize = 11.sp,
+                            color = activeTextColor.copy(alpha = 0.5f),
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Player Control row
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .shadow(24.dp, RoundedCornerShape(24.dp)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = bottomDockBg
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Previous Button
+                        IconButton(
+                            onClick = {
+                                val prevIdx = ttsParagraphIndex - 1
+                                if (prevIdx >= 0) {
+                                    viewModel.seekTtsToParagraph(prevIdx)
+                                }
+                            },
+                            enabled = ttsParagraphIndex > 0,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SkipPrevious,
+                                contentDescription = "Previous Paragraph",
+                                tint = if (ttsParagraphIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+
+                        // Play / Pause Button
+                        IconButton(
+                            onClick = { viewModel.playOrPausePlaylist() },
+                            modifier = Modifier
+                                .size(56.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+
+                        // Next Button
+                        IconButton(
+                            onClick = {
+                                val nextIdx = ttsParagraphIndex + 1
+                                if (nextIdx < paragraphs.size) {
+                                    viewModel.seekTtsToParagraph(nextIdx)
+                                }
+                            },
+                            enabled = ttsParagraphIndex < paragraphs.size - 1,
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SkipNext,
+                                contentDescription = "Next Paragraph",
+                                tint = if (ttsParagraphIndex < paragraphs.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

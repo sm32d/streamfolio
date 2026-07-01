@@ -25,11 +25,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -75,6 +79,7 @@ fun HomeScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
+    val context = LocalContext.current
 
     val activeRegion = remember(viewModel.prefs.region) { viewModel.prefs.region.uppercase() }
     val hasCuratedFeeds = remember(activeRegion, selectedCategory) {
@@ -366,6 +371,13 @@ fun HomeScreen(
                                              onBookmarkClick = {
                                                  viewModel.toggleBookmark(article)
                                              },
+                                             onPlayClick = {
+                                                 viewModel.speakArticle(article)
+                                             },
+                                             onQueueClick = {
+                                                 viewModel.addToTtsPlaylist(article)
+                                                 Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                             },
                                              onTap = {
                                                  val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                                  navController.navigate("detail_screen/$encodedUrl")
@@ -488,7 +500,12 @@ fun HomeScreen(
                                     val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                     navController.navigate("detail_screen/$encodedUrl")
                                 },
-                                onBookmarkToggle = { viewModel.toggleBookmark(article) }
+                                onBookmarkToggle = { viewModel.toggleBookmark(article) },
+                                onPlayClick = { viewModel.speakArticle(article) },
+                                onQueueClick = {
+                                    viewModel.addToTtsPlaylist(article)
+                                    Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                }
                             )
                         }
                     }
@@ -506,6 +523,8 @@ fun TrendingCard(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBookmarkClick: () -> Unit,
+    onPlayClick: () -> Unit,
+    onQueueClick: () -> Unit,
     onTap: () -> Unit
 ) {
     val thumbnail = article.thumbnailUrl
@@ -625,27 +644,61 @@ fun TrendingCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = article.sourceName,
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = formatPubDate(article.pubDate),
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.5f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = article.sourceName,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = formatPubDate(article.pubDate),
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+
+                // Primary Play Button establishing hierarchy
+                IconButton(
+                    onClick = onPlayClick,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play Now",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
 
-        // Floating bookmark button at the top-right
+        // Floating actions button row at the top-right (secondary actions only)
         var isBookmarked by remember(article.isBookmarked) { mutableStateOf(article.isBookmarked) }
-        Box(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = onQueueClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlaylistAdd,
+                    contentDescription = "Add to Queue",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
             IconButton(
                 onClick = {
                     onBookmarkClick()
@@ -673,7 +726,9 @@ fun ArticleListItem(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onTap: () -> Unit,
-    onBookmarkToggle: () -> Unit
+    onBookmarkToggle: () -> Unit,
+    onPlayClick: () -> Unit,
+    onQueueClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -875,16 +930,46 @@ fun ArticleListItem(
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                             )
-                            IconButton(
-                                onClick = onBookmarkToggle,
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (article.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkAdd,
-                                    contentDescription = "Bookmark",
-                                    tint = if (article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = onPlayClick,
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "Play Now",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                IconButton(
+                                    onClick = onQueueClick,
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlaylistAdd,
+                                        contentDescription = "Add to Queue",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                IconButton(
+                                    onClick = onBookmarkToggle,
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (article.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkAdd,
+                                        contentDescription = "Bookmark",
+                                        tint = if (article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
