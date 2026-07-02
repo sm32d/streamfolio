@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         viewModel = ViewModelProvider(this)[NewsViewModel::class.java]
 
         intent?.getStringExtra("article_url")?.let { url ->
-            viewModel.pendingArticleUrl = url
+            viewModel.setPendingArticleUrl(url)
         }
 
         setContent {
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getStringExtra("article_url")?.let { url ->
-            viewModel.pendingArticleUrl = url
+            viewModel.setPendingArticleUrl(url)
         }
     }
 }

@@ -262,7 +262,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     var filterCategoryOnSettings: String? = null
 
     // Pending article URL clicked from widget
-    var pendingArticleUrl: String? = null
+    private val _pendingArticleUrl = MutableStateFlow<String?>(null)
+    val pendingArticleUrl: StateFlow<String?> = _pendingArticleUrl.asStateFlow()
+
+    fun setPendingArticleUrl(url: String?) {
+        _pendingArticleUrl.value = url
+    }
 
     init {
         // Fetch top stories initially if onboarding is done

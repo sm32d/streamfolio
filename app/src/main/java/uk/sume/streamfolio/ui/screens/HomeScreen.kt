@@ -59,6 +59,9 @@ import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.BorderStroke
+import kotlinx.coroutines.launch
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import java.net.URLEncoder
@@ -733,19 +736,30 @@ fun ArticleListItem(
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
 
+    val currentArticle by rememberUpdatedState(article)
+    val currentOnBookmarkToggle by rememberUpdatedState(onBookmarkToggle)
+    val showRemoveConfirmationState = remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.EndToStart -> {
-                    onBookmarkToggle()
+                    if (currentArticle.isBookmarked) {
+                        scope.launch {
+                            showRemoveConfirmationState.value = true
+                        }
+                    } else {
+                        currentOnBookmarkToggle()
+                    }
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     false
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, article.title)
-                        putExtra(Intent.EXTRA_TEXT, "${article.title}\n\nRead more at: ${article.link}")
+                        putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
+                        putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: ${currentArticle.link}")
                     }
                     context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -988,6 +1002,96 @@ fun ArticleListItem(
             }
         }
     )
+
+    if (showRemoveConfirmationState.value) {
+        Dialog(onDismissRequest = { showRemoveConfirmationState.value = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFEF5350),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Remove Bookmark",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to remove this article from your saved bookmarks?",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showRemoveConfirmationState.value = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                        ) {
+                            Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                showRemoveConfirmationState.value = false
+                                currentOnBookmarkToggle()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFEF5350),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Remove", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // Extract publisher domain helper

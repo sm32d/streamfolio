@@ -37,9 +37,10 @@ import java.net.URLEncoder
 fun AppNavigation(viewModel: NewsViewModel) {
     val navController = rememberNavController()
 
-    LaunchedEffect(viewModel.pendingArticleUrl) {
-        viewModel.pendingArticleUrl?.let { url ->
-            viewModel.pendingArticleUrl = null
+    val pendingUrl by viewModel.pendingArticleUrl.collectAsState()
+    LaunchedEffect(pendingUrl) {
+        pendingUrl?.let { url ->
+            viewModel.setPendingArticleUrl(null)
             val encodedUrl = URLEncoder.encode(url, "UTF-8")
             navController.navigate("detail_screen/$encodedUrl")
         }
