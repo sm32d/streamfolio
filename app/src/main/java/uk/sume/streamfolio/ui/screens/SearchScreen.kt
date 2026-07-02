@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,21 @@ fun SearchScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val context = LocalContext.current
     val isLoadingSearch by viewModel.isLoadingSearch.collectAsState()
+
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        viewModel.tabResetEvent.collect { route ->
+            if (route == "search_screen") {
+                viewModel.setSearchQuery("")
+                try {
+                    focusRequester.requestFocus()
+                } catch (e: Exception) {
+                    // Ignore focus exceptions if not attached yet
+                }
+            }
+        }
+    }
 
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
@@ -79,6 +96,7 @@ fun SearchScreen(
                 onValueChange = { viewModel.setSearchQuery(it) },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
                 placeholder = {
                     Text(

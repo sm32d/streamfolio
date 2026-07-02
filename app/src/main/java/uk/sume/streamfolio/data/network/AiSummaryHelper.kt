@@ -17,7 +17,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 
-class AiSummaryHelper(private val context: Context) {
+class AiSummaryHelperImpl(private val context: Context) : IAiSummaryHelper {
 
     private val options = SummarizerOptions.builder(context)
         .setInputType(InputType.ARTICLE)
@@ -32,14 +32,14 @@ class AiSummaryHelper(private val context: Context) {
     /**
      * Checks if the model is ready.
      */
-    suspend fun checkFeatureStatus(): Int {
+    override suspend fun checkFeatureStatus(): Int {
         return client.checkFeatureStatus().await()
     }
 
     /**
      * Downloads the required model feature using the ML Kit download callback.
      */
-    suspend fun downloadFeature() = suspendCancellableCoroutine<Unit> { cont ->
+    override suspend fun downloadFeature() = suspendCancellableCoroutine<Unit> { cont ->
         client.downloadFeature(object : DownloadCallback {
             override fun onDownloadStarted(bytesToDownload: Long) {}
             override fun onDownloadProgress(totalBytesDownloaded: Long) {}
@@ -55,9 +55,10 @@ class AiSummaryHelper(private val context: Context) {
     /**
      * Runs on-device AI summarization.
      */
-    suspend fun summarizeText(text: String): SummarizationResult {
+    override suspend fun summarizeText(text: String): String {
         val request = SummarizationRequest.builder(text).build()
-        return client.runInference(request).await()
+        val result = client.runInference(request).await()
+        return result.summary
     }
 
     // Pure Kotlin extension to convert ListenableFuture to a suspend function

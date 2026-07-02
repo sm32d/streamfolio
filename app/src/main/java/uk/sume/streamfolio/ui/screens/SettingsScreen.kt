@@ -122,227 +122,13 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
             SectionLabel("AI Services")
             Spacer(modifier = Modifier.height(10.dp))
             SettingsCard {
-                // Global Switch
-                val isAiEnabled by viewModel.isAiEnabled.collectAsState()
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(EmeraldPrimary),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column {
-                            Text(
-                                text = "On-Device AI Upgrades",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Run private Gemini models locally",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = isAiEnabled,
-                        onCheckedChange = { viewModel.setAiEnabled(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = EmeraldPrimary
-                        )
-                    )
-                }
-
-                if (isAiEnabled) {
-                    CardDivider()
-                    
-                    // Toggle 1: AI Translation & Language Target
-                    val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
-                    val targetLang by viewModel.translationTargetLanguage.collectAsState()
-                    var showLangDropdown by remember { mutableStateOf(false) }
-
-                    val languagesMap = mapOf(
-                        "en" to "🇬🇧 English",
-                        "es" to "🇪🇸 Español",
-                        "fr" to "🇫🇷 Français",
-                        "de" to "🇩🇪 Deutsch",
-                        "hi" to "🇮🇳 हिन्दी",
-                        "zh" to "🇨🇳 中文"
-                    )
-
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Offline Translation",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Translate foreign news feeds automatically",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
-                            }
-                            Switch(
-                                checked = isTranslationEnabled,
-                                onCheckedChange = { viewModel.setTranslationEnabled(it) },
-                                modifier = Modifier.scale(0.85f),
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = EmeraldPrimary
-                                )
-                            )
-                        }
-
-                        if (isTranslationEnabled) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                    .clickable { showLangDropdown = true }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Target Language",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = languagesMap[targetLang] ?: "English",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = EmeraldPrimary
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                    )
-                                }
-                            }
-
-                            DropdownMenu(
-                                expanded = showLangDropdown,
-                                onDismissRequest = { showLangDropdown = false },
-                                modifier = Modifier.fillMaxWidth(0.8f).background(MaterialTheme.colorScheme.surface)
-                            ) {
-                                languagesMap.forEach { (code, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label) },
-                                        onClick = {
-                                            viewModel.setTranslationTargetLanguage(code)
-                                            viewModel.triggerBackgroundAiPreDownload()
-                                            showLangDropdown = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    CardDivider()
-
-                    // Toggle 2: AI Summaries
-                    val isSummaryEnabled by viewModel.isSummaryEnabled.collectAsState()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Key Insights Generator",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Provide 3 key takeaways of parsed articles",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                        }
-                        Switch(
-                            checked = isSummaryEnabled,
-                            onCheckedChange = { viewModel.setSummaryEnabled(it) },
-                            modifier = Modifier.scale(0.85f),
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = EmeraldPrimary
-                            )
-                        )
-                    }
-
-                    CardDivider()
-
-                    // Toggle 3: Smart Tags
-                    val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Smart Categories & Tags",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Scan articles using local Gemini to suggest contextual hashtags",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                        }
-                        Switch(
-                            checked = isSmartTagsEnabled,
-                            onCheckedChange = { viewModel.setSmartTagsEnabled(it) },
-                            modifier = Modifier.scale(0.85f),
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = EmeraldPrimary
-                            )
-                        )
-                    }
-                }
+                SettingsRow(
+                    icon = Icons.Default.AutoAwesome,
+                    iconBg = Color(0xFF8B5CF6),
+                    title = "AI Services & Preferences",
+                    subtitle = "Offline translation, key insights & smart tags",
+                    onClick = { navController.navigate("settings_ai") }
+                )
             }
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -541,12 +327,10 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
         ) {
             SubPageTopBar(title = "Preferences", onBack = { navController.popBackStack() })
 
-            Text(
-                text = "Choose the language and country that best matches your news preferences.",
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                modifier = Modifier.padding(bottom = 28.dp)
+            SettingsSubHeader(
+                title = "Preferences",
+                description = "Choose the default feed language, source regions, and database cache retention durations that best match your news reading preferences.",
+                icon = Icons.Default.Tune
             )
 
             SettingsSelectorField(
@@ -629,12 +413,10 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
         ) {
             SubPageTopBar(title = "Manage Content & Sources", onBack = { navController.popBackStack() })
 
-            Text(
-                text = "Control default curated categories, adjust tab positions, and toggle specific news publishers.",
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                modifier = Modifier.padding(bottom = 28.dp)
+            SettingsSubHeader(
+                title = "Content Categories",
+                description = "Choose which news categories are displayed on your dashboard. You can toggle default feeds, change category order, or manage custom news sources.",
+                icon = Icons.Default.Category
             )
 
             // Default Feeds toggle card
@@ -826,12 +608,10 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
         ) {
             SubPageTopBar(title = "Reorder Category Tabs", onBack = { navController.popBackStack() })
 
-            Text(
-                text = "Hold and drag the handles next to each category to change the order in which they appear on your dashboard.",
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                modifier = Modifier.padding(bottom = 24.dp)
+            SettingsSubHeader(
+                title = "Category Order",
+                description = "Hold and drag the handles next to each category to change the order in which they appear on your dashboard tab layout.",
+                icon = Icons.Default.Sort
             )
 
             var draggedIndex by remember { mutableStateOf(-1) }
@@ -1037,12 +817,10 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
         ) {
             SubPageTopBar(title = "Default Feed Providers", onBack = { navController.popBackStack() })
 
-            Text(
-                text = "Control exactly which curated news publishers are enabled. Grouped by region or category.",
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                modifier = Modifier.padding(bottom = 16.dp)
+            SettingsSubHeader(
+                title = "News Providers",
+                description = "Manage which default, curated global news publishers and regional sources are active or hidden across your dashboard categories.",
+                icon = Icons.Default.Public
             )
 
             // Category Filter Active Banner
@@ -1471,12 +1249,10 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
         ) {
             SubPageTopBar(title = "Custom RSS Feeds", onBack = { navController.popBackStack() })
 
-            Text(
-                text = "Add public RSS feeds or OPML outline lists to your dashboard.",
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                modifier = Modifier.padding(bottom = 28.dp)
+            SettingsSubHeader(
+                title = "Custom RSS Feeds",
+                description = "Add private RSS publishers, custom URLs, or import OPML files directly to subscribe to independent publications and specialized topics.",
+                icon = Icons.Default.RssFeed
             )
 
             // Add Custom Feed form card
@@ -1862,3 +1638,362 @@ private fun SettingsSelectorField(
         }
     }
 }
+
+@Composable
+fun SettingsSubHeader(title: String, description: String, icon: ImageVector) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = title,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = description,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
+    val isAiEnabled by viewModel.isAiEnabled.collectAsState()
+    val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
+    val isSummaryEnabled by viewModel.isSummaryEnabled.collectAsState()
+    val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
+    val isGeminiSupported by viewModel.isGeminiSupported.collectAsState()
+
+    val targetLang by viewModel.translationTargetLanguage.collectAsState()
+    var showLangDropdown by remember { mutableStateOf(false) }
+
+    val languagesMap = mapOf(
+        "en" to "🇬🇧 English",
+        "es" to "🇪🇸 Español",
+        "fr" to "🇫🇷 Français",
+        "de" to "🇩🇪 Deutsch",
+        "hi" to "🇮🇳 हिन्दी",
+        "zh" to "🇨🇳 中文"
+    )
+
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            SubPageTopBar(title = "AI Services", onBack = { navController.popBackStack() })
+
+            SettingsSubHeader(
+                title = "AI Services",
+                description = "Unlock offline machine learning translation, smart categorization hashtags, and localized private summarization powered by Gemini Nano.",
+                icon = Icons.Default.AutoAwesome
+            )
+
+            SettingsCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(EmeraldPrimary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Enable On-Device AI",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Run private models locally on this device",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = isAiEnabled,
+                        onCheckedChange = { viewModel.setAiEnabled(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = EmeraldPrimary
+                        )
+                    )
+                }
+
+                if (isAiEnabled) {
+                    CardDivider()
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF3B82F6).copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Translate,
+                                        contentDescription = null,
+                                        tint = Color(0xFF3B82F6),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Offline AI Translation",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Translate foreign news feeds automatically",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = isTranslationEnabled,
+                                onCheckedChange = { viewModel.setTranslationEnabled(it) },
+                                modifier = Modifier.scale(0.85f),
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = EmeraldPrimary
+                                )
+                            )
+                        }
+
+                        if (isTranslationEnabled) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                    .clickable { showLangDropdown = true }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Target Language",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = languagesMap[targetLang] ?: "English",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = EmeraldPrimary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = showLangDropdown,
+                                onDismissRequest = { showLangDropdown = false },
+                                modifier = Modifier.fillMaxWidth(0.8f).background(MaterialTheme.colorScheme.surface)
+                            ) {
+                                languagesMap.forEach { (code, label) ->
+                                    DropdownMenuItem(
+                                        text = { Text(label) },
+                                        onClick = {
+                                            viewModel.setTranslationTargetLanguage(code)
+                                            viewModel.triggerBackgroundAiPreDownload()
+                                            showLangDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    CardDivider()
+
+                    val isGeminiAvail = isGeminiSupported != false
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isGeminiAvail) Color(0xFF10B981).copy(alpha = 0.15f)
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = if (isGeminiAvail) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "AI Key Insights Generator",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                                Text(
+                                    text = if (isGeminiAvail) "Provide 3 key takeaways of parsed articles"
+                                           else "Requires Gemini Nano (unsupported on this device)",
+                                    fontSize = 11.sp,
+                                    color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                           else MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isSummaryEnabled && isGeminiAvail,
+                            onCheckedChange = { if (isGeminiAvail) viewModel.setSummaryEnabled(it) },
+                            enabled = isGeminiAvail,
+                            modifier = Modifier.scale(0.85f),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = EmeraldPrimary
+                            )
+                        )
+                    }
+
+                    CardDivider()
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color(0xFF8B5CF6).copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Category,
+                                    contentDescription = null,
+                                    tint = Color(0xFF8B5CF6),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Smart Categories & Tags",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Extract and suggest contextual hashtags dynamically",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isSmartTagsEnabled,
+                            onCheckedChange = { viewModel.setSmartTagsEnabled(it) },
+                            modifier = Modifier.scale(0.85f),
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = EmeraldPrimary
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

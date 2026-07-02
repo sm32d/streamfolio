@@ -25,7 +25,7 @@ class NewsRepository(private val context: Context) {
     private val customFeedDao = db.customFeedDao()
     private val prefs = PreferencesHelper(context)
     private val parser = RssParser()
-    private val aiSummaryHelper by lazy { AiSummaryHelper(context) }
+    private val aiSummaryHelper by lazy { AiHelperFactory.createSummaryHelper(context) }
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -324,14 +324,14 @@ class NewsRepository(private val context: Context) {
                     try {
                         var aiSummary = ""
                         try {
-                            val status = aiSummaryHelper.checkFeatureStatus()
-                            if (status != com.google.mlkit.genai.common.FeatureStatus.DOWNLOADABLE &&
-                                status != com.google.mlkit.genai.common.FeatureStatus.DOWNLOADING &&
-                                status != com.google.mlkit.genai.common.FeatureStatus.UNAVAILABLE) {
-                                val result = aiSummaryHelper.summarizeText(article.title + "\n" + article.description)
-                                aiSummary = result.summary
+                            val helper = aiSummaryHelper
+                            if (helper != null) {
+                                val status = helper.checkFeatureStatus()
+                                if (status != 0 && status != 1 && status != 2) {
+                                    aiSummary = helper.summarizeText(article.title + "\n" + article.description)
+                                }
                             }
-                        } catch (e: Exception) {
+                        } catch (e: Throwable) {
                             Log.d("NewsRepository", "Nano summarizer unavailable for tagging. Using text-parsing fallback.")
                         }
 

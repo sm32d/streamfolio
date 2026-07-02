@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -87,6 +88,16 @@ fun HomeScreen(
     val isAiEnabled by viewModel.isAiEnabled.collectAsState()
     val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
     val hasSeenAiSpotlight by viewModel.hasSeenAiSpotlight.collectAsState()
+
+    val scrollState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        viewModel.tabResetEvent.collect { route ->
+            if (route == "home_screen") {
+                scrollState.animateScrollToItem(0)
+            }
+        }
+    }
 
     val context = LocalContext.current
 
@@ -283,6 +294,7 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f)
                 ) {
                     LazyColumn(
+                        state = scrollState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 96.dp)
                     ) {

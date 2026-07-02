@@ -11,13 +11,13 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AiTranslateHelper(private val context: Context) {
+class AiTranslateHelperImpl(private val context: Context) : IAiTranslateHelper {
 
     /**
      * Identifies the language of the provided text.
      * Returns BCP 47 language code (e.g. "fr", "de"), or "en" if undetermined.
      */
-    suspend fun identifyLanguage(text: String): String {
+    override suspend fun identifyLanguage(text: String): String {
         val languageIdentifier = LanguageIdentification.getClient()
         return try {
             val languageCode = languageIdentifier.identifyLanguage(text).await()
@@ -31,7 +31,7 @@ class AiTranslateHelper(private val context: Context) {
      * Translates a string from source language to target language.
      * Automatically downloads the required translation models if not already present on-device.
      */
-    suspend fun translateText(text: String, sourceLangCode: String, targetLangCode: String): String {
+    override suspend fun translateText(text: String, sourceLangCode: String, targetLangCode: String): String {
         if (text.isBlank() || sourceLangCode == targetLangCode) return text
 
         val sourceLanguage = TranslateLanguage.fromLanguageTag(sourceLangCode) ?: return text

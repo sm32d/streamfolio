@@ -140,6 +140,35 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 SettingsPreferencesScreen(navController = navController, viewModel = viewModel)
             }
             composable(
+                route = "settings_ai",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsAiScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
                 route = "settings_categories",
                 enterTransition = {
                     slideIntoContainer(
@@ -320,14 +349,15 @@ fun AppNavigation(viewModel: NewsViewModel) {
                                 launchSingleTop = true
                                 restoreState = true
                             }
+                        } else {
+                            viewModel.triggerTabReset(tab.route)
                         }
                     }
                 )
             }
         }
 
-        val hiddenRoutes = listOf("onboarding", "settings_screen", "settings_preferences", "settings_categories")
-        val showMiniPlayer = currentRoute !in hiddenRoutes
+        val showMiniPlayer = currentRoute != null && !currentRoute.startsWith("settings") && currentRoute != "onboarding"
 
         val animatedBottomOffset by animateDpAsState(
             targetValue = if (showBottomBar) 108.dp else 20.dp,

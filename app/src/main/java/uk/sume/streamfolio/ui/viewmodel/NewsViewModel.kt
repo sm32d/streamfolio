@@ -24,12 +24,69 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val prefs = PreferencesHelper(application)
     val ttsHelper = TtsHelper(application)
 
+    // AI Translation States & Logic
+    private val aiTranslateHelper by lazy { uk.sume.streamfolio.data.network.AiHelperFactory.createTranslateHelper(getApplication()) }
+
+    private val _translatedTitle = MutableStateFlow("")
+    val translatedTitle: StateFlow<String> = _translatedTitle.asStateFlow()
+
+    private val _translatedBody = MutableStateFlow("")
+    val translatedBody: StateFlow<String> = _translatedBody.asStateFlow()
+
+    private val _isTranslationLoading = MutableStateFlow(false)
+    val isTranslationLoading: StateFlow<Boolean> = _isTranslationLoading.asStateFlow()
+
+    private val _translationError = MutableStateFlow<String?>(null)
+    val translationError: StateFlow<String?> = _translationError.asStateFlow()
+
+    // On-Device AI Summarization
+    private val aiSummaryHelper by lazy { uk.sume.streamfolio.data.network.AiHelperFactory.createSummaryHelper(getApplication()) }
+    
+    private val _isGeminiSupported = MutableStateFlow<Boolean?>(null)
+    val isGeminiSupported: StateFlow<Boolean?> = _isGeminiSupported.asStateFlow()
+
+    private val _aiSummaryState = MutableStateFlow<AiSummaryState>(AiSummaryState.Idle)
+    val aiSummaryState: StateFlow<AiSummaryState> = _aiSummaryState
+
     init {
         ttsHelper.onArticleCompleted = {
             advanceTtsPlaylist()
         }
-        if (prefs.isAiEnabled) {
-            triggerBackgroundAiPreDownload()
+        viewModelScope.launch(Dispatchers.Main) {
+            checkGeminiSupport()
+            if (prefs.isAiEnabled) {
+                triggerBackgroundAiPreDownload()
+            }
+            if (prefs.isCompletedOnboarding) {
+                refreshCurrentFeed()
+                syncAllCategoriesInBackground()
+            }
+        }
+    }
+
+    fun syncAllCategoriesInBackground() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val categoriesToSync = prefs.selectedCategories.toList()
+            for (cat in categoriesToSync) {
+                try {
+                    val matchingFeeds = customFeeds.value.filter { it.category == cat }
+                    if (matchingFeeds.isNotEmpty()) {
+                        repository.fetchCustomFeeds(matchingFeeds, cat)
+                    } else {
+                        repository.fetchDefaultFeeds(
+                            category = cat,
+                            language = prefs.language,
+                            region = prefs.region,
+                            disabledFeedUrls = prefs.disabledFeedUrls,
+                            enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
+                        )
+                    }
+                    // Debounce to prevent device congestion
+                    kotlinx.coroutines.delay(1000)
+                } catch (e: Exception) {
+                    android.util.Log.e("NewsViewModel", "Background sync failed for category $cat", e)
+                }
+            }
         }
     }
 
@@ -272,19 +329,17 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     // Navigation parameter helper for curation filtering
     var filterCategoryOnSettings: String? = null
 
-    // Pending article URL clicked from widget
+    val tabResetEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    
+    fun triggerTabReset(route: String) {
+        tabResetEvent.tryEmit(route)
+    }
+
     private val _pendingArticleUrl = MutableStateFlow<String?>(null)
     val pendingArticleUrl: StateFlow<String?> = _pendingArticleUrl.asStateFlow()
 
     fun setPendingArticleUrl(url: String?) {
         _pendingArticleUrl.value = url
-    }
-
-    init {
-        // Fetch top stories initially if onboarding is done
-        if (prefs.isCompletedOnboarding) {
-            refreshCurrentFeed()
-        }
     }
 
     fun selectCategory(category: String) {
@@ -545,31 +600,23 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _hasSeenAiSpotlight.value = seen
     }
 
-    // AI Translation States & Logic
-    private val aiTranslateHelper by lazy { uk.sume.streamfolio.data.network.AiTranslateHelper(getApplication()) }
 
-    private val _translatedTitle = MutableStateFlow("")
-    val translatedTitle: StateFlow<String> = _translatedTitle.asStateFlow()
-
-    private val _translatedBody = MutableStateFlow("")
-    val translatedBody: StateFlow<String> = _translatedBody.asStateFlow()
-
-    private val _isTranslationLoading = MutableStateFlow(false)
-    val isTranslationLoading: StateFlow<Boolean> = _isTranslationLoading.asStateFlow()
-
-    private val _translationError = MutableStateFlow<String?>(null)
-    val translationError: StateFlow<String?> = _translationError.asStateFlow()
 
     fun translateArticleText(title: String, body: String) {
         _isTranslationLoading.value = true
         _translationError.value = null
         viewModelScope.launch {
             try {
-                val detectedSrc = aiTranslateHelper.identifyLanguage(title + " " + body.take(100))
+                val helper = aiTranslateHelper
+                if (helper == null) {
+                    _translationError.value = "Translation service is not supported on this device."
+                    return@launch
+                }
+                val detectedSrc = helper.identifyLanguage(title + " " + body.take(100))
                 val target = _translationTargetLanguage.value
 
-                val tTitle = aiTranslateHelper.translateText(title, detectedSrc, target)
-                val tBody = aiTranslateHelper.translateText(body, detectedSrc, target)
+                val tTitle = helper.translateText(title, detectedSrc, target)
+                val tBody = helper.translateText(body, detectedSrc, target)
 
                 _translatedTitle.value = tTitle
                 _translatedBody.value = tBody
@@ -590,27 +637,47 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     fun triggerBackgroundAiPreDownload() {
         viewModelScope.launch {
             try {
-                val target = _translationTargetLanguage.value
-                aiTranslateHelper.translateText("Hello", "en", target)
-            } catch (e: Exception) {
+                val helper = aiTranslateHelper
+                if (helper != null) {
+                    val target = _translationTargetLanguage.value
+                    helper.translateText("Hello", "en", target)
+                }
+            } catch (e: Throwable) {
                 android.util.Log.d("NewsViewModel", "Background AI translation pre-download failed/skipped: ${e.message}")
             }
 
             try {
-                val status = aiSummaryHelper.checkFeatureStatus()
-                if (status == com.google.mlkit.genai.common.FeatureStatus.DOWNLOADABLE) {
-                    aiSummaryHelper.downloadFeature()
+                val helper = aiSummaryHelper
+                if (helper != null) {
+                    val status = helper.checkFeatureStatus()
+                    if (status == 1) { // DOWNLOADABLE
+                        helper.downloadFeature()
+                    }
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 android.util.Log.d("NewsViewModel", "Background AI summary pre-download failed/skipped: ${e.message}")
             }
         }
     }
 
-    // On-Device AI Summarization
-    private val aiSummaryHelper by lazy { uk.sume.streamfolio.data.network.AiSummaryHelper(getApplication()) }
-    private val _aiSummaryState = MutableStateFlow<AiSummaryState>(AiSummaryState.Idle)
-    val aiSummaryState: StateFlow<AiSummaryState> = _aiSummaryState
+
+
+    fun checkGeminiSupport() {
+        viewModelScope.launch {
+            try {
+                val helper = aiSummaryHelper
+                if (helper == null) {
+                    _isGeminiSupported.value = false
+                } else {
+                    val status = helper.checkFeatureStatus()
+                    _isGeminiSupported.value = status != 0 // 0 is UNAVAILABLE
+                }
+            } catch (e: Throwable) {
+                _isGeminiSupported.value = false
+            }
+        }
+    }
+
 
     fun generateAiSummary(text: String) {
         if (text.isBlank()) {
@@ -621,24 +688,29 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         
         viewModelScope.launch {
             try {
-                val status = aiSummaryHelper.checkFeatureStatus()
-                if (status == com.google.mlkit.genai.common.FeatureStatus.DOWNLOADABLE) {
-                    _aiSummaryState.value = AiSummaryState.DownloadingModel
-                    aiSummaryHelper.downloadFeature()
-                    val result = aiSummaryHelper.summarizeText(text)
-                    _aiSummaryState.value = AiSummaryState.Success(result.summary)
+                val helper = aiSummaryHelper
+                if (helper == null) {
+                    _aiSummaryState.value = AiSummaryState.Error("Gemini Nano features are not supported on this device.")
                     return@launch
-                } else if (status == com.google.mlkit.genai.common.FeatureStatus.DOWNLOADING) {
+                }
+                val status = helper.checkFeatureStatus()
+                if (status == 1) { // DOWNLOADABLE
+                    _aiSummaryState.value = AiSummaryState.DownloadingModel
+                    helper.downloadFeature()
+                    val summary = helper.summarizeText(text)
+                    _aiSummaryState.value = AiSummaryState.Success(summary)
+                    return@launch
+                } else if (status == 2) { // DOWNLOADING
                     _aiSummaryState.value = AiSummaryState.DownloadingModel
                     return@launch
-                } else if (status == com.google.mlkit.genai.common.FeatureStatus.UNAVAILABLE) {
+                } else if (status == 0) { // UNAVAILABLE
                     _aiSummaryState.value = AiSummaryState.Error("This feature requires Gemini Nano (AICore), which is not available on this device.")
                     return@launch
                 }
                 
-                val result = aiSummaryHelper.summarizeText(text)
-                _aiSummaryState.value = AiSummaryState.Success(result.summary)
-            } catch (e: Exception) {
+                val summary = helper.summarizeText(text)
+                _aiSummaryState.value = AiSummaryState.Success(summary)
+            } catch (e: Throwable) {
                 val msg = e.message ?: "Failed to generate summary."
                 if (msg.contains("AICore", ignoreCase = true)) {
                     _aiSummaryState.value = AiSummaryState.Error("Gemini Nano (AICore) is not available or requires update on this device.")

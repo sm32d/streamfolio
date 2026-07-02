@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +39,16 @@ fun BookmarkScreen(
 ) {
     val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
     val context = LocalContext.current
+
+    val scrollState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        viewModel.tabResetEvent.collect { route ->
+            if (route == "bookmarks_screen") {
+                scrollState.animateScrollToItem(0)
+            }
+        }
+    }
 
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
@@ -98,6 +110,7 @@ fun BookmarkScreen(
                 }
             } else {
                 LazyColumn(
+                    state = scrollState,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 96.dp)
                 ) {

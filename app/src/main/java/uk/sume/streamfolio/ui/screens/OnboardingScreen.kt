@@ -210,13 +210,11 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                         viewModel.prefs.selectedCategories = selectedCats
                         
                         // Save AI preferences
-                        viewModel.prefs.isAiEnabled = isAiEnabled
-                        viewModel.prefs.isTranslationEnabled = isTranslationEnabled
-                        viewModel.prefs.isSummaryEnabled = isSummaryEnabled
-                        viewModel.prefs.isSmartTagsEnabled = isSmartTagsEnabled
-                        if (isAiEnabled) {
-                            viewModel.triggerBackgroundAiPreDownload()
-                        }
+                        viewModel.setAiEnabled(isAiEnabled)
+                        viewModel.setTranslationEnabled(isTranslationEnabled)
+                        viewModel.setSummaryEnabled(isSummaryEnabled)
+                        viewModel.setSmartTagsEnabled(isSmartTagsEnabled)
+                        viewModel.setHasSeenAiSpotlight(true)
                         
                         viewModel.prefs.isCompletedOnboarding = true
                         viewModel.refreshCurrentFeed()
