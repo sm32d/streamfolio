@@ -13,6 +13,8 @@ import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.data.network.NewsRepository
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import uk.sume.streamfolio.ui.components.TtsHelper
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -38,6 +40,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showLyricsVisualizer = MutableStateFlow(false)
     val showLyricsVisualizer: StateFlow<Boolean> = _showLyricsVisualizer
+
+    private val _currentArticleDetail = MutableStateFlow<Article?>(null)
+    val currentArticleDetail: StateFlow<Article?> = _currentArticleDetail.asStateFlow()
 
     fun setShowLyricsVisualizer(show: Boolean) {
         _showLyricsVisualizer.value = show
@@ -334,6 +339,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadArticleBody(url: String) {
         viewModelScope.launch {
+            val art = repository.getArticleByLink(url)
+            _currentArticleDetail.value = art
+
             // Check if this article is already active in the reader/speech playlist.
             // If yes, do not clear the body or stop the playback.
             val list = _ttsPlaylist.value
@@ -347,16 +355,68 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             _articleBody.value = ""
             ttsHelper.stop() // Stop playing previous article
             
-            val cachedArticle = repository.getArticleByLink(url)
+            var cachedArticle = art
             if (cachedArticle != null && cachedArticle.fullText != null) {
                 _articleBody.value = cachedArticle.fullText
                 _isLoadingBody.value = false
-            } else {
+            } else if (cachedArticle != null) {
                 val body = repository.fetchArticleBody(url)
                 _articleBody.value = body
                 _isLoadingBody.value = false
                 if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
                     repository.updateFullText(url, body)
+                }
+            } else {
+                // Scrape page metadata dynamically to build transient article
+                try {
+                    val transientArticle = withContext(Dispatchers.IO) {
+                        val realUrl = repository.resolveGoogleNewsUrl(url)
+                        val doc = org.jsoup.Jsoup.connect(realUrl)
+                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                            .timeout(8000)
+                            .get()
+
+                        val title = doc.select("h1").firstOrNull()?.text()?.trim() 
+                            ?: doc.title() 
+                            ?: "Article Details"
+                        val source = doc.select("meta[property=og:site_name]").attr("content").trim().ifBlank {
+                            try { java.net.URL(realUrl).host.replace("www.", "") } catch (e: Exception) { "Web Article" }
+                        }
+                        val thumb = doc.select("meta[property=og:image]").attr("content").trim()
+
+                        Article(
+                            link = url,
+                            title = title,
+                            description = title,
+                            pubDate = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", java.util.Locale.US).format(java.util.Date()),
+                            sourceName = source,
+                            sourceUrl = realUrl,
+                            category = "TOP STORIES",
+                            thumbnailUrl = thumb.ifBlank { null }
+                        )
+                    }
+                    _currentArticleDetail.value = transientArticle
+                    
+                    val body = repository.fetchArticleBody(url)
+                    _articleBody.value = body
+                    _isLoadingBody.value = false
+                    if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                        repository.insertArticle(transientArticle.copy(fullText = body))
+                    }
+                } catch (e: Exception) {
+                    val fallbackArt = Article(
+                        link = url,
+                        title = "Shared Article",
+                        description = "Shared Web Article",
+                        pubDate = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", java.util.Locale.US).format(java.util.Date()),
+                        sourceName = "Web",
+                        sourceUrl = url,
+                        category = "NEWS",
+                        thumbnailUrl = null
+                    )
+                    _currentArticleDetail.value = fallbackArt
+                    _articleBody.value = "Unable to load article content automatically. Please switch to Web View to read this story."
+                    _isLoadingBody.value = false
                 }
             }
         }

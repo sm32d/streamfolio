@@ -312,9 +312,13 @@ class NewsRepository(context: Context) {
 
     suspend fun getArticleByLink(link: String): Article? = articleDao.getArticleByLink(link)
 
+    suspend fun insertArticle(article: Article) = withContext(Dispatchers.IO) {
+        articleDao.insertOrUpdateArticles(listOf(article))
+    }
+
     suspend fun updateFullText(link: String, fullText: String?) = articleDao.updateFullText(link, fullText)
 
-    private fun resolveGoogleNewsUrl(googleUrl: String): String {
+    fun resolveGoogleNewsUrl(googleUrl: String): String {
         try {
             if (!googleUrl.startsWith("https://news.google.com/")) {
                 return googleUrl

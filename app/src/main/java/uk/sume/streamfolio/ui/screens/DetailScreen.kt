@@ -58,16 +58,8 @@ fun DetailScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val articles by viewModel.articles.collectAsState()
-    val searchResults by viewModel.searchResults.collectAsState()
-    val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
-
-    // Find the article across all cached lists
-    val article = remember(articles, searchResults, bookmarkedArticles, url) {
-        articles.firstOrNull { it.link == url }
-            ?: searchResults.firstOrNull { it.link == url }
-            ?: bookmarkedArticles.firstOrNull { it.link == url }
-    }
+    val articleState = viewModel.currentArticleDetail.collectAsState()
+    val article = articleState.value
 
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
