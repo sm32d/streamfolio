@@ -79,6 +79,10 @@ fun DetailScreen(
     val lineSpacing by viewModel.readerLineSpacing.collectAsState()
     var showTypographyPanel by remember { mutableStateOf(false) }
 
+    val playlist by viewModel.ttsPlaylist.collectAsState()
+    val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val hasActiveTrack = playlist.isNotEmpty() && currentIndex != -1
+
     // Trigger load of article body for Reader mode
     LaunchedEffect(url) {
         viewModel.loadArticleBody(url)
@@ -484,7 +488,8 @@ fun DetailScreen(
                             }
                         }
                         
-                        Spacer(modifier = Modifier.height(100.dp))
+                        val bottomSpacerHeight = if (hasActiveTrack) 200.dp else 120.dp
+                        Spacer(modifier = Modifier.height(bottomSpacerHeight))
                     }
                 }
             } else {
@@ -537,9 +542,6 @@ fun DetailScreen(
 
         // Floating Bottom Reaction Bar
         if (article != null) {
-            val playlist by viewModel.ttsPlaylist.collectAsState()
-            val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
-            val hasActiveTrack = playlist.isNotEmpty() && currentIndex != -1
             val bottomPaddingVal = if (hasActiveTrack) 100.dp else 12.dp
 
             Box(

@@ -568,7 +568,8 @@ fun TtsLyricsVisualizer(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 24.dp)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
             ) {
                 // Progress timeline
                 if (paragraphs.isNotEmpty()) {
@@ -576,7 +577,7 @@ fun TtsLyricsVisualizer(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 8.dp, vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         LinearProgressIndicator(
@@ -588,83 +589,126 @@ fun TtsLyricsVisualizer(
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = activeTextColor.copy(alpha = 0.1f)
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
-                            fontSize = 11.sp,
-                            color = activeTextColor.copy(alpha = 0.5f),
-                            fontWeight = FontWeight.Medium
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Paragraph ${ttsParagraphIndex + 1}",
+                                fontSize = 11.sp,
+                                color = activeTextColor.copy(alpha = 0.5f),
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "${paragraphs.size} total",
+                                fontSize = 11.sp,
+                                color = activeTextColor.copy(alpha = 0.5f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
 
-                // Player Control row
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .shadow(24.dp, RoundedCornerShape(24.dp)),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = bottomDockBg
-                    )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Player Control row: Premium Capsule Shape
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
+                    Card(
+                        modifier = Modifier
+                            .width(300.dp)
+                            .height(72.dp)
+                            .shadow(16.dp, CircleShape)
+                            .border(
+                                1.dp,
+                                if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f),
+                                CircleShape
+                            ),
+                        shape = CircleShape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = bottomDockBg
+                        )
                     ) {
-                        // Previous Button
-                        IconButton(
-                            onClick = {
-                                val prevIdx = ttsParagraphIndex - 1
-                                if (prevIdx >= 0) {
-                                    viewModel.seekTtsToParagraph(prevIdx)
-                                }
-                            },
-                            enabled = ttsParagraphIndex > 0,
-                            modifier = Modifier.size(48.dp)
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.SkipPrevious,
-                                contentDescription = "Previous Paragraph",
-                                tint = if (ttsParagraphIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
+                            // Previous Button
+                            IconButton(
+                                onClick = {
+                                    val prevIdx = ttsParagraphIndex - 1
+                                    if (prevIdx >= 0) {
+                                        viewModel.seekTtsToParagraph(prevIdx)
+                                    }
+                                },
+                                enabled = ttsParagraphIndex > 0,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        if (ttsParagraphIndex > 0) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipPrevious,
+                                    contentDescription = "Previous Paragraph",
+                                    tint = if (ttsParagraphIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
 
-                        // Play / Pause Button
-                        IconButton(
-                            onClick = { viewModel.playOrPausePlaylist() },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .background(MaterialTheme.colorScheme.primary, CircleShape)
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
+                            // Play / Pause Button
+                            IconButton(
+                                onClick = { viewModel.playOrPausePlaylist() },
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .shadow(4.dp, CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary,
+                                                MaterialTheme.colorScheme.secondary
+                                            )
+                                        ),
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isPlaying) "Pause" else "Play",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
 
-                        // Next Button
-                        IconButton(
-                            onClick = {
-                                val nextIdx = ttsParagraphIndex + 1
-                                if (nextIdx < paragraphs.size) {
-                                    viewModel.seekTtsToParagraph(nextIdx)
-                                }
-                            },
-                            enabled = ttsParagraphIndex < paragraphs.size - 1,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SkipNext,
-                                contentDescription = "Next Paragraph",
-                                tint = if (ttsParagraphIndex < paragraphs.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
-                                modifier = Modifier.size(28.dp)
-                            )
+                            // Next Button
+                            IconButton(
+                                onClick = {
+                                    val nextIdx = ttsParagraphIndex + 1
+                                    if (nextIdx < paragraphs.size) {
+                                        viewModel.seekTtsToParagraph(nextIdx)
+                                    }
+                                },
+                                enabled = ttsParagraphIndex < paragraphs.size - 1,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(
+                                        if (ttsParagraphIndex < paragraphs.size - 1) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
+                                        CircleShape
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SkipNext,
+                                    contentDescription = "Next Paragraph",
+                                    tint = if (ttsParagraphIndex < paragraphs.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                     }
                 }
