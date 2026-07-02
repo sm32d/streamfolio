@@ -69,6 +69,7 @@ fun DetailScreen(
     val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
     val isSummaryEnabled by viewModel.isSummaryEnabled.collectAsState()
     val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
+    val isGeminiSupported by viewModel.isGeminiSupported.collectAsState()
 
     val translatedTitle by viewModel.translatedTitle.collectAsState()
     val translatedBody by viewModel.translatedBody.collectAsState()
@@ -524,158 +525,218 @@ fun DetailScreen(
                                     
                                     Spacer(modifier = Modifier.height(12.dp))
 
-                                    when (val state = aiSummaryState) {
-                                        is AiSummaryState.Idle -> {
-                                            Button(
-                                                onClick = { viewModel.generateAiSummary(articleBody) },
-                                                modifier = Modifier.fillMaxWidth(),
-                                                shape = RoundedCornerShape(16.dp),
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = EmeraldPrimary
-                                                )
+                                    val isGeminiOk = isGeminiSupported != false
+                                    if (!isGeminiOk) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
+                                                modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.AutoAwesome,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text("Generate Summary", fontWeight = FontWeight.Bold)
-                                            }
-                                        }
-                                        is AiSummaryState.Loading -> {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                                horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(20.dp),
-                                                    strokeWidth = 2.dp,
-                                                    color = EmeraldPrimary
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = "Gemini is summarizing...",
-                                                    fontSize = 13.sp,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                                )
-                                            }
-                                        }
-                                        is AiSummaryState.DownloadingModel -> {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                                horizontalArrangement = Arrangement.Center,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                CircularProgressIndicator(
-                                                    modifier = Modifier.size(20.dp),
-                                                    strokeWidth = 2.dp,
-                                                    color = EmeraldPrimary
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = "Initializing local AI model (this may take a while depending on your internet connection)...",
-                                                    fontSize = 13.sp,
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                                )
-                                            }
-                                        }
-                                        is AiSummaryState.Success -> {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                val bullets = state.summary.split("\n")
-                                                    .map { it.trim().removePrefix("*").trim() }
-                                                    .filter { it.isNotBlank() }
-                                                
-                                                if (bullets.isNotEmpty()) {
-                                                    for (bullet in bullets) {
-                                                        Row(modifier = Modifier.fillMaxWidth()) {
-                                                            Text(
-                                                                text = "•",
-                                                                color = EmeraldPrimary,
-                                                                fontWeight = FontWeight.Bold,
-                                                                fontSize = 15.sp,
-                                                                modifier = Modifier.padding(end = 8.dp)
-                                                            )
-                                                            Text(
-                                                                text = bullet,
-                                                                fontSize = 13.sp,
-                                                                lineHeight = 18.sp,
-                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                                            )
-                                                        }
+                                                Column(modifier = Modifier.padding(12.dp)) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Warning,
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.error,
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text(
+                                                            text = "Summarization Error",
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 12.sp,
+                                                            color = MaterialTheme.colorScheme.error
+                                                        )
                                                     }
-                                                } else {
+                                                    Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
-                                                        text = state.summary,
-                                                        fontSize = 13.sp,
-                                                        lineHeight = 18.sp,
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                        text = "This feature requires Gemini Nano (AICore), which is not available on this device.",
+                                                        fontSize = 11.sp,
+                                                        lineHeight = 15.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                    )
+                                                }
+                                            }
+                                            
+                                            if (article != null && article.description.isNotBlank()) {
+                                                Text(
+                                                    text = "Standard RSS Preview",
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(
+                                                        text = android.text.Html.fromHtml(article.description, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim(),
+                                                        fontSize = 12.sp,
+                                                        lineHeight = 17.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                                        modifier = Modifier.padding(12.dp)
                                                     )
                                                 }
                                             }
                                         }
-                                        is AiSummaryState.Error -> {
-                                            Column(
-                                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                val isPolicyCheck = state.message.contains("policy check", ignoreCase = true)
-                                                
-                                                Surface(
-                                                    shape = RoundedCornerShape(12.dp),
-                                                    color = if (isPolicyCheck) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f) else MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
-                                                    modifier = Modifier.fillMaxWidth()
+                                    } else {
+                                        when (val state = aiSummaryState) {
+                                            is AiSummaryState.Idle -> {
+                                                Button(
+                                                    onClick = { viewModel.generateAiSummary(articleBody) },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = EmeraldPrimary
+                                                    )
                                                 ) {
-                                                    Column(modifier = Modifier.padding(12.dp)) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Icon(
-                                                                imageVector = if (isPolicyCheck) Icons.Default.Info else Icons.Default.Warning,
-                                                                contentDescription = null,
-                                                                tint = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                                                modifier = Modifier.size(16.dp)
-                                                            )
-                                                            Spacer(modifier = Modifier.width(8.dp))
-                                                            Text(
-                                                                text = if (isPolicyCheck) "On-Device Safety Guardrails" else "Summarization Error",
-                                                                fontWeight = FontWeight.Bold,
-                                                                fontSize = 12.sp,
-                                                                color = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                                                            )
+                                                    Icon(
+                                                        imageVector = Icons.Default.AutoAwesome,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text("Generate Summary", fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                            is AiSummaryState.Loading -> {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(20.dp),
+                                                        strokeWidth = 2.dp,
+                                                        color = EmeraldPrimary
+                                                    )
+                                                    Spacer(modifier = Modifier.width(12.dp))
+                                                    Text(
+                                                        text = "Gemini is summarizing...",
+                                                        fontSize = 13.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                    )
+                                                }
+                                            }
+                                            is AiSummaryState.DownloadingModel -> {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(20.dp),
+                                                        strokeWidth = 2.dp,
+                                                        color = EmeraldPrimary
+                                                    )
+                                                    Spacer(modifier = Modifier.width(12.dp))
+                                                    Text(
+                                                        text = "Initializing local AI model (this may take a while depending on your internet connection)...",
+                                                        fontSize = 13.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                    )
+                                                }
+                                            }
+                                            is AiSummaryState.Success -> {
+                                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    val bullets = state.summary.split("\n")
+                                                        .map { it.trim().removePrefix("*").trim() }
+                                                        .filter { it.isNotBlank() }
+                                                    
+                                                    if (bullets.isNotEmpty()) {
+                                                        for (bullet in bullets) {
+                                                            Row(modifier = Modifier.fillMaxWidth()) {
+                                                                Text(
+                                                                    text = "•",
+                                                                    color = EmeraldPrimary,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 15.sp,
+                                                                    modifier = Modifier.padding(end = 8.dp)
+                                                                )
+                                                                Text(
+                                                                    text = bullet,
+                                                                    fontSize = 13.sp,
+                                                                    lineHeight = 18.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                                )
+                                                            }
                                                         }
-                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                    } else {
                                                         Text(
-                                                            text = if (isPolicyCheck) {
-                                                                "This article touches upon sensitive topics that trigger Gemini Nano's built-in local safety policies. We have provided the standard article preview below."
-                                                            } else {
-                                                                state.message
-                                                            },
-                                                            fontSize = 11.sp,
-                                                            lineHeight = 15.sp,
-                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                            text = state.summary,
+                                                            fontSize = 13.sp,
+                                                            lineHeight = 18.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                                                         )
                                                     }
                                                 }
-                                                
-                                                if (article != null && article.description.isNotBlank()) {
-                                                    Text(
-                                                        text = "Standard RSS Preview",
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        fontSize = 12.sp,
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                                    )
+                                            }
+                                            is AiSummaryState.Error -> {
+                                                Column(
+                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    val isPolicyCheck = state.message.contains("policy check", ignoreCase = true)
                                                     
                                                     Surface(
                                                         shape = RoundedCornerShape(12.dp),
-                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f),
+                                                        color = if (isPolicyCheck) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f) else MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
                                                         modifier = Modifier.fillMaxWidth()
                                                     ) {
+                                                        Column(modifier = Modifier.padding(12.dp)) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Icon(
+                                                                    imageVector = if (isPolicyCheck) Icons.Default.Info else Icons.Default.Warning,
+                                                                    contentDescription = null,
+                                                                    tint = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                                                    modifier = Modifier.size(16.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(8.dp))
+                                                                Text(
+                                                                    text = if (isPolicyCheck) "On-Device Safety Guardrails" else "Summarization Error",
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 12.sp,
+                                                                    color = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                                                )
+                                                            }
+                                                            Spacer(modifier = Modifier.height(4.dp))
+                                                            Text(
+                                                                text = if (isPolicyCheck) {
+                                                                    "This article touches upon sensitive topics that trigger Gemini Nano's built-in local safety policies. We have provided the standard article preview below."
+                                                                } else {
+                                                                    state.message
+                                                                },
+                                                                fontSize = 11.sp,
+                                                                lineHeight = 15.sp,
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                            )
+                                                        }
+                                                    }
+                                                    
+                                                    if (article != null && article.description.isNotBlank()) {
                                                         Text(
-                                                            text = android.text.Html.fromHtml(article.description, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim(),
+                                                            text = "Standard RSS Preview",
+                                                            fontWeight = FontWeight.SemiBold,
                                                             fontSize = 12.sp,
-                                                            lineHeight = 17.sp,
-                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                                                            modifier = Modifier.padding(12.dp)
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                                         )
+                                                        
+                                                        Surface(
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f),
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Text(
+                                                                text = android.text.Html.fromHtml(article.description, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim(),
+                                                                fontSize = 12.sp,
+                                                                lineHeight = 17.sp,
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                                                modifier = Modifier.padding(12.dp)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }

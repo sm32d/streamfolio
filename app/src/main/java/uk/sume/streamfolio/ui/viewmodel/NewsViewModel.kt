@@ -53,6 +53,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             advanceTtsPlaylist()
         }
         viewModelScope.launch(Dispatchers.Main) {
+            if (!prefs.hasClearedOldTags) {
+                repository.clearAllTags()
+                prefs.hasClearedOldTags = true
+            }
             checkGeminiSupport()
             if (prefs.isAiEnabled) {
                 triggerBackgroundAiPreDownload()

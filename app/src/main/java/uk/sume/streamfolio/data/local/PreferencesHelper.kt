@@ -80,4 +80,8 @@ class PreferencesHelper(context: Context) {
     var hasSeenAiSpotlight: Boolean
         get() = prefs.getBoolean("has_seen_ai_spotlight", false)
         set(value) = prefs.edit().putBoolean("has_seen_ai_spotlight", value).apply()
+
+    var hasClearedOldTags: Boolean
+        get() = prefs.getBoolean("has_cleared_old_tags_v3", false)
+        set(value) = prefs.edit().putBoolean("has_cleared_old_tags_v3", value).apply()
 }

@@ -335,7 +335,7 @@ class NewsRepository(private val context: Context) {
                             Log.d("NewsRepository", "Nano summarizer unavailable for tagging. Using text-parsing fallback.")
                         }
 
-                        val tags = extractTagsFromContent(article.title, article.description, aiSummary)
+                        val tags = extractTagsFromContent(article.title, article.description, aiSummary, article.category ?: "")
                         if (tags.isNotBlank()) {
                             articleDao.updateTags(article.link, tags)
                         } else {
@@ -349,7 +349,7 @@ class NewsRepository(private val context: Context) {
         }
     }
 
-    private fun extractTagsFromContent(title: String, description: String, aiSummary: String): String {
+    private fun extractTagsFromContent(title: String, description: String, aiSummary: String, category: String): String {
         val content = "$title $description $aiSummary".lowercase()
         val tags = mutableSetOf<String>()
 
@@ -358,42 +358,129 @@ class NewsRepository(private val context: Context) {
             "chatgpt" to "#AI",
             "machine learning" to "#AI",
             "gemini" to "#AI",
+            "deep learning" to "#AI",
+            "neural network" to "#AI",
             "inflation" to "#Inflation",
             "interest rate" to "#Inflation",
             "federal reserve" to "#Inflation",
+            "cpi" to "#Inflation",
             "economy" to "#Economy",
             "recession" to "#Economy",
-            "stocks" to "#Markets",
-            "market" to "#Markets",
+            "gdp" to "#Economy",
+            "stock market" to "#Markets",
             "nasdaq" to "#Markets",
             "s&p 500" to "#Markets",
             "dow jones" to "#Markets",
+            "wall street" to "#Markets",
+            "investing" to "#Markets",
+            "market cap" to "#Markets",
+            "shares slide" to "#Markets",
+            "shares rally" to "#Markets",
+            "bond market" to "#Markets",
             "football" to "#Sports",
             "soccer" to "#Sports",
             "basketball" to "#Sports",
             "nba" to "#Sports",
-            "world cup" to "#WorldCup",
+            "world cup" to "#Sports",
             "olympics" to "#Sports",
+            "super bowl" to "#Sports",
+            "championship" to "#Sports",
             "bitcoin" to "#Crypto",
             "ethereum" to "#Crypto",
             "cryptocurrency" to "#Crypto",
-            "election" to "#Politics",
+            "crypto" to "#Crypto",
+            "blockchain" to "#Crypto",
+            "presidential election" to "#Politics",
             "senate" to "#Politics",
-            "biden" to "#Politics",
-            "trump" to "#Politics",
-            "president" to "#Politics",
-            "climate" to "#Climate",
-            "warming" to "#Climate",
-            "greenhouse" to "#Climate",
-            "carbon" to "#Climate",
+            "political party" to "#Politics",
+            "parliament" to "#Politics",
+            "legislature" to "#Politics",
+            "white house" to "#Politics",
+            "capitol hill" to "#Politics",
+            "congress" to "#Politics",
+            "democrat" to "#Politics",
+            "republican" to "#Politics",
+            "climate change" to "#Climate",
+            "global warming" to "#Climate",
+            "greenhouse gas" to "#Climate",
+            "greenhouse gases" to "#Climate",
+            "carbon emissions" to "#Climate",
+            "renewable energy" to "#Climate",
             "cancer" to "#Health",
             "fda" to "#Health",
             "vaccine" to "#Health",
             "medicine" to "#Health",
-            "space" to "#Space",
+            "disease" to "#Health",
+            "covid" to "#Health",
+            "virus" to "#Health",
+            "outer space" to "#Space",
+            "astronomy" to "#Space",
+            "orbit" to "#Space",
+            "rocket launch" to "#Space",
             "nasa" to "#Space",
             "spacex" to "#Space",
-            "mars" to "#Space"
+            "mars rover" to "#Space",
+            "space station" to "#Space",
+            "entertainment" to "#Entertainment",
+            "movie" to "#Entertainment",
+            "music" to "#Entertainment",
+            "hollywood" to "#Entertainment",
+            "actor" to "#Entertainment",
+            "singer" to "#Entertainment",
+            "concert" to "#Entertainment",
+            "film" to "#Entertainment",
+            "technology" to "#Tech",
+            "software" to "#Tech",
+            "hardware" to "#Tech",
+            "gadget" to "#Tech",
+            "smartphone" to "#Tech",
+            "apple" to "#Tech",
+            "google" to "#Tech",
+            "microsoft" to "#Tech",
+            "science" to "#Science",
+            "physics" to "#Science",
+            "biology" to "#Science",
+            "chemistry" to "#Science",
+            "research" to "#Science",
+            "business" to "#Business",
+            "company" to "#Business",
+            "revenue" to "#Business",
+            "startup" to "#Business",
+            "ceo" to "#Business",
+            "china" to "#World",
+            "russia" to "#World",
+            "europe" to "#World",
+            "ukraine" to "#World",
+            "middle east" to "#World",
+            "nato" to "#World",
+            "global" to "#World",
+            "military" to "#Defense",
+            "defense" to "#Defense",
+            "army" to "#Defense",
+            "war" to "#Defense",
+            "missile" to "#Defense",
+            "travel" to "#Travel",
+            "tourism" to "#Travel",
+            "flight" to "#Travel",
+            "hotel" to "#Travel",
+            "fashion" to "#Lifestyle",
+            "wellness" to "#Lifestyle",
+            "fitness" to "#Lifestyle",
+            "electric vehicle" to "#Automotive",
+            "electric vehicles" to "#Automotive",
+            "tesla" to "#Automotive",
+            "autonomous driving" to "#Automotive",
+            "concept car" to "#Automotive",
+            "automaker" to "#Automotive",
+            "automakers" to "#Automotive",
+            "electric cars" to "#Automotive",
+            "hybrid vehicles" to "#Automotive",
+            "supercar" to "#Automotive",
+            "supercars" to "#Automotive",
+            "auto industry" to "#Automotive",
+            "car manufacturer" to "#Automotive",
+            "car manufacturers" to "#Automotive",
+            "ev charging" to "#Automotive"
         )
 
         for ((keyword, tag) in keywordToTagMap) {
@@ -402,32 +489,21 @@ class NewsRepository(private val context: Context) {
             }
         }
 
-        val words = "$title $description".split(Regex("[^a-zA-Z0-9#]")).filter { it.isNotBlank() }
-        val stopWords = setOf(
-            "the", "a", "an", "and", "but", "or", "for", "nor", "on", "at", "to", "from", "by", 
-            "in", "of", "with", "this", "that", "these", "those", "is", "are", "was", "were", 
-            "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", 
-            "should", "can", "could", "may", "might", "must", "about", "above", "after", "again",
-            "against", "all", "am", "any", "as", "at", "be", "because", "been", "before", "being",
-            "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down",
-            "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "he",
-            "her", "here", "hers", "herself", "him", "himself", "his", "how", "i", "if", "in", "into",
-            "is", "it", "its", "itself", "me", "more", "most", "my", "myself", "no", "nor", "not", "of",
-            "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
-            "over", "own", "same", "she", "should", "so", "some", "such", "than", "that", "the", "their",
-            "theirs", "them", "themselves", "then", "there", "theirs", "these", "they", "this", "those",
-            "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what", "when",
-            "where", "which", "while", "who", "whom", "why", "with", "would", "you", "your", "yours",
-            "yourself", "yourselves"
-        )
-
-        for (word in words) {
-            if (word.isNotEmpty() && word[0].isUpperCase()) {
-                val lowerWord = word.lowercase()
-                if (lowerWord !in stopWords && lowerWord.length > 2) {
-                    tags.add("#${word.replace("#", "")}")
-                }
-            }
+        // If no high-level keywords match, fallback to category mapping so every story is groupable
+        if (tags.isEmpty() && category.isNotBlank()) {
+            val categoryTagMap = mapOf(
+                "top stories" to "#TopStories",
+                "world" to "#World",
+                "business" to "#Business",
+                "technology" to "#Tech",
+                "science" to "#Science",
+                "sports" to "#Sports",
+                "health" to "#Health",
+                "entertainment" to "#Entertainment"
+            )
+            val normalizedCat = category.lowercase().trim()
+            val fallbackTag = categoryTagMap[normalizedCat] ?: "#${category.replace(Regex("\\s+"), "")}"
+            tags.add(fallbackTag)
         }
 
         return tags.take(4).joinToString(", ")
@@ -619,5 +695,9 @@ class NewsRepository(private val context: Context) {
         if (allArticles.isNotEmpty()) {
             insertAndPruneArticles(allArticles, category)
         }
+    }
+
+    suspend fun clearAllTags() = withContext(Dispatchers.IO) {
+        articleDao.clearAllTags()
     }
 }

@@ -57,6 +57,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -64,10 +65,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -100,11 +104,20 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
         mutableStateOf(setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment"))
     }
     
+    val isGeminiSupported by viewModel.isGeminiSupported.collectAsState()
+    
     // AI Toggles
     var isAiEnabled by rememberSaveable { mutableStateOf(false) }
     var isTranslationEnabled by rememberSaveable { mutableStateOf(true) }
     var isSummaryEnabled by rememberSaveable { mutableStateOf(true) }
     var isSmartTagsEnabled by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(isGeminiSupported) {
+        if (isGeminiSupported == false) {
+            isSummaryEnabled = false
+            isSmartTagsEnabled = false
+        }
+    }
 
     var currentStep by rememberSaveable { mutableStateOf(0) }
     val totalSteps = 4
@@ -188,7 +201,8 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             isSummaryEnabled = isSummaryEnabled,
                             onSummaryToggle = { isSummaryEnabled = it },
                             isSmartTagsEnabled = isSmartTagsEnabled,
-                            onSmartTagsToggle = { isSmartTagsEnabled = it }
+                            onSmartTagsToggle = { isSmartTagsEnabled = it },
+                            isGeminiSupported = isGeminiSupported
                         )
                     }
                 }
@@ -218,6 +232,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                         
                         viewModel.prefs.isCompletedOnboarding = true
                         viewModel.refreshCurrentFeed()
+                        viewModel.syncAllCategoriesInBackground()
                         navController.navigate("home_screen") {
                             popUpTo("onboarding") { inclusive = true }
                         }
@@ -805,7 +820,8 @@ private fun AiFeaturesStep(
     isSummaryEnabled: Boolean,
     onSummaryToggle: (Boolean) -> Unit,
     isSmartTagsEnabled: Boolean,
-    onSmartTagsToggle: (Boolean) -> Unit
+    onSmartTagsToggle: (Boolean) -> Unit,
+    isGeminiSupported: Boolean?
 ) {
     Column(
         modifier = Modifier
@@ -917,19 +933,26 @@ private fun AiFeaturesStep(
                 )
 
                 // Sub-Toggle 2: Summaries
+                val isGeminiOk = isGeminiSupported != false
                 SubToggleRow(
                     title = "Key Insights Generator",
                     subtitle = "Generate 3-bullet points summaries",
-                    checked = isSummaryEnabled,
-                    onCheckedChange = onSummaryToggle
+                    checked = if (isGeminiOk) isSummaryEnabled else false,
+                    onCheckedChange = onSummaryToggle,
+                    enabled = isGeminiOk,
+                    errorText = if (!isGeminiOk) "Requires Gemini Nano (unsupported on this device)" else null
                 )
 
                 // Sub-Toggle 3: Smart Tags
                 SubToggleRow(
                     title = "Smart Categories & Tags",
-                    subtitle = "Automatically tag articles for sorting",
-                    checked = isSmartTagsEnabled,
-                    onCheckedChange = onSmartTagsToggle
+                    subtitle = "Automatically suggest tags dynamically",
+                    checked = if (isGeminiOk) isSmartTagsEnabled else false,
+                    onCheckedChange = onSmartTagsToggle,
+                    enabled = isGeminiOk,
+                    isBeta = true,
+                    warningText = "Tags are experimental and may occasionally be inaccurate.",
+                    errorText = if (!isGeminiOk) "Requires Gemini Nano (unsupported on this device)" else null
                 )
             }
         }
@@ -941,34 +964,75 @@ private fun SubToggleRow(
     title: String,
     subtitle: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+    errorText: String? = null,
+    isBeta: Boolean = false,
+    warningText: String? = null
 ) {
+    val alpha = if (enabled) 1f else 0.5f
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .clickable { onCheckedChange(!checked) }
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        Column(modifier = Modifier.weight(1f).alpha(alpha)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (isBeta) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                        modifier = Modifier.padding(start = 6.dp)
+                    ) {
+                        Text(
+                            text = "BETA",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFD97706),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
+            if (warningText != null && enabled) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = warningText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFD97706)
+                )
+            }
+            if (errorText != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = errorText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
         }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             modifier = Modifier.scale(0.85f),
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,

@@ -56,6 +56,9 @@ interface ArticleDao {
     @Query("UPDATE articles SET tags = :tags WHERE link = :link")
     suspend fun updateTags(link: String, tags: String?)
 
+    @Query("UPDATE articles SET tags = NULL")
+    suspend fun clearAllTags()
+
     @Query("SELECT * FROM articles WHERE tags IS NULL AND isBookmarked = 0 ORDER BY pubDate DESC LIMIT :limit")
     suspend fun getArticlesWithoutTags(limit: Int): List<Article>
 

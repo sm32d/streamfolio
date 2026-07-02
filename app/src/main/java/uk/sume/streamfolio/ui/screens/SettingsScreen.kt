@@ -1956,34 +1956,66 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFF8B5CF6).copy(alpha = 0.15f)),
+                                    .background(
+                                        if (isGeminiAvail) Color(0xFF8B5CF6).copy(alpha = 0.15f)
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Category,
                                     contentDescription = null,
-                                    tint = Color(0xFF8B5CF6),
+                                    tint = if (isGeminiAvail) Color(0xFF8B5CF6) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "Smart Categories & Tags",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    )
+                                    if (isGeminiAvail) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                            modifier = Modifier.padding(start = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "BETA",
+                                                fontSize = 8.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFFD97706),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
                                 Text(
-                                    text = "Smart Categories & Tags",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Extract and suggest contextual hashtags dynamically",
+                                    text = if (isGeminiAvail) "Automatically suggest tags dynamically"
+                                           else "Requires Gemini Nano (unsupported on this device)",
                                     fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                           else MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                                 )
+                                if (isGeminiAvail) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Tags are experimental and may occasionally be inaccurate.",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFD97706)
+                                    )
+                                }
                             }
                         }
                         Switch(
-                            checked = isSmartTagsEnabled,
-                            onCheckedChange = { viewModel.setSmartTagsEnabled(it) },
+                            checked = isSmartTagsEnabled && isGeminiAvail,
+                            onCheckedChange = { if (isGeminiAvail) viewModel.setSmartTagsEnabled(it) },
+                            enabled = isGeminiAvail,
                             modifier = Modifier.scale(0.85f),
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
