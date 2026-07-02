@@ -301,7 +301,10 @@ fun HomeScreen(
                         if (!hasSeenAiSpotlight && !isAiEnabled) {
                             item {
                                 AiSpotlightBanner(
-                                    onEnable = { viewModel.setAiEnabled(true); viewModel.setHasSeenAiSpotlight(true) },
+                                    onEnable = {
+                                        viewModel.setHasSeenAiSpotlight(true)
+                                        navController.navigate("settings_ai")
+                                    },
                                     onDismiss = { viewModel.setHasSeenAiSpotlight(true) }
                                 )
                             }
@@ -1240,67 +1243,84 @@ fun AiSpotlightBanner(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 12.dp)
-            .shadow(4.dp, RoundedCornerShape(24.dp)),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = EmeraldPrimary.copy(alpha = 0.08f)
-        ),
-        border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.3f))
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF6366F1), // Premium Indigo
+                            Color(0xFF0D9488)  // Premium Teal
+                        )
+                    )
+                )
+                .padding(20.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(EmeraldPrimary),
-                    contentAlignment = Alignment.Center
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Text(
+                        text = "Upgrade to On-Device AI",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
+
                 Text(
-                    text = "Upgrade to On-Device AI",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "Translate foreign feeds offline, read dynamic key summaries, and browse semantic tags. Private and run 100% locally.",
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    color = Color.White.copy(alpha = 0.85f)
                 )
-            }
 
-            Text(
-                text = "Translate foreign feeds offline, read dynamic key summaries, and browse semantic tags. Private and run 100% locally.",
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(
-                    onClick = onEnable,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Enable AI", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
+                    Button(
+                        onClick = onEnable,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = Color(0xFF6366F1)
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text("Enable AI", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
 
-                TextButton(
-                    onClick = onDismiss
-                ) {
-                    Text("Dismiss", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 13.sp)
+                    TextButton(
+                        onClick = onDismiss
+                    ) {
+                        Text(
+                            text = "Dismiss",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

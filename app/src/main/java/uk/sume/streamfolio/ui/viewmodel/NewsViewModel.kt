@@ -71,12 +71,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     fun syncAllCategoriesInBackground() {
         viewModelScope.launch(Dispatchers.IO) {
             val categoriesToSync = prefs.selectedCategories.toList()
+            val defaultCategories = setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
             for (cat in categoriesToSync) {
                 try {
                     val matchingFeeds = customFeeds.value.filter { it.category == cat }
                     if (matchingFeeds.isNotEmpty()) {
                         repository.fetchCustomFeeds(matchingFeeds, cat)
-                    } else {
+                    }
+                    if (defaultCategories.contains(cat) && prefs.isDefaultFeedsEnabled) {
                         repository.fetchDefaultFeeds(
                             category = cat,
                             language = prefs.language,
@@ -369,7 +371,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             val matchingFeeds = customFeeds.value.filter { it.category == currentCat }
             if (matchingFeeds.isNotEmpty()) {
                 repository.fetchCustomFeeds(matchingFeeds, currentCat)
-            } else {
+            }
+            
+            val defaultCategories = setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+            if (defaultCategories.contains(currentCat) && prefs.isDefaultFeedsEnabled) {
                 repository.fetchDefaultFeeds(
                     category = currentCat,
                     language = prefs.language,
