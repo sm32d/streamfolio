@@ -563,13 +563,69 @@ fun DetailScreen(
                                             }
                                         }
                                         is AiSummaryState.Error -> {
-                                            Text(
-                                                text = state.message,
-                                                fontSize = 12.sp,
-                                                lineHeight = 16.sp,
-                                                color = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.padding(vertical = 4.dp)
-                                            )
+                                            Column(
+                                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                val isPolicyCheck = state.message.contains("policy check", ignoreCase = true)
+                                                
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = if (isPolicyCheck) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f) else MaterialTheme.colorScheme.error.copy(alpha = 0.05f),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Column(modifier = Modifier.padding(12.dp)) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Icon(
+                                                                imageVector = if (isPolicyCheck) Icons.Default.Info else Icons.Default.Warning,
+                                                                contentDescription = null,
+                                                                tint = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                                                modifier = Modifier.size(16.dp)
+                                                            )
+                                                            Spacer(modifier = Modifier.width(8.dp))
+                                                            Text(
+                                                                text = if (isPolicyCheck) "On-Device Safety Guardrails" else "Summarization Error",
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 12.sp,
+                                                                color = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                        Text(
+                                                            text = if (isPolicyCheck) {
+                                                                "This article touches upon sensitive topics that trigger Gemini Nano's built-in local safety policies. We have provided the standard article preview below."
+                                                            } else {
+                                                                state.message
+                                                            },
+                                                            fontSize = 11.sp,
+                                                            lineHeight = 15.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                                        )
+                                                    }
+                                                }
+                                                
+                                                if (article != null && article.description.isNotBlank()) {
+                                                    Text(
+                                                        text = "Standard RSS Preview",
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                    )
+                                                    
+                                                    Surface(
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f),
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        Text(
+                                                            text = android.text.Html.fromHtml(article.description, android.text.Html.FROM_HTML_MODE_LEGACY).toString().trim(),
+                                                            fontSize = 12.sp,
+                                                            lineHeight = 17.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                                            modifier = Modifier.padding(12.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
