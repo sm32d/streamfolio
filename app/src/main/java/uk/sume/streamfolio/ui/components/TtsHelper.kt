@@ -19,18 +19,33 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
     private val _currentParagraphIndex = MutableStateFlow(0)
     val currentParagraphIndex: StateFlow<Int> = _currentParagraphIndex
 
+    private val _currentWordRange = MutableStateFlow<Pair<Int, Int>?>(null)
+    val currentWordRange: StateFlow<Pair<Int, Int>?> = _currentWordRange
+
     private var paragraphsList: List<String> = emptyList()
+    private var activeParagraphOffset = 0
+    private var lastPausedCharOffset = 0
+
+    var onArticleCompleted: (() -> Unit)? = null
 
     init {
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
                 _isPlaying.value = true
+                _currentWordRange.value = null
                 utteranceId?.toIntOrNull()?.let { index ->
-                    _currentParagraphIndex.value = index
+                    if (_currentParagraphIndex.value != index) {
+                        _currentParagraphIndex.value = index
+                        activeParagraphOffset = 0
+                        lastPausedCharOffset = 0
+                    }
                 }
             }
 
             override fun onDone(utteranceId: String?) {
+                _currentWordRange.value = null
+                activeParagraphOffset = 0
+                lastPausedCharOffset = 0
                 utteranceId?.toIntOrNull()?.let { index ->
                     val nextIndex = index + 1
                     if (nextIndex < paragraphsList.size) {
@@ -38,6 +53,7 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
                     } else {
                         _isPlaying.value = false
                         _currentParagraphIndex.value = 0
+                        onArticleCompleted?.invoke()
                     }
                 }
             }
@@ -45,11 +61,25 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {
                 _isPlaying.value = false
+                _currentWordRange.value = null
+                activeParagraphOffset = 0
+                lastPausedCharOffset = 0
             }
 
             override fun onError(utteranceId: String?, errorCode: Int) {
                 super.onError(utteranceId, errorCode)
                 _isPlaying.value = false
+                _currentWordRange.value = null
+                activeParagraphOffset = 0
+                lastPausedCharOffset = 0
+            }
+
+            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                super.onRangeStart(utteranceId, start, end, frame)
+                val absoluteStart = start + activeParagraphOffset
+                val absoluteEnd = end + activeParagraphOffset
+                _currentWordRange.value = Pair(absoluteStart, absoluteEnd)
+                lastPausedCharOffset = absoluteStart
             }
         })
     }
@@ -101,6 +131,7 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
 
     fun pause() {
         if (!isInitialized) return
+        activeParagraphOffset = lastPausedCharOffset
         tts?.stop()
         _isPlaying.value = false
     }
@@ -110,6 +141,16 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         tts?.stop()
         _isPlaying.value = false
         _currentParagraphIndex.value = 0
+        activeParagraphOffset = 0
+        lastPausedCharOffset = 0
+    }
+
+    fun seekToParagraph(index: Int) {
+        if (!isInitialized) return
+        if (index < 0 || index >= paragraphsList.size) return
+        activeParagraphOffset = 0
+        lastPausedCharOffset = 0
+        speakParagraph(index)
     }
 
     private fun speakParagraph(index: Int) {
@@ -117,10 +158,17 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         _currentParagraphIndex.value = index
         _isPlaying.value = true
         
+        val fullText = paragraphsList[index]
+        val textToSpeak = if (activeParagraphOffset > 0 && activeParagraphOffset < fullText.length) {
+            fullText.substring(activeParagraphOffset)
+        } else {
+            fullText
+        }
+        
         val params = android.os.Bundle()
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, index.toString())
         
-        tts?.speak(paragraphsList[index], TextToSpeech.QUEUE_FLUSH, params, index.toString())
+        tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, index.toString())
     }
 
     fun shutdown() {

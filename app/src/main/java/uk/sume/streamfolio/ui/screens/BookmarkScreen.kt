@@ -19,11 +19,24 @@ import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import java.net.URLEncoder
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.outlined.Hearing
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun BookmarkScreen(navController: NavController, viewModel: NewsViewModel) {
+fun BookmarkScreen(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
+    val context = LocalContext.current
 
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
@@ -91,11 +104,18 @@ fun BookmarkScreen(navController: NavController, viewModel: NewsViewModel) {
                     items(bookmarkedArticles) { article ->
                         ArticleListItem(
                             article = article,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
                             onTap = {
                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                 navController.navigate("detail_screen/$encodedUrl")
                             },
-                            onBookmarkToggle = { viewModel.toggleBookmark(article) }
+                            onBookmarkToggle = { viewModel.toggleBookmark(article) },
+                            onPlayClick = { viewModel.speakArticle(article) },
+                            onQueueClick = {
+                                viewModel.addToTtsPlaylist(article)
+                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                            }
                         )
                     }
                 }

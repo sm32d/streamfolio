@@ -13,6 +13,7 @@ import kotlinx.coroutines.awaitAll
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import uk.sume.streamfolio.data.local.AppDatabase
+import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import java.util.concurrent.TimeUnit
@@ -22,6 +23,7 @@ class NewsRepository(context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val articleDao = db.articleDao()
     private val customFeedDao = db.customFeedDao()
+    private val prefs = PreferencesHelper(context)
     private val parser = RssParser()
 
     private val client = OkHttpClient.Builder()
@@ -63,7 +65,7 @@ class NewsRepository(context: Context) {
                     client.newCall(request).execute().use { response ->
                         if (response.isSuccessful) {
                             val xml = response.body?.string() ?: ""
-                            val parsed = parser.parse(xml, category)
+                            val parsed = parser.parse(xml, category, feedUrl = url)
                             feedArticles.addAll(parsed)
                         }
                     }
@@ -79,9 +81,9 @@ class NewsRepository(context: Context) {
             allArticles.addAll(list)
         }
         
-        articleDao.clearNonBookmarkedArticlesByCategory(category)
-        articleDao.insertArticles(allArticles)
+        insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+        triggerArticleBodyPreScrape(allArticles)
     }
 
     // Fetch multiple Custom RSS Feeds for a single category/tab in parallel
@@ -113,7 +115,7 @@ class NewsRepository(context: Context) {
                                         client.newCall(childRequest).execute().use { childResponse ->
                                             if (childResponse.isSuccessful) {
                                                 val childXml = childResponse.body?.string() ?: ""
-                                                val childArticles = parser.parse(childXml, feed.category, feed.id)
+                                                val childArticles = parser.parse(childXml, feed.category, feed.id, feedUrl = formattedChildUrl)
                                                 aggregated.addAll(childArticles)
                                             }
                                         }
@@ -123,7 +125,7 @@ class NewsRepository(context: Context) {
                                 }
                                 aggregated
                             } else {
-                                parser.parse(xml, feed.category, feed.id)
+                                parser.parse(xml, feed.category, feed.id, feedUrl = url)
                             }
                             feedArticles.addAll(parsed)
                         }
@@ -139,9 +141,23 @@ class NewsRepository(context: Context) {
             allArticles.addAll(list)
         }
         
-        articleDao.clearNonBookmarkedArticlesByCategory(category)
-        articleDao.insertArticles(allArticles)
+        insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+        triggerArticleBodyPreScrape(allArticles)
+    }
+
+    private suspend fun insertAndPruneArticles(allArticles: List<Article>, category: String) {
+        articleDao.insertOrUpdateArticles(allArticles)
+        val historyDays = prefs.cacheHistoryDays
+        if (historyDays < 36500) {
+            val cal = java.util.Calendar.getInstance()
+            cal.add(java.util.Calendar.DAY_OF_YEAR, -historyDays)
+            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }
+            val expiryDate = sdf.format(cal.time)
+            articleDao.pruneOldArticles(expiryDate)
+        }
     }
 
     // Search news online by querying active default and custom feeds, and filtering results locally
@@ -194,7 +210,7 @@ class NewsRepository(context: Context) {
                                         client.newCall(childReq).execute().use { childResp ->
                                             if (childResp.isSuccessful) {
                                                 val childXml = childResp.body?.string() ?: ""
-                                                val childParsed = parser.parse(childXml, cat)
+                                                val childParsed = parser.parse(childXml, cat, feedUrl = fc)
                                                 aggregated.addAll(childParsed)
                                             }
                                         }
@@ -204,7 +220,7 @@ class NewsRepository(context: Context) {
                                 }
                                 aggregated
                             } else {
-                                parser.parse(xml, cat)
+                                parser.parse(xml, cat, feedUrl = formattedUrl)
                             }
                             
                             val cleanQuery = query.replace("\"", "").lowercase()
@@ -229,8 +245,9 @@ class NewsRepository(context: Context) {
         }
         
         articleDao.clearNonBookmarkedArticlesByCategory(category)
-        articleDao.insertArticles(allArticles)
+        articleDao.insertOrUpdateArticles(allArticles)
         triggerThumbnailResolution(allArticles)
+        triggerArticleBodyPreScrape(allArticles)
     }
 
     private fun isGibberishOrPromo(line: String): Boolean {
@@ -272,7 +289,36 @@ class NewsRepository(context: Context) {
         }
     }
 
-    private fun resolveGoogleNewsUrl(googleUrl: String): String {
+    // Pre-scrape full text for the top 10 articles in parallel in the background
+    private suspend fun triggerArticleBodyPreScrape(articles: List<Article>) {
+        withContext(Dispatchers.IO) {
+            articles.take(10).forEach { article ->
+                val existing = articleDao.getArticleByLink(article.link)
+                if (existing == null || existing.fullText == null) {
+                    launch {
+                        try {
+                            val body = fetchArticleBody(article.link)
+                            if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                                articleDao.updateFullText(article.link, body)
+                            }
+                        } catch (e: Exception) {
+                            Log.e("NewsRepository", "Failed pre-scraping for ${article.link}", e)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun getArticleByLink(link: String): Article? = articleDao.getArticleByLink(link)
+
+    suspend fun insertArticle(article: Article) = withContext(Dispatchers.IO) {
+        articleDao.insertOrUpdateArticles(listOf(article))
+    }
+
+    suspend fun updateFullText(link: String, fullText: String?) = articleDao.updateFullText(link, fullText)
+
+    fun resolveGoogleNewsUrl(googleUrl: String): String {
         try {
             if (!googleUrl.startsWith("https://news.google.com/")) {
                 return googleUrl
@@ -428,4 +474,27 @@ class NewsRepository(context: Context) {
     fun getCustomFeeds(): Flow<List<CustomFeed>> = customFeedDao.getAllFeeds()
     suspend fun addCustomFeed(feed: CustomFeed) = customFeedDao.insertFeed(feed)
     suspend fun deleteCustomFeed(feed: CustomFeed) = customFeedDao.deleteFeed(feed)
+
+    suspend fun deleteArticlesForFeed(sourceUrl: String) = withContext(Dispatchers.IO) {
+        articleDao.deleteArticlesBySourceUrl(sourceUrl)
+    }
+
+    suspend fun fetchSingleFeed(url: String, category: String) = withContext(Dispatchers.IO) {
+        val allArticles = mutableListOf<Article>()
+        try {
+            val request = buildBrowserRequest(url)
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val xml = response.body?.string() ?: ""
+                    val parsed = parser.parse(xml, category, feedUrl = url)
+                    allArticles.addAll(parsed)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NewsRepository", "Error fetching single feed: $url", e)
+        }
+        if (allArticles.isNotEmpty()) {
+            insertAndPruneArticles(allArticles, category)
+        }
+    }
 }

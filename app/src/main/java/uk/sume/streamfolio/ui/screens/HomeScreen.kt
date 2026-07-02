@@ -2,6 +2,9 @@ package uk.sume.streamfolio.ui.screens
 
 import android.net.Uri
 import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,7 +23,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.BookmarkAdd
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import android.content.Intent
+import android.widget.Toast
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -46,6 +59,9 @@ import uk.sume.streamfolio.ui.theme.DarkGradient
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.BorderStroke
+import kotlinx.coroutines.launch
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import java.net.URLEncoder
@@ -53,14 +69,20 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
+fun HomeScreen(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
     val articles by viewModel.articles.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
+    val context = LocalContext.current
 
     val activeRegion = remember(viewModel.prefs.region) { viewModel.prefs.region.uppercase() }
     val hasCuratedFeeds = remember(activeRegion, selectedCategory) {
@@ -240,7 +262,7 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                     ) {
                     
                     // Publisher Favicon filter carousel
-                    if (publishers.isNotEmpty()) {
+                    if (publishers.size > 1) {
                         item {
                             Text(
                                 text = "Publishers",
@@ -345,16 +367,25 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                                                 clip = false
                                             )
                                     ) {
-                                        TrendingCard(
-                                            article = article,
-                                            onBookmarkClick = {
-                                                viewModel.toggleBookmark(article)
-                                            },
-                                            onTap = {
-                                                val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                                navController.navigate("detail_screen/$encodedUrl")
-                                            }
-                                        )
+                                         TrendingCard(
+                                             article = article,
+                                             sharedTransitionScope = sharedTransitionScope,
+                                             animatedVisibilityScope = animatedVisibilityScope,
+                                             onBookmarkClick = {
+                                                 viewModel.toggleBookmark(article)
+                                             },
+                                             onPlayClick = {
+                                                 viewModel.speakArticle(article)
+                                             },
+                                             onQueueClick = {
+                                                 viewModel.addToTtsPlaylist(article)
+                                                 Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                             },
+                                             onTap = {
+                                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                                 navController.navigate("detail_screen/$encodedUrl")
+                                             }
+                                         )
                                     }
                                 }
 
@@ -466,11 +497,18 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
                         items(listArticles) { article ->
                             ArticleListItem(
                                 article = article,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                                 onTap = {
                                     val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                     navController.navigate("detail_screen/$encodedUrl")
                                 },
-                                onBookmarkToggle = { viewModel.toggleBookmark(article) }
+                                onBookmarkToggle = { viewModel.toggleBookmark(article) },
+                                onPlayClick = { viewModel.speakArticle(article) },
+                                onQueueClick = {
+                                    viewModel.addToTtsPlaylist(article)
+                                    Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                }
                             )
                         }
                     }
@@ -481,8 +519,17 @@ fun HomeScreen(navController: NavController, viewModel: NewsViewModel) {
 }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun TrendingCard(article: Article, onBookmarkClick: () -> Unit, onTap: () -> Unit) {
+fun TrendingCard(
+    article: Article,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onBookmarkClick: () -> Unit,
+    onPlayClick: () -> Unit,
+    onQueueClick: () -> Unit,
+    onTap: () -> Unit
+) {
     val thumbnail = article.thumbnailUrl
     val isGoogleLogo = thumbnail?.let {
         it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
@@ -497,30 +544,45 @@ fun TrendingCard(article: Article, onBookmarkClick: () -> Unit, onTap: () -> Uni
     ) {
         if (hasValidThumbnail) {
             // Thumbnail Image
-            AsyncImage(
-                model = thumbnail,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+            with(sharedTransitionScope) {
+                AsyncImage(
+                    model = thumbnail,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .sharedElement(
+                            rememberSharedContentState(key = "image_${article.link}"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+            }
         } else {
             // Fallback gradient background with publisher's initial watermark
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+            with(sharedTransitionScope) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .sharedElement(
+                            rememberSharedContentState(key = "image_${article.link}"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
                         )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = article.sourceName.firstOrNull()?.toString() ?: "?",
-                    color = Color.White.copy(alpha = 0.15f),
-                    fontSize = 120.sp,
-                    fontWeight = FontWeight.Black
-                )
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = article.sourceName.firstOrNull()?.toString() ?: "?",
+                        color = Color.White.copy(alpha = 0.15f),
+                        fontSize = 120.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
             }
         }
 
@@ -565,42 +627,81 @@ fun TrendingCard(article: Article, onBookmarkClick: () -> Unit, onTap: () -> Uni
                     color = Color.White.copy(alpha = 0.8f)
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = article.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            with(sharedTransitionScope) {
+                Text(
+                    text = article.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.sharedElement(
+                        rememberSharedContentState(key = "title_${article.link}"),
+                        animatedVisibilityScope = animatedVisibilityScope
+                    )
+                )
+            }
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = article.sourceName,
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = formatPubDate(article.pubDate),
-                    fontSize = 11.sp,
-                    color = Color.White.copy(alpha = 0.5f)
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = article.sourceName,
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = formatPubDate(article.pubDate),
+                        fontSize = 11.sp,
+                        color = Color.White.copy(alpha = 0.5f)
+                    )
+                }
+
+                // Primary Play Button establishing hierarchy
+                IconButton(
+                    onClick = onPlayClick,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "Play Now",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
 
-        // Floating bookmark button at the top-right
+        // Floating actions button row at the top-right (secondary actions only)
         var isBookmarked by remember(article.isBookmarked) { mutableStateOf(article.isBookmarked) }
-        Box(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                onClick = onQueueClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlaylistAdd,
+                    contentDescription = "Add to Queue",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
             IconButton(
                 onClick = {
                     onBookmarkClick()
@@ -621,110 +722,371 @@ fun TrendingCard(article: Article, onBookmarkClick: () -> Unit, onTap: () -> Uni
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ArticleListItem(
     article: Article,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onTap: () -> Unit,
-    onBookmarkToggle: () -> Unit
+    onBookmarkToggle: () -> Unit,
+    onPlayClick: () -> Unit,
+    onQueueClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 8.dp)
-            .border(
-                1.dp,
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                RoundedCornerShape(20.dp)
-            )
-            .clickable(onClick = onTap),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Thumbnail with fallback gradient helper
-            val thumbnail = article.thumbnailUrl
-            val isGoogleLogo = thumbnail?.let {
-                it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
-            } ?: false
-            val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
-            if (hasValidThumbnail) {
-                AsyncImage(
-                    model = thumbnail,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = article.sourceName.firstOrNull()?.toString() ?: "?",
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+    val currentArticle by rememberUpdatedState(article)
+    val currentOnBookmarkToggle by rememberUpdatedState(onBookmarkToggle)
+    val showRemoveConfirmationState = remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    if (currentArticle.isBookmarked) {
+                        scope.launch {
+                            showRemoveConfirmationState.value = true
+                        }
+                    } else {
+                        currentOnBookmarkToggle()
+                    }
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    false
                 }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
+                        putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: ${currentArticle.link}")
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    false
+                }
+                else -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val color = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF00B0FF).copy(alpha = 0.2f)
+                SwipeToDismissBoxValue.EndToStart -> {
+                    if (article.isBookmarked) {
+                        Color(0xFFEF5350).copy(alpha = 0.2f)
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                    }
+                }
+                else -> Color.Transparent
+            }
+            val contentColor = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF00B0FF)
+                SwipeToDismissBoxValue.EndToStart -> {
+                    if (article.isBookmarked) {
+                        Color(0xFFEF5350)
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
+                }
+                else -> Color.Transparent
+            }
+            val alignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                else -> Alignment.Center
+            }
+            val icon = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Share
+                SwipeToDismissBoxValue.EndToStart -> if (article.isBookmarked) Icons.Default.Delete else Icons.Outlined.BookmarkAdd
+                else -> null
+            }
+            val label = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> "Share"
+                SwipeToDismissBoxValue.EndToStart -> if (article.isBookmarked) "Remove" else "Save"
+                else -> ""
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Details
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = article.sourceName,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(color)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = alignment
+            ) {
+                if (icon != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (direction == SwipeToDismissBoxValue.StartToEnd) {
+                            Icon(icon, contentDescription = null, tint = contentColor)
+                            Text(label, color = contentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        } else {
+                            Text(label, color = contentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Icon(icon, contentDescription = null, tint = contentColor)
+                        }
+                    }
+                }
+            }
+        },
+        content = {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                        RoundedCornerShape(20.dp)
+                    )
+                    .clickable(onClick = onTap),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = article.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = formatPubDate(article.pubDate),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                    IconButton(
-                        onClick = onBookmarkToggle,
-                        modifier = Modifier.size(24.dp)
+                    val thumbnail = article.thumbnailUrl
+                    val isGoogleLogo = thumbnail?.let {
+                        it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
+                    } ?: false
+                    val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+
+                    // Left Thumbnail Area with Overlaid Play Button
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                    ) {
+                        if (hasValidThumbnail) {
+                            with(sharedTransitionScope) {
+                                AsyncImage(
+                                    model = thumbnail,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
+                                        ),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                        } else {
+                            with(sharedTransitionScope) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(16.dp)) }
+                                        )
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = article.sourceName.firstOrNull()?.toString() ?: "?",
+                                        color = Color.White,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        // Overlaid Play Button
+                        IconButton(
+                            onClick = onPlayClick,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(36.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = "Play Now",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    // Text & Actions Column
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = article.sourceName,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        with(sharedTransitionScope) {
+                            Text(
+                                text = article.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.sharedElement(
+                                    rememberSharedContentState(key = "title_${article.link}"),
+                                    animatedVisibilityScope = animatedVisibilityScope
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Bottom Row: Date on Left, Secondary Actions on Right
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = formatPubDate(article.pubDate),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = onQueueClick,
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlaylistAdd,
+                                        contentDescription = "Add to Queue",
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                IconButton(
+                                    onClick = onBookmarkToggle,
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (article.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkAdd,
+                                        contentDescription = "Bookmark",
+                                        tint = if (article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+
+    if (showRemoveConfirmationState.value) {
+        Dialog(onDismissRequest = { showRemoveConfirmationState.value = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (article.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkAdd,
-                            contentDescription = "Bookmark",
-                            tint = if (article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            modifier = Modifier.size(18.dp)
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFEF5350),
+                            modifier = Modifier.size(28.dp)
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Remove Bookmark",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Are you sure you want to remove this article from your saved bookmarks?",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { showRemoveConfirmationState.value = false },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                        ) {
+                            Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                showRemoveConfirmationState.value = false
+                                currentOnBookmarkToggle()
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFEF5350),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Remove", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -737,8 +1099,9 @@ fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: Strin
     if (sourceUrl.isNotBlank()) {
         try {
             val uri = Uri.parse(sourceUrl)
-            val host = uri.host
+            var host = uri.host
             if (!host.isNullOrEmpty() && !host.contains("google.com")) {
+                if (host.startsWith("www.")) host = host.substring(4)
                 return host
             }
         } catch (e: Exception) {
@@ -748,8 +1111,9 @@ fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: Strin
     if (articleLink.isNotBlank()) {
         try {
             val uri = Uri.parse(articleLink)
-            val host = uri.host
+            var host = uri.host
             if (!host.isNullOrEmpty() && !host.contains("google.com")) {
+                if (host.startsWith("www.")) host = host.substring(4)
                 return host
             }
         } catch (e: Exception) {

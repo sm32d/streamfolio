@@ -14,8 +14,8 @@ android {
         applicationId = "uk.sume.streamfolio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.1.2-beta"
+        versionCode = 8
+        versionName = "1.1.6-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -61,6 +61,7 @@ dependencies {
     // Navigation & Image Loading
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     
     // Parsing & Networking
     implementation(libs.jsoup)
@@ -70,6 +71,8 @@ dependencies {
     implementation("com.google.mlkit:genai-summarization:1.0.0-beta1")
 
     testImplementation(libs.junit)
+    testImplementation("xmlpull:xmlpull:1.1.3.4a")
+    testImplementation("xpp3:xpp3:1.1.4c")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

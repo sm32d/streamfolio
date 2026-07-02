@@ -11,7 +11,10 @@ import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.data.network.NewsRepository
+import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import uk.sume.streamfolio.ui.components.TtsHelper
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -21,6 +24,173 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val prefs = PreferencesHelper(application)
     val ttsHelper = TtsHelper(application)
 
+    init {
+        ttsHelper.onArticleCompleted = {
+            advanceTtsPlaylist()
+        }
+    }
+
+    // Typography States
+    val readerFontFamily = MutableStateFlow(prefs.readerFontFamily)
+    val readerFontSize = MutableStateFlow(prefs.readerFontSize)
+    val readerLineSpacing = MutableStateFlow(prefs.readerLineSpacing)
+
+    // TTS Word Range & Seek
+    val currentWordRange: StateFlow<Pair<Int, Int>?> = ttsHelper.currentWordRange
+
+    private val _showLyricsVisualizer = MutableStateFlow(false)
+    val showLyricsVisualizer: StateFlow<Boolean> = _showLyricsVisualizer
+
+    private val _currentArticleDetail = MutableStateFlow<Article?>(null)
+    val currentArticleDetail: StateFlow<Article?> = _currentArticleDetail.asStateFlow()
+
+    fun setShowLyricsVisualizer(show: Boolean) {
+        _showLyricsVisualizer.value = show
+    }
+
+    fun seekTtsToParagraph(index: Int) {
+        ttsHelper.seekToParagraph(index)
+    }
+
+    fun updateReaderFontFamily(font: String) {
+        prefs.readerFontFamily = font
+        readerFontFamily.value = font
+    }
+
+    fun updateReaderFontSize(size: Float) {
+        prefs.readerFontSize = size
+        readerFontSize.value = size
+    }
+
+    fun updateReaderLineSpacing(spacing: Float) {
+        prefs.readerLineSpacing = spacing
+        readerLineSpacing.value = spacing
+    }
+
+    // TTS Playlist state
+    private val _ttsPlaylist = MutableStateFlow<List<Article>>(emptyList())
+    val ttsPlaylist: StateFlow<List<Article>> = _ttsPlaylist
+
+    private val _currentTtsArticleIndex = MutableStateFlow<Int>(-1)
+    val currentTtsArticleIndex: StateFlow<Int> = _currentTtsArticleIndex
+
+    fun addToTtsPlaylist(article: Article) {
+        val current = _ttsPlaylist.value.toMutableList()
+        if (!current.any { it.link == article.link }) {
+            current.add(article)
+            _ttsPlaylist.value = current
+            if (_currentTtsArticleIndex.value == -1) {
+                _currentTtsArticleIndex.value = 0
+            }
+        }
+    }
+
+    fun removeFromTtsPlaylist(article: Article) {
+        val current = _ttsPlaylist.value.toMutableList()
+        val index = current.indexOfFirst { it.link == article.link }
+        if (index != -1) {
+            current.removeAt(index)
+            _ttsPlaylist.value = current
+            
+            val activeIdx = _currentTtsArticleIndex.value
+            if (activeIdx == index) {
+                if (current.isEmpty()) {
+                    stopSpeakingPlaylist()
+                } else {
+                    val nextIdx = if (index < current.size) index else current.size - 1
+                    playTtsPlaylist(nextIdx)
+                }
+            } else if (index < activeIdx) {
+                _currentTtsArticleIndex.value = activeIdx - 1
+            }
+        }
+    }
+
+    fun clearTtsPlaylist() {
+        stopSpeakingPlaylist()
+        _ttsPlaylist.value = emptyList()
+    }
+
+    fun moveTtsPlaylistItem(fromIndex: Int, toIndex: Int) {
+        val current = _ttsPlaylist.value.toMutableList()
+        if (fromIndex in current.indices && toIndex in current.indices) {
+            val item = current.removeAt(fromIndex)
+            current.add(toIndex, item)
+            _ttsPlaylist.value = current
+            
+            // Adjust current playing index if it was moved
+            val activeIdx = _currentTtsArticleIndex.value
+            if (activeIdx == fromIndex) {
+                _currentTtsArticleIndex.value = toIndex
+            } else if (activeIdx in (fromIndex + 1)..toIndex) {
+                _currentTtsArticleIndex.value = activeIdx - 1
+            } else if (activeIdx in toIndex..<fromIndex) {
+                _currentTtsArticleIndex.value = activeIdx + 1
+            }
+        }
+    }
+
+    fun playTtsPlaylist(startIndex: Int) {
+        val list = _ttsPlaylist.value
+        if (startIndex < 0 || startIndex >= list.size) return
+        
+        _currentTtsArticleIndex.value = startIndex
+        val article = list[startIndex]
+        
+        viewModelScope.launch {
+            _isLoadingBody.value = true
+            _articleBody.value = ""
+            ttsHelper.stop()
+            
+            val cached = repository.getArticleByLink(article.link)
+            val textToSpeak = if (cached != null && cached.fullText != null) {
+                _articleBody.value = cached.fullText
+                cached.fullText
+            } else {
+                val body = repository.fetchArticleBody(article.link)
+                _articleBody.value = body
+                if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                    repository.updateFullText(article.link, body)
+                }
+                body
+            }
+            _isLoadingBody.value = false
+            ttsHelper.play(textToSpeak)
+        }
+    }
+
+    fun stopSpeakingPlaylist() {
+        ttsHelper.stop()
+        _currentTtsArticleIndex.value = -1
+        _articleBody.value = ""
+    }
+
+    fun playOrPausePlaylist() {
+        if (ttsHelper.isPlaying.value) {
+            ttsHelper.pause()
+        } else {
+            val idx = _currentTtsArticleIndex.value
+            if (idx != -1) {
+                if (_articleBody.value.isEmpty()) {
+                    playTtsPlaylist(idx)
+                } else {
+                    ttsHelper.resume()
+                }
+            } else if (_ttsPlaylist.value.isNotEmpty()) {
+                playTtsPlaylist(0)
+            }
+        }
+    }
+
+    fun advanceTtsPlaylist() {
+        val nextIndex = _currentTtsArticleIndex.value + 1
+        if (nextIndex < _ttsPlaylist.value.size) {
+            playTtsPlaylist(nextIndex)
+        } else {
+            stopSpeakingPlaylist()
+        }
+    }
+
     // Current category selector
     private val _selectedCategory = MutableStateFlow("Top Stories")
     val selectedCategory: StateFlow<String> = _selectedCategory
@@ -29,10 +199,25 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedPublisher = MutableStateFlow<String?>(null)
     val selectedPublisher: StateFlow<String?> = _selectedPublisher
 
+    private val _prefsChangedSignal = MutableStateFlow(0)
+
     // Articles flow
-    val articles: StateFlow<List<Article>> = _selectedCategory
+    val articles: StateFlow<List<Article>> = combine(_selectedCategory, _prefsChangedSignal) { category, _ ->
+        category
+    }
         .flatMapLatest { category ->
-            repository.getArticlesByCategory(category)
+            repository.getArticlesByCategory(category).map { list ->
+                val enabledUrls = DefaultFeedsConfig.getFeedsFor(
+                    region = prefs.region,
+                    category = category,
+                    disabledFeedUrls = prefs.disabledFeedUrls,
+                    enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
+                ).toSet()
+                
+                list.filter { article ->
+                    article.customFeedId != null || enabledUrls.contains(article.sourceUrl)
+                }
+            }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -75,6 +260,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     // Navigation parameter helper for curation filtering
     var filterCategoryOnSettings: String? = null
+
+    // Pending article URL clicked from widget
+    private val _pendingArticleUrl = MutableStateFlow<String?>(null)
+    val pendingArticleUrl: StateFlow<String?> = _pendingArticleUrl.asStateFlow()
+
+    fun setPendingArticleUrl(url: String?) {
+        _pendingArticleUrl.value = url
+    }
 
     init {
         // Fetch top stories initially if onboarding is done
@@ -151,19 +344,99 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadArticleBody(url: String) {
         viewModelScope.launch {
+            val art = repository.getArticleByLink(url)
+            _currentArticleDetail.value = art
+
+            // Check if this article is already active in the reader/speech playlist.
+            // If yes, do not clear the body or stop the playback.
+            val list = _ttsPlaylist.value
+            val activeIdx = _currentTtsArticleIndex.value
+            if (activeIdx != -1 && activeIdx < list.size && list[activeIdx].link == url) {
+                // Keep playing, do not stop!
+                return@launch
+            }
+
             _isLoadingBody.value = true
             _articleBody.value = ""
             resetAiSummary()
             ttsHelper.stop() // Stop playing previous article
-            val body = repository.fetchArticleBody(url)
-            _articleBody.value = body
-            _isLoadingBody.value = false
+            
+            var cachedArticle = art
+            if (cachedArticle != null && cachedArticle.fullText != null) {
+                _articleBody.value = cachedArticle.fullText
+                _isLoadingBody.value = false
+            } else if (cachedArticle != null) {
+                val body = repository.fetchArticleBody(url)
+                _articleBody.value = body
+                _isLoadingBody.value = false
+                if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                    repository.updateFullText(url, body)
+                }
+            } else {
+                // Scrape page metadata dynamically to build transient article
+                try {
+                    val transientArticle = withContext(Dispatchers.IO) {
+                        val realUrl = repository.resolveGoogleNewsUrl(url)
+                        val doc = org.jsoup.Jsoup.connect(realUrl)
+                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                            .timeout(8000)
+                            .get()
+
+                        val title = doc.select("h1").firstOrNull()?.text()?.trim() 
+                            ?: doc.title() 
+                            ?: "Article Details"
+                        val source = doc.select("meta[property=og:site_name]").attr("content").trim().ifBlank {
+                            try { java.net.URL(realUrl).host.replace("www.", "") } catch (e: Exception) { "Web Article" }
+                        }
+                        val thumb = doc.select("meta[property=og:image]").attr("content").trim()
+
+                        Article(
+                            link = url,
+                            title = title,
+                            description = title,
+                            pubDate = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", java.util.Locale.US).format(java.util.Date()),
+                            sourceName = source,
+                            sourceUrl = realUrl,
+                            category = "TOP STORIES",
+                            thumbnailUrl = thumb.ifBlank { null }
+                        )
+                    }
+                    _currentArticleDetail.value = transientArticle
+                    
+                    val body = repository.fetchArticleBody(url)
+                    _articleBody.value = body
+                    _isLoadingBody.value = false
+                    if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                        repository.insertArticle(transientArticle.copy(fullText = body))
+                    }
+                } catch (e: Exception) {
+                    val fallbackArt = Article(
+                        link = url,
+                        title = "Shared Article",
+                        description = "Shared Web Article",
+                        pubDate = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", java.util.Locale.US).format(java.util.Date()),
+                        sourceName = "Web",
+                        sourceUrl = url,
+                        category = "NEWS",
+                        thumbnailUrl = null
+                    )
+                    _currentArticleDetail.value = fallbackArt
+                    _articleBody.value = "Unable to load article content automatically. Please switch to Web View to read this story."
+                    _isLoadingBody.value = false
+                }
+            }
         }
     }
 
-    // TTS Actions
-    fun speakArticle() {
-        ttsHelper.playOrPause(_articleBody.value)
+    fun speakArticle(article: Article) {
+        val list = _ttsPlaylist.value
+        val activeIdx = _currentTtsArticleIndex.value
+        if (activeIdx != -1 && activeIdx < list.size && list[activeIdx].link == article.link) {
+            playOrPausePlaylist()
+        } else {
+            _ttsPlaylist.value = listOf(article)
+            playTtsPlaylist(0)
+        }
     }
 
     fun stopSpeaking() {
@@ -241,6 +514,22 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetAiSummary() {
         _aiSummaryState.value = AiSummaryState.Idle
+    }
+
+    fun deleteArticlesForFeed(sourceUrl: String) {
+        viewModelScope.launch {
+            repository.deleteArticlesForFeed(sourceUrl)
+        }
+    }
+
+    fun fetchSingleFeed(url: String, category: String) {
+        viewModelScope.launch {
+            repository.fetchSingleFeed(url, category)
+        }
+    }
+
+    fun triggerPrefsChanged() {
+        _prefsChangedSignal.value = _prefsChangedSignal.value + 1
     }
 
     override fun onCleared() {

@@ -2,9 +2,13 @@ package uk.sume.streamfolio.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.*
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,8 +34,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -45,19 +51,17 @@ import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import androidx.compose.foundation.BorderStroke
 import uk.sume.streamfolio.ui.viewmodel.AiSummaryState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
-fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: String) {
-    val articles by viewModel.articles.collectAsState()
-    val searchResults by viewModel.searchResults.collectAsState()
-    val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
-
-    // Find the article across all cached lists
-    val article = remember(articles, searchResults, bookmarkedArticles, url) {
-        articles.firstOrNull { it.link == url }
-            ?: searchResults.firstOrNull { it.link == url }
-            ?: bookmarkedArticles.firstOrNull { it.link == url }
-    }
+fun DetailScreen(
+    navController: NavController,
+    viewModel: NewsViewModel,
+    url: String,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+) {
+    val articleState = viewModel.currentArticleDetail.collectAsState()
+    val article = articleState.value
 
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
@@ -72,16 +76,18 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
     val isTtsPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
     val ttsParagraphIndex by viewModel.ttsHelper.currentParagraphIndex.collectAsState()
 
+    val fontFamily by viewModel.readerFontFamily.collectAsState()
+    val fontSize by viewModel.readerFontSize.collectAsState()
+    val lineSpacing by viewModel.readerLineSpacing.collectAsState()
+    var showTypographyPanel by remember { mutableStateOf(false) }
+
+    val playlist by viewModel.ttsPlaylist.collectAsState()
+    val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val hasActiveTrack = playlist.isNotEmpty() && currentIndex != -1
+
     // Trigger load of article body for Reader mode
     LaunchedEffect(url) {
         viewModel.loadArticleBody(url)
-    }
-
-    // Stop speech when exiting detail screen
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.stopSpeaking()
-        }
     }
 
     Box(
@@ -90,25 +96,27 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
             .background(bgBrush)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            
             // Top Navigation Header
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.statusBars)
                     .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                contentAlignment = Alignment.Center
             ) {
-                IconButton(onClick = { navController.popBackStack() }) {
+                // Back Button (Start aligned)
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 
-                // Reader / Web Switcher Tabs
+                // Reader / Web Switcher Tabs (Center aligned)
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
@@ -137,22 +145,112 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                         }
                     }
                 }
-
-                IconButton(
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, article?.title ?: "")
-                            putExtra(Intent.EXTRA_TEXT, url)
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
-                    }
+                
+                // Action Buttons Row (End aligned)
+                Row(
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Share",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+                    if (currentTab == "Reader") {
+                        IconButton(onClick = { showTypographyPanel = !showTypographyPanel }) {
+                            Icon(
+                                imageVector = Icons.Default.TextFields,
+                                contentDescription = "Text Settings",
+                                tint = if (showTypographyPanel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        article?.let { art ->
+                            IconButton(onClick = {
+                                viewModel.addToTtsPlaylist(art)
+                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlaylistAdd,
+                                    contentDescription = "Queue in Playlist",
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (currentTab == "Reader" && showTypographyPanel) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Font Family", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Row {
+                                listOf("Sans-Serif", "Serif").forEach { opt ->
+                                    val isSel = (opt == "Sans-Serif" && fontFamily == "sans_serif") || (opt == "Serif" && fontFamily == "serif")
+                                    FilterChip(
+                                        selected = isSel,
+                                        onClick = { viewModel.updateReaderFontFamily(if (opt == "Serif") "serif" else "sans_serif") },
+                                        label = { Text(opt, fontSize = 12.sp) },
+                                        modifier = Modifier.padding(start = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Text Size (${fontSize.toInt()}sp)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = { if (fontSize > 12f) viewModel.updateReaderFontSize(fontSize - 2f) },
+                                    enabled = fontSize > 12f
+                                ) {
+                                    Text("A-", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                                IconButton(
+                                    onClick = { if (fontSize < 30f) viewModel.updateReaderFontSize(fontSize + 2f) },
+                                    enabled = fontSize < 30f
+                                ) {
+                                    Text("A+", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Line Spacing", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Row {
+                                listOf("1.2x" to 1.2f, "1.5x" to 1.5f, "1.8x" to 1.8f).forEach { (label, value) ->
+                                    val isSel = lineSpacing == value
+                                    FilterChip(
+                                        selected = isSel,
+                                        onClick = { viewModel.updateReaderLineSpacing(value) },
+                                        label = { Text(label, fontSize = 12.sp) },
+                                        modifier = Modifier.padding(start = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -176,36 +274,50 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                         val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
 
                         if (hasValidThumbnail) {
-                            AsyncImage(
-                                model = thumbnail,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(240.dp)
-                                    .padding(horizontal = 24.dp)
-                                    .clip(RoundedCornerShape(24.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .padding(horizontal = 24.dp)
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = article.sourceName,
-                                    color = Color.White,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold
+                            with(sharedTransitionScope) {
+                                AsyncImage(
+                                    model = thumbnail,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(240.dp)
+                                        .padding(horizontal = 24.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
+                                        ),
+                                    contentScale = ContentScale.Crop
                                 )
+                            }
+                        } else {
+                            with(sharedTransitionScope) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .padding(horizontal = 24.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .sharedElement(
+                                            rememberSharedContentState(key = "image_${article.link}"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            clipInOverlayDuringTransition = remember { OverlayClip(RoundedCornerShape(24.dp)) }
+                                        )
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(Color(0xFF3B82F6), Color(0xFF10B981))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = article.sourceName,
+                                        color = Color.White,
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
 
@@ -218,13 +330,21 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = article.title,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 28.sp
-                            )
+                            with(sharedTransitionScope) {
+                                val titleSize = (fontSize * 1.3f).sp
+                                Text(
+                                    text = article.title,
+                                    fontSize = titleSize,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    lineHeight = (fontSize * 1.3f * 1.25f).sp,
+                                    fontFamily = if (fontFamily == "serif") FontFamily(android.graphics.Typeface.SERIF) else FontFamily(android.graphics.Typeface.SANS_SERIF),
+                                    modifier = Modifier.sharedElement(
+                                        rememberSharedContentState(key = "title_${article.link}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
+                                    )
+                                )
+                            }
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -272,7 +392,7 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { viewModel.speakArticle() }
+                                        .clickable { viewModel.speakArticle(article) }
                                         .padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
@@ -518,10 +638,12 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = cardAlpha))
                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                         ) {
+                                            val currentFont = if (fontFamily == "serif") FontFamily(android.graphics.Typeface.SERIF) else FontFamily(android.graphics.Typeface.SANS_SERIF)
                                             Text(
                                                 text = paragraph,
-                                                fontSize = 16.sp,
-                                                lineHeight = 26.sp,
+                                                fontSize = fontSize.sp,
+                                                lineHeight = (fontSize * lineSpacing).sp,
+                                                fontFamily = currentFont,
                                                 color = textColor,
                                                 fontWeight = weight
                                             )
@@ -531,7 +653,8 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
                             }
                         }
                         
-                        Spacer(modifier = Modifier.height(100.dp))
+                        val bottomSpacerHeight = if (hasActiveTrack) 200.dp else 120.dp
+                        Spacer(modifier = Modifier.height(bottomSpacerHeight))
                     }
                 }
             } else {
@@ -584,10 +707,13 @@ fun DetailScreen(navController: NavController, viewModel: NewsViewModel, url: St
 
         // Floating Bottom Reaction Bar
         if (article != null) {
+            val bottomPaddingVal = if (hasActiveTrack) 100.dp else 12.dp
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 16.dp),
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(bottom = bottomPaddingVal),
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Row(

@@ -49,7 +49,7 @@ class RssParser {
     /**
      * Unified parser supporting standard RSS (<channel>/<item>) and Atom (<feed>/<entry>) formats.
      */
-    fun parse(xmlContent: String, category: String, customFeedId: Int? = null): List<Article> {
+    fun parse(xmlContent: String, category: String, customFeedId: Int? = null, feedUrl: String? = null): List<Article> {
         val articles = mutableListOf<Article>()
         var channelTitle = "Unknown Source"
         try {
@@ -66,64 +66,69 @@ class RssParser {
                     XmlPullParser.START_TAG -> {
                         // Detect start of RSS item or Atom entry
                         if (name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) {
-                            currentArticleBuilder = ArticleBuilder()
+                            currentArticleBuilder = ArticleBuilder().apply {
+                                sourceUrl = feedUrl
+                            }
                         } else if (currentArticleBuilder != null) {
                             when {
                                 name.equals("title", ignoreCase = true) -> {
-                                    currentArticleBuilder.title = parser.nextText()
+                                    currentArticleBuilder.title = parser.nextText()?.trim()
                                 }
                                 name.equals("link", ignoreCase = true) -> {
                                     val href = parser.getAttributeValue(null, "href")
                                     if (!href.isNullOrBlank()) {
-                                        currentArticleBuilder.link = href
+                                        currentArticleBuilder.link = href.trim()
                                     } else {
-                                        currentArticleBuilder.link = parser.nextText()
+                                        currentArticleBuilder.link = parser.nextText()?.trim()
                                     }
                                 }
                                 name.equals("description", ignoreCase = true) || 
                                 name.equals("summary", ignoreCase = true) -> {
-                                    currentArticleBuilder.description = parser.nextText()
+                                    currentArticleBuilder.description = parser.nextText()?.trim()
                                 }
                                 name.equals("content", ignoreCase = true) || 
                                 name.equals("content:encoded", ignoreCase = true) -> {
                                     val url = parser.getAttributeValue(null, "url")
                                     if (url != null) {
                                         // Media content (image)
-                                        currentArticleBuilder.thumbnailUrl = url
+                                        currentArticleBuilder.thumbnailUrl = url.trim()
                                     } else {
                                         // Atom content tag (HTML body)
-                                        currentArticleBuilder.description = parser.nextText()
+                                        currentArticleBuilder.description = parser.nextText()?.trim()
                                     }
                                 }
                                 name.equals("pubDate", ignoreCase = true) || 
                                 name.equals("published", ignoreCase = true) || 
                                 name.equals("updated", ignoreCase = true) -> {
-                                    currentArticleBuilder.pubDate = parser.nextText()
+                                    currentArticleBuilder.pubDate = parser.nextText()?.trim()
                                 }
                                 name.equals("source", ignoreCase = true) -> {
-                                    currentArticleBuilder.sourceUrl = parser.getAttributeValue(null, "url") ?: ""
-                                    currentArticleBuilder.sourceName = parser.nextText()
+                                    val attrUrl = parser.getAttributeValue(null, "url")
+                                    if (!attrUrl.isNullOrBlank()) {
+                                        currentArticleBuilder.sourceUrl = attrUrl.trim()
+                                    }
+                                    currentArticleBuilder.sourceName = parser.nextText()?.trim()
                                 }
                                 name.equals("enclosure", ignoreCase = true) -> {
                                     val type = parser.getAttributeValue(null, "type") ?: ""
                                     if (type.startsWith("image/") || type.contains("image")) {
-                                        currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")
+                                        currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")?.trim()
                                     }
                                 }
                                 name.equals("media:content", ignoreCase = true) -> {
                                     val type = parser.getAttributeValue(null, "type") ?: ""
                                     val url = parser.getAttributeValue(null, "url")
                                     if (url != null && (type.isEmpty() || type.startsWith("image/") || type.contains("image"))) {
-                                        currentArticleBuilder.thumbnailUrl = url
+                                        currentArticleBuilder.thumbnailUrl = url.trim()
                                     }
                                 }
                                 name.equals("media:thumbnail", ignoreCase = true) -> {
-                                    currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")
+                                    currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")?.trim()
                                 }
                             }
                         } else if (name.equals("title", ignoreCase = true)) {
                             // Main channel/feed title
-                            channelTitle = parser.nextText()
+                            channelTitle = parser.nextText()?.trim() ?: "Unknown Source"
                         }
                     }
                     XmlPullParser.END_TAG -> {

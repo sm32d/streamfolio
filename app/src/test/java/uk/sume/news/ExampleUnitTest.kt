@@ -1,144 +1,70 @@
 package uk.sume.news
 
-import org.jsoup.Connection
-import org.jsoup.Jsoup
 import org.junit.Test
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import uk.sume.streamfolio.data.network.RssParser
+import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 
 class ExampleUnitTest {
     @Test
-    fun testAllArticlesResolution() {
-        val rssUrl = "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en"
-        val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    fun testFeeds() {
+        val client = OkHttpClient()
+        val parser = RssParser()
         
-        try {
-            println("Fetching RSS Feed: $rssUrl")
-            val doc = Jsoup.connect(rssUrl).get()
-            val items = doc.select("item").take(10)
-            println("Found ${items.size} articles in feed.")
-            
-            for ((index, item) in items.withIndex()) {
-                val title = item.select("title").text()
-                val link = item.select("link").text()
-                println("\n--- ARTICLE #${index + 1}: $title ---")
-                println("Link: $link")
+        val failedFeeds = mutableListOf<String>()
+        val emptyFeeds = mutableListOf<String>()
+        val successfulFeeds = mutableListOf<String>()
+
+        val providers = DefaultFeedsConfig.getAllCuratedProviders()
+        for (provider in providers) {
+            val region = provider.region
+            val category = provider.category
+            val url = provider.url
+            println("\n=== TESTING FEED [$region][$category]: $url ===")
+            try {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
+                    .build()
                 
-                // 1. Resolve URL
-                val resolvedUrl = resolveGoogleNewsUrl(link)
-                println("Resolved URL: $resolvedUrl")
-                
-                if (resolvedUrl == link) {
-                    println("WARNING: URL could not be resolved (same as original)")
-                    continue
-                }
-                
-                // 2. Scraping thumbnail
-                try {
-                    val targetDoc = Jsoup.connect(resolvedUrl)
-                        .userAgent(userAgent)
-                        .referrer("https://www.google.com")
-                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                        .header("Accept-Language", "en-US,en;q=0.9")
-                        .header("Cache-Control", "max-age=0")
-                        .header("Connection", "keep-alive")
-                        .ignoreHttpErrors(true)
-                        .timeout(8000)
-                        .get()
-                        
-                    var imageUrl = targetDoc.select("meta[property=og:image]").attr("content")
-                    if (imageUrl.isBlank()) {
-                        imageUrl = targetDoc.select("meta[name=twitter:image]").attr("content")
-                    }
-                    if (imageUrl.isBlank()) {
-                        imageUrl = targetDoc.select("article img, main img").firstOrNull()?.attr("abs:src") ?: ""
-                    }
-                    println("Scraped image URL: $imageUrl")
-                    
-                    if (imageUrl.contains("googleusercontent.com") || 
-                        imageUrl.contains("gstatic.com") || 
-                        imageUrl.contains("google.com")) {
-                        println("FILTERED: Image URL contains google branding!")
-                    }
-                } catch (e: Exception) {
-                    println("Scrape thumbnail failed: ${e.message}")
-                }
-                
-                // 3. Scraping body
-                try {
-                    val targetDoc = Jsoup.connect(resolvedUrl)
-                        .userAgent(userAgent)
-                        .referrer("https://www.google.com")
-                        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                        .header("Accept-Language", "en-US,en;q=0.9")
-                        .header("Cache-Control", "max-age=0")
-                        .header("Connection", "keep-alive")
-                        .ignoreHttpErrors(true)
-                        .timeout(8000)
-                        .get()
-                        
-                    val paragraphs = targetDoc.select("article p, main p, .post-content p, .article-content p, .story-body p")
-                    val rawText = if (paragraphs.isNotEmpty()) {
-                        paragraphs.map { it.text().trim() }
-                            .filter { it.isNotBlank() }
-                            .joinToString("\n\n")
+                client.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string() ?: ""
+                        val articles = parser.parse(body, category, feedUrl = url)
+                        if (articles.isNotEmpty()) {
+                            println("SUCCESS: Parsed ${articles.size} articles.")
+                            successfulFeeds.add("[$region][$category] $url - ${articles.size} articles")
+                        } else {
+                            println("EMPTY: 0 articles parsed.")
+                            emptyFeeds.add("[$region][$category] $url")
+                        }
                     } else {
-                        targetDoc.select("p").map { it.text().trim() }
-                            .filter { it.isNotBlank() }
-                            .joinToString("\n\n")
+                        println("FAILED: HTTP ${response.code}")
+                        failedFeeds.add("[$region][$category] $url - HTTP ${response.code}")
                     }
-                    
-                    println("Scraped body length: ${rawText.length}")
-                    if (rawText.length > 200) {
-                        println("Snippet: ${rawText.take(150)}...")
-                    } else {
-                        println("Snippet: $rawText")
-                    }
-                } catch (e: Exception) {
-                    println("Scrape body failed: ${e.message}")
                 }
+            } catch (e: Exception) {
+                println("EXCEPTION: ${e.message}")
+                failedFeeds.add("[$region][$category] $url - Exception: ${e.message}")
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
-    }
-    
-    private fun resolveGoogleNewsUrl(googleUrl: String): String {
-        try {
-            if (!googleUrl.startsWith("https://news.google.com/")) {
-                return googleUrl
-            }
-            val uri = java.net.URI(googleUrl)
-            val pathParts = uri.path.split("/").filter { it.isNotEmpty() }
-            if (pathParts.size < 2) return googleUrl
-            val base64Str = pathParts.last()
-            
-            val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            val redirectDoc = Jsoup.connect(googleUrl)
-                .userAgent(userAgent)
-                .referrer("https://www.google.com")
-                .timeout(6000)
-                .get()
-            
-            val element = redirectDoc.select("[data-n-a-sg]").firstOrNull() ?: return googleUrl
-            val signature = element.attr("data-n-a-sg")
-            val timestamp = element.attr("data-n-a-ts")
-            
-            val payload = """[[["Fbv4je","[\"garturlreq\",[[\"X\",\"X\",[\"X\",\"X\"],null,null,1,1,\"US:en\",null,1,null,null,null,null,null,0,1],\"X\",\"X\",1,[1,1,1],1,1,null,0,0,null,0],\"$base64Str\",$timestamp,\"$signature\"]",null,"generic"]]]"""
-            
-            val postResponse = Jsoup.connect("https://news.google.com/_/DotsSplashUi/data/batchexecute")
-                .method(Connection.Method.POST)
-                .header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
-                .userAgent(userAgent)
-                .data("f.req", payload)
-                .ignoreContentType(true)
-                .timeout(6000)
-                .execute()
-            
-            val responseBody = postResponse.body()
-            val match = Regex("""https://[^"\\ ]+""").find(responseBody)
-            return match?.value ?: googleUrl
-        } catch (e: Exception) {
-            return googleUrl
+        
+        println("\n=======================================")
+        println("SUMMARY:")
+        println("Successful: ${successfulFeeds.size}/${successfulFeeds.size + failedFeeds.size + emptyFeeds.size}")
+        println("Empty: ${emptyFeeds.size}")
+        println("Failed: ${failedFeeds.size}")
+        
+        if (emptyFeeds.isNotEmpty()) {
+            println("\nEMPTY FEEDS:")
+            emptyFeeds.forEach { println(" - $it") }
         }
+        if (failedFeeds.isNotEmpty()) {
+            println("\nFAILED FEEDS:")
+            failedFeeds.forEach { println(" - $it") }
+        }
+        println("=======================================")
     }
 }

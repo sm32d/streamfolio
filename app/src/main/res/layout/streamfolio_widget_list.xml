@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_glass_bg"
+    android:padding="12dp">
+
+    <!-- Top Header Bar -->
+    <LinearLayout
+        android:id="@+id/header_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_alignParentTop="true">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="StreamFolio"
+            android:textColor="#00B0FF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:text="•"
+            android:textColor="#40FFFFFF"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/widget_category"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="All Feeds"
+            android:textColor="#80FFFFFF"
+            android:textSize="11sp" />
+
+        <ImageView
+            android:id="@+id/widget_refresh_button"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_widget_refresh"
+            android:tint="#80FFFFFF"
+            android:contentDescription="Refresh"
+            android:padding="2dp"
+            android:focusable="true"
+            android:clickable="true" />
+
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center_vertical"
+            android:visibility="gone"
+            android:indeterminate="true"
+            style="?android:attr/progressBarStyleSmall" />
+    </LinearLayout>
+
+    <!-- Scrollable ListView -->
+    <ListView
+        android:id="@+id/widget_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/header_layout"
+        android:layout_marginTop="6dp"
+        android:divider="#10FFFFFF"
+        android:dividerHeight="1dp" />
+
+    <!-- Empty View (shown when list is empty) -->
+    <TextView
+        android:id="@+id/widget_empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/header_layout"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:text="No articles found"
+        android:textColor="#80FFFFFF"
+        android:textSize="13sp"
+        android:visibility="gone" />
+</RelativeLayout>

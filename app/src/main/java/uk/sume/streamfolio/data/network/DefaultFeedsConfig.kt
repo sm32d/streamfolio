@@ -11,7 +11,7 @@ object DefaultFeedsConfig {
     private val FEEDS = mapOf(
         "US" to mapOf(
             "Top Stories" to listOf(
-                "https://feedx.net/rss/ap.xml",
+                "https://feeds.npr.org/1001/rss.xml",
                 "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
                 "https://feeds.bbci.co.uk/news/world/rss.xml"
             ),
@@ -32,7 +32,7 @@ object DefaultFeedsConfig {
                 "https://www.nasa.gov/news-release/feed/"
             ),
             "Sports" to listOf(
-                "https://www.espn.com/espn/rss/news",
+                "https://www.cbssports.com/rss/headlines/",
                 "https://sports.yahoo.com/rss/"
             ),
             "Health" to listOf(
@@ -81,39 +81,34 @@ object DefaultFeedsConfig {
                 "https://www.straitstimes.com/news/business/rss.xml"
             ),
             "Technology" to listOf(
-                "https://www.techinasia.com/feed",
-                "https://www.straitstimes.com/news/life/rss.xml"
+                "https://www.techinasia.com/feed"
             ),
             "Sports" to listOf(
                 "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10296",
                 "https://www.straitstimes.com/news/sport/rss.xml"
             ),
             "Health" to listOf(
-                "https://www.straitstimes.com/news/life/rss.xml",
                 "https://www.sciencedaily.com/rss/health_medicine.xml"
-            ),
-            "Entertainment" to listOf(
-                "https://www.straitstimes.com/news/life/rss.xml"
             )
         ),
         "IN" to mapOf(
             "Top Stories" to listOf(
                 "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
-                "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml"
+                "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"
             ),
             "World" to listOf(
                 "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
                 "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml"
             ),
             "Business" to listOf(
-                "https://www.moneycontrol.com/rss/latestnews.xml"
+                "https://www.livemint.com/rss/markets"
             ),
             "Technology" to listOf(
                 "https://feeds.feedburner.com/gadgets360-latest"
             ),
             "Sports" to listOf(
-                "https://www.ndtv.com/rss/sports",
-                "https://www.hindustantimes.com/feeds/rss/news/rssfeed.xml"
+                "https://www.hindustantimes.com/feeds/rss/sports/rssfeed.xml",
+                "https://www.livemint.com/rss/sports"
             )
         ),
         "CA" to mapOf(
@@ -180,14 +175,14 @@ object DefaultFeedsConfig {
         val regionUpper = region.uppercase()
         val regionMap = FEEDS[regionUpper] ?: FEEDS["US"]!!
         val standardFeeds = regionMap[category] ?: emptyList()
-        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains(it) }
+        val activeFeeds = standardFeeds.filter { !disabledFeedUrls.contains("$regionUpper|$category|$it") }
         
         val manuallyEnabledCrossFeeds = mutableListOf<String>()
         for ((r, categoryMap) in FEEDS) {
             if (r != regionUpper) {
                 val urls = categoryMap[category] ?: emptyList()
                 for (url in urls) {
-                    if (enabledCrossRegionFeeds.contains(url)) {
+                    if (enabledCrossRegionFeeds.contains("$r|$category|$url")) {
                         manuallyEnabledCrossFeeds.add(url)
                     }
                 }
@@ -198,6 +193,7 @@ object DefaultFeedsConfig {
 
     fun getPublisherName(url: String): String {
         return when {
+            url.contains("npr.org") -> "NPR"
             url.contains("apnews.com") || url.contains("ap.xml") -> "Associated Press (AP)"
             url.contains("nytimes.com") -> "The New York Times"
             url.contains("bbc.co.uk") || url.contains("bbc.com") || url.contains("bbci.co.uk") -> "BBC News"
@@ -210,12 +206,16 @@ object DefaultFeedsConfig {
             url.contains("nasa.gov") -> "NASA"
             url.contains("espn.com") -> "ESPN"
             url.contains("yahoo.com") -> "Yahoo Sports"
+            url.contains("cbssports.com") -> "CBS Sports"
+            url.contains("hollywoodreporter.com") -> "The Hollywood Reporter"
+            url.contains("variety.com") -> "Variety"
             url.contains("channelnewsasia.com") -> "CNA"
             url.contains("straitstimes.com") -> "The Straits Times"
             url.contains("techinasia.com") -> "Tech in Asia"
             url.contains("timesofindia") -> "Times of India"
             url.contains("hindustantimes.com") -> "Hindustan Times"
             url.contains("moneycontrol.com") -> "Moneycontrol"
+            url.contains("livemint.com") -> "Livemint"
             url.contains("gadgets360") -> "Gadgets360"
             url.contains("ndtv.com") -> "NDTV"
             url.contains("cbc.ca") -> "CBC News"
