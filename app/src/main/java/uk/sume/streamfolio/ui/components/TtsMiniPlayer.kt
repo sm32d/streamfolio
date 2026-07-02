@@ -336,7 +336,7 @@ fun TtsLyricsVisualizer(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(top = 16.dp, bottom = 120.dp)
+                            .padding(top = 16.dp)
                     ) {
                         Text(
                             text = "Hold & drag to reorder queue",
@@ -350,7 +350,10 @@ fun TtsLyricsVisualizer(
                         var dragOffset by remember { mutableStateOf(0f) }
 
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentPadding = PaddingValues(bottom = 24.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             itemsIndexed(playlist, key = { _, item -> item.link }) { index, queuedArticle ->
@@ -359,6 +362,11 @@ fun TtsLyricsVisualizer(
                                 val activeColor = if (isActive) MaterialTheme.colorScheme.primary else activeTextColor
 
                                 var itemHeightPx by remember { mutableStateOf(0) }
+                                
+                                // Stale-proof state lookups for uninterrupted drag gestures
+                                val currentIndexState = rememberUpdatedState(index)
+                                val playlistSizeState = rememberUpdatedState(playlist.size)
+                                val itemHeightPxState = rememberUpdatedState(itemHeightPx)
 
                                 Card(
                                     modifier = Modifier
@@ -373,27 +381,29 @@ fun TtsLyricsVisualizer(
                                                 shadowElevation = 8f
                                             }
                                         }
-                                        .pointerInput(index, itemHeightPx, playlist.size) {
-                                            if (itemHeightPx == 0) return@pointerInput
+                                        .pointerInput(queuedArticle.link) {
                                             detectDragGesturesAfterLongPress(
                                                 onDragStart = {
-                                                    draggingIndex = index
+                                                    draggingIndex = currentIndexState.value
                                                     dragOffset = 0f
                                                 },
                                                 onDrag = { change, dragAmount ->
                                                     change.consume()
                                                     dragOffset += dragAmount.y
-                                                    val currentOffset = dragOffset
-                                                    val threshold = itemHeightPx / 2f
+                                                    val currentIdx = currentIndexState.value
+                                                    val height = itemHeightPxState.value
+                                                    if (height == 0) return@detectDragGesturesAfterLongPress
+                                                    val threshold = height / 2f
+                                                    val totalSize = playlistSizeState.value
 
-                                                    if (currentOffset > threshold && index < playlist.size - 1) {
-                                                        viewModel.moveTtsPlaylistItem(index, index + 1)
-                                                        dragOffset = currentOffset - itemHeightPx
-                                                        draggingIndex = index + 1
-                                                    } else if (currentOffset < -threshold && index > 0) {
-                                                        viewModel.moveTtsPlaylistItem(index, index - 1)
-                                                        dragOffset = currentOffset + itemHeightPx
-                                                        draggingIndex = index - 1
+                                                    if (dragOffset > threshold && currentIdx < totalSize - 1) {
+                                                        viewModel.moveTtsPlaylistItem(currentIdx, currentIdx + 1)
+                                                        dragOffset -= height
+                                                        draggingIndex = currentIdx + 1
+                                                    } else if (dragOffset < -threshold && currentIdx > 0) {
+                                                        viewModel.moveTtsPlaylistItem(currentIdx, currentIdx - 1)
+                                                        dragOffset += height
+                                                        draggingIndex = currentIdx - 1
                                                     }
                                                 },
                                                 onDragEnd = {
