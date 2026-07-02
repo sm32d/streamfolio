@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -82,6 +83,11 @@ fun HomeScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
+    
+    val isAiEnabled by viewModel.isAiEnabled.collectAsState()
+    val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
+    val hasSeenAiSpotlight by viewModel.hasSeenAiSpotlight.collectAsState()
+
     val context = LocalContext.current
 
     val activeRegion = remember(viewModel.prefs.region) { viewModel.prefs.region.uppercase() }
@@ -114,7 +120,9 @@ fun HomeScreen(
     val selectedCategoriesPref = remember { viewModel.prefs.selectedCategories }
     val isDefaultFeedsEnabled = remember { viewModel.prefs.isDefaultFeedsEnabled }
     val categoryOrder = viewModel.prefs.categoryOrder
-    val categories = remember(customFeeds, selectedCategoriesPref, isDefaultFeedsEnabled, categoryOrder) {
+    val selectedDynamicTag by viewModel.selectedDynamicTag.collectAsState()
+
+    val categories = remember(customFeeds, selectedCategoriesPref, isDefaultFeedsEnabled, categoryOrder, selectedDynamicTag) {
         val defaultCategories = listOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
         val googleCategories = if (isDefaultFeedsEnabled) {
             val filteredDefaults = defaultCategories.filter { selectedCategoriesPref.contains(it) }
@@ -123,10 +131,16 @@ fun HomeScreen(
             emptyList()
         }
         val rawCategories = (googleCategories + customFeeds.map { it.category }).distinct()
-        rawCategories.sortedWith(compareBy { cat ->
+        val sorted = rawCategories.sortedWith(compareBy { cat ->
             val index = categoryOrder.indexOf(cat)
             if (index == -1) Int.MAX_VALUE else index
-        })
+        }).toMutableList()
+        selectedDynamicTag?.let { tag ->
+            if (!sorted.contains(tag)) {
+                sorted.add(tag)
+            }
+        }
+        sorted.toList()
     }
 
     LaunchedEffect(categories) {
@@ -147,6 +161,12 @@ fun HomeScreen(
 
     val filteredArticles = remember(articles, selectedPublisher) {
         if (selectedPublisher == null) articles else articles.filter { it.sourceName == selectedPublisher }
+    }
+
+    val activeTags = remember(articles) {
+        articles.flatMap { article ->
+            article.tags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+        }.distinct().take(10)
     }
 
     // Split trending (first 3 articles) and regular list
@@ -205,7 +225,13 @@ fun HomeScreen(
                     Tab(
                         selected = isSelected,
                         onClick = {
-                            viewModel.selectCategory(category)
+                            if (category.startsWith("#")) {
+                                viewModel.setDynamicTagFilter(category)
+                                viewModel.selectCategory(category)
+                            } else {
+                                viewModel.setDynamicTagFilter(null)
+                                viewModel.selectCategory(category)
+                            }
                         },
                         modifier = Modifier
                             .padding(end = 8.dp)
@@ -260,9 +286,35 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 96.dp)
                     ) {
+                        if (!hasSeenAiSpotlight && !isAiEnabled) {
+                            item {
+                                AiSpotlightBanner(
+                                    onEnable = { viewModel.setAiEnabled(true); viewModel.setHasSeenAiSpotlight(true) },
+                                    onDismiss = { viewModel.setHasSeenAiSpotlight(true) }
+                                )
+                            }
+                        }
+
+                        if (isAiEnabled && isSmartTagsEnabled && activeTags.isNotEmpty()) {
+                            item {
+                                TagFilterPillsRow(
+                                    tags = activeTags,
+                                    selectedTag = selectedDynamicTag,
+                                    onTagClick = { tag ->
+                                        if (selectedDynamicTag == tag) {
+                                            viewModel.setDynamicTagFilter(null)
+                                            viewModel.selectCategory(categories.first())
+                                        } else {
+                                            viewModel.setDynamicTagFilter(tag)
+                                            viewModel.selectCategory(tag)
+                                        }
+                                    }
+                                )
+                            }
+                        }
                     
-                    // Publisher Favicon filter carousel
-                    if (publishers.size > 1) {
+                        // Publisher Favicon filter carousel
+                        if (publishers.size > 1) {
                         item {
                             Text(
                                 text = "Publishers",
@@ -1166,4 +1218,127 @@ fun formatPubDate(pubDateStr: String): String {
         }
     }
     return pubDateStr // fallback
+}
+
+@Composable
+fun AiSpotlightBanner(
+    onEnable: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .shadow(4.dp, RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = EmeraldPrimary.copy(alpha = 0.08f)
+        ),
+        border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.3f))
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(EmeraldPrimary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Text(
+                    text = "Upgrade to On-Device AI",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Text(
+                text = "Translate foreign feeds offline, read dynamic key summaries, and browse semantic tags. Private and run 100% locally.",
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onEnable,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) {
+                    Text("Enable AI", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+
+                TextButton(
+                    onClick = onDismiss
+                ) {
+                    Text("Dismiss", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TagFilterPillsRow(
+    tags: List<String>,
+    selectedTag: String?,
+    onTagClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Text(
+            text = "Smart Tags",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp)
+        )
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(tags) { tag ->
+                val isSelected = selectedTag == tag
+                val bg = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                val textCol = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(bg)
+                        .clickable { onTagClick(tag) }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = tag,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textCol
+                    )
+                }
+            }
+        }
+    }
 }

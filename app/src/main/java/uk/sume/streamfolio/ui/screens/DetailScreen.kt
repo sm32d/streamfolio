@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -63,7 +65,29 @@ fun DetailScreen(
     val articleState = viewModel.currentArticleDetail.collectAsState()
     val article = articleState.value
 
+    val isAiEnabled by viewModel.isAiEnabled.collectAsState()
+    val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
+    val isSummaryEnabled by viewModel.isSummaryEnabled.collectAsState()
+    val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
+
+    val translatedTitle by viewModel.translatedTitle.collectAsState()
+    val translatedBody by viewModel.translatedBody.collectAsState()
+    val isTranslationLoading by viewModel.isTranslationLoading.collectAsState()
+    val translationError by viewModel.translationError.collectAsState()
+
     val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.clearTranslation()
+        }
+    }
+
+    LaunchedEffect(translationError) {
+        translationError?.let { err ->
+            Toast.makeText(context, "Translation error: $err", Toast.LENGTH_LONG).show()
+        }
+    }
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
 
@@ -333,7 +357,7 @@ fun DetailScreen(
                             with(sharedTransitionScope) {
                                 val titleSize = (fontSize * 1.3f).sp
                                 Text(
-                                    text = article.title,
+                                    text = translatedTitle.ifEmpty { article.title },
                                     fontSize = titleSize,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = MaterialTheme.colorScheme.onSurface,
@@ -345,6 +369,35 @@ fun DetailScreen(
                                     )
                                 )
                             }
+
+                            if (isAiEnabled && isSmartTagsEnabled && !article.tags.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    val tagsList = article.tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                    tagsList.forEach { tag ->
+                                        Text(
+                                            text = tag,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = EmeraldPrimary,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(EmeraldPrimary.copy(alpha = 0.08f))
+                                                .clickable {
+                                                    viewModel.setDynamicTagFilter(tag)
+                                                    viewModel.selectCategory(tag)
+                                                    navController.popBackStack()
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -414,7 +467,7 @@ fun DetailScreen(
                         }
 
                         // AI Summary Card
-                        if (articleBody.isNotBlank() && articleBody != "Unable to parse article text. Please open in WebView to read the full story.") {
+                        if (isAiEnabled && isSummaryEnabled && articleBody.isNotBlank() && articleBody != "Unable to parse article text. Please open in WebView to read the full story.") {
                             val aiSummaryState by viewModel.aiSummaryState.collectAsState()
                             
                             Card(
@@ -641,13 +694,14 @@ fun DetailScreen(
                             if (isLoadingBody) {
                                 TextSkeletonLoader()
                             } else {
-                                val bodyToShow = if (articleBody.length < 150 || articleBody.startsWith("Failed to load")) {
-                                    article.description.takeIf { it.isNotBlank() } ?: articleBody
+                                val rawBody = translatedBody.ifEmpty { articleBody }
+                                val bodyToShow = if (rawBody.length < 150 || rawBody.startsWith("Failed to load")) {
+                                    if (translatedBody.isNotEmpty()) rawBody else (article.description.takeIf { it.isNotBlank() } ?: rawBody)
                                 } else {
-                                    articleBody
+                                    rawBody
                                 }
                                 
-                                val showSuggestionBanner = articleBody.length < 150 || articleBody.startsWith("Failed to load")
+                                val showSuggestionBanner = (translatedBody.isEmpty() && (articleBody.length < 150 || articleBody.startsWith("Failed to load")))
 
                                 val paragraphs = bodyToShow.split("\n\n").filter { it.isNotBlank() }
                                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -827,6 +881,42 @@ fun DetailScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+
+                    if (isAiEnabled && isTranslationEnabled) {
+                        val isTranslated = translatedTitle.isNotEmpty()
+                        Row(
+                            modifier = Modifier.clickable {
+                                if (isTranslated) {
+                                    viewModel.clearTranslation()
+                                } else {
+                                    val body = if (currentTab == "Web") "" else (articleBody.takeIf { it.isNotBlank() } ?: article.description)
+                                    viewModel.translateArticleText(article.title, body)
+                                }
+                            },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isTranslationLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = EmeraldPrimary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Translate,
+                                    contentDescription = "Translate",
+                                    tint = if (isTranslated) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isTranslated) "Original" else "Translate",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isTranslated) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }

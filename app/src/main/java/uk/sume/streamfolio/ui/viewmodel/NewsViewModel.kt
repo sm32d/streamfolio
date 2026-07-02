@@ -28,6 +28,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         ttsHelper.onArticleCompleted = {
             advanceTtsPlaylist()
         }
+        if (prefs.isAiEnabled) {
+            triggerBackgroundAiPreDownload()
+        }
     }
 
     // Typography States
@@ -206,16 +209,24 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         category
     }
         .flatMapLatest { category ->
-            repository.getArticlesByCategory(category).map { list ->
-                val enabledUrls = DefaultFeedsConfig.getFeedsFor(
-                    region = prefs.region,
-                    category = category,
-                    disabledFeedUrls = prefs.disabledFeedUrls,
-                    enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
-                ).toSet()
-                
-                list.filter { article ->
-                    article.customFeedId != null || enabledUrls.contains(article.sourceUrl)
+            if (category.startsWith("#")) {
+                repository.getAllArticles().map { list ->
+                    list.filter { article ->
+                        article.tags?.lowercase()?.contains(category.lowercase()) == true
+                    }
+                }
+            } else {
+                repository.getArticlesByCategory(category).map { list ->
+                    val enabledUrls = DefaultFeedsConfig.getFeedsFor(
+                        region = prefs.region,
+                        category = category,
+                        disabledFeedUrls = prefs.disabledFeedUrls,
+                        enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
+                    ).toSet()
+                    
+                    list.filter { article ->
+                        article.customFeedId != null || enabledUrls.contains(article.sourceUrl)
+                    }
                 }
             }
         }
@@ -290,6 +301,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isRefreshing.value = true
             val currentCat = _selectedCategory.value
+            if (currentCat.startsWith("#")) {
+                _isRefreshing.value = false
+                return@launch
+            }
             
             // Check if it's a custom feed
             val matchingFeeds = customFeeds.value.filter { it.category == currentCat }
@@ -468,6 +483,128 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         prefs.language = language
         prefs.region = region
         refreshCurrentFeed()
+    }
+
+    // AI Toggle States
+    private val _isAiEnabled = MutableStateFlow(prefs.isAiEnabled)
+    val isAiEnabled: StateFlow<Boolean> = _isAiEnabled.asStateFlow()
+
+    private val _isTranslationEnabled = MutableStateFlow(prefs.isTranslationEnabled)
+    val isTranslationEnabled: StateFlow<Boolean> = _isTranslationEnabled.asStateFlow()
+
+    private val _isSummaryEnabled = MutableStateFlow(prefs.isSummaryEnabled)
+    val isSummaryEnabled: StateFlow<Boolean> = _isSummaryEnabled.asStateFlow()
+
+    private val _isSmartTagsEnabled = MutableStateFlow(prefs.isSmartTagsEnabled)
+    val isSmartTagsEnabled: StateFlow<Boolean> = _isSmartTagsEnabled.asStateFlow()
+
+    private val _translationTargetLanguage = MutableStateFlow(prefs.translationTargetLanguage)
+    val translationTargetLanguage: StateFlow<String> = _translationTargetLanguage.asStateFlow()
+
+    private val _hasSeenAiSpotlight = MutableStateFlow(prefs.hasSeenAiSpotlight)
+    val hasSeenAiSpotlight: StateFlow<Boolean> = _hasSeenAiSpotlight.asStateFlow()
+
+    // Dynamic Tag Filter state
+    private val _selectedDynamicTag = MutableStateFlow<String?>(null)
+    val selectedDynamicTag: StateFlow<String?> = _selectedDynamicTag.asStateFlow()
+
+    fun setDynamicTagFilter(tag: String?) {
+        _selectedDynamicTag.value = tag
+    }
+
+    fun setAiEnabled(enabled: Boolean) {
+        prefs.isAiEnabled = enabled
+        _isAiEnabled.value = enabled
+        if (enabled) {
+            triggerBackgroundAiPreDownload()
+        }
+    }
+
+    fun setTranslationEnabled(enabled: Boolean) {
+        prefs.isTranslationEnabled = enabled
+        _isTranslationEnabled.value = enabled
+    }
+
+    fun setSummaryEnabled(enabled: Boolean) {
+        prefs.isSummaryEnabled = enabled
+        _isSummaryEnabled.value = enabled
+    }
+
+    fun setSmartTagsEnabled(enabled: Boolean) {
+        prefs.isSmartTagsEnabled = enabled
+        _isSmartTagsEnabled.value = enabled
+    }
+
+    fun setTranslationTargetLanguage(lang: String) {
+        prefs.translationTargetLanguage = lang
+        _translationTargetLanguage.value = lang
+    }
+
+    fun setHasSeenAiSpotlight(seen: Boolean) {
+        prefs.hasSeenAiSpotlight = seen
+        _hasSeenAiSpotlight.value = seen
+    }
+
+    // AI Translation States & Logic
+    private val aiTranslateHelper by lazy { uk.sume.streamfolio.data.network.AiTranslateHelper(getApplication()) }
+
+    private val _translatedTitle = MutableStateFlow("")
+    val translatedTitle: StateFlow<String> = _translatedTitle.asStateFlow()
+
+    private val _translatedBody = MutableStateFlow("")
+    val translatedBody: StateFlow<String> = _translatedBody.asStateFlow()
+
+    private val _isTranslationLoading = MutableStateFlow(false)
+    val isTranslationLoading: StateFlow<Boolean> = _isTranslationLoading.asStateFlow()
+
+    private val _translationError = MutableStateFlow<String?>(null)
+    val translationError: StateFlow<String?> = _translationError.asStateFlow()
+
+    fun translateArticleText(title: String, body: String) {
+        _isTranslationLoading.value = true
+        _translationError.value = null
+        viewModelScope.launch {
+            try {
+                val detectedSrc = aiTranslateHelper.identifyLanguage(title + " " + body.take(100))
+                val target = _translationTargetLanguage.value
+
+                val tTitle = aiTranslateHelper.translateText(title, detectedSrc, target)
+                val tBody = aiTranslateHelper.translateText(body, detectedSrc, target)
+
+                _translatedTitle.value = tTitle
+                _translatedBody.value = tBody
+            } catch (e: Exception) {
+                _translationError.value = e.message ?: "Translation download or inference failed."
+            } finally {
+                _isTranslationLoading.value = false
+            }
+        }
+    }
+
+    fun clearTranslation() {
+        _translatedTitle.value = ""
+        _translatedBody.value = ""
+        _translationError.value = null
+    }
+
+    fun triggerBackgroundAiPreDownload() {
+        viewModelScope.launch {
+            try {
+                val target = _translationTargetLanguage.value
+                aiTranslateHelper.translateText("Hello", "en", target)
+            } catch (e: Exception) {
+                android.util.Log.d("NewsViewModel", "Background AI translation pre-download failed/skipped: ${e.message}")
+            }
+
+            try {
+                val status = aiSummaryHelper.checkFeatureStatus()
+                if (status == com.google.mlkit.genai.common.FeatureStatus.DOWNLOADABLE) {
+                    aiSummaryHelper.downloadFeature()
+                }
+            } catch (e: Exception) {
+                android.util.Log.d("NewsViewModel", "Background AI summary pre-download failed/skipped: ${e.message}")
+            }
+        }
     }
 
     // On-Device AI Summarization

@@ -43,6 +43,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.History
@@ -98,9 +99,15 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
     var selectedCats by rememberSaveable {
         mutableStateOf(setOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment"))
     }
+    
+    // AI Toggles
+    var isAiEnabled by rememberSaveable { mutableStateOf(false) }
+    var isTranslationEnabled by rememberSaveable { mutableStateOf(true) }
+    var isSummaryEnabled by rememberSaveable { mutableStateOf(true) }
+    var isSmartTagsEnabled by rememberSaveable { mutableStateOf(true) }
 
     var currentStep by rememberSaveable { mutableStateOf(0) }
-    val totalSteps = 3
+    val totalSteps = 4
 
     // Pulse animation for final button
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -173,6 +180,16 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             selectedCats = selectedCats,
                             onCatsChanged = { selectedCats = it }
                         )
+                        3 -> AiFeaturesStep(
+                            isAiEnabled = isAiEnabled,
+                            onAiToggle = { isAiEnabled = it },
+                            isTranslationEnabled = isTranslationEnabled,
+                            onTranslationToggle = { isTranslationEnabled = it },
+                            isSummaryEnabled = isSummaryEnabled,
+                            onSummaryToggle = { isSummaryEnabled = it },
+                            isSmartTagsEnabled = isSmartTagsEnabled,
+                            onSmartTagsToggle = { isSmartTagsEnabled = it }
+                        )
                     }
                 }
             }
@@ -191,6 +208,16 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                         viewModel.prefs.cacheHistoryDays = selectedCacheDays.toInt()
                         viewModel.prefs.isDefaultFeedsEnabled = isDefaultFeedsEnabled
                         viewModel.prefs.selectedCategories = selectedCats
+                        
+                        // Save AI preferences
+                        viewModel.prefs.isAiEnabled = isAiEnabled
+                        viewModel.prefs.isTranslationEnabled = isTranslationEnabled
+                        viewModel.prefs.isSummaryEnabled = isSummaryEnabled
+                        viewModel.prefs.isSmartTagsEnabled = isSmartTagsEnabled
+                        if (isAiEnabled) {
+                            viewModel.triggerBackgroundAiPreDownload()
+                        }
+                        
                         viewModel.prefs.isCompletedOnboarding = true
                         viewModel.refreshCurrentFeed()
                         navController.navigate("home_screen") {
@@ -768,5 +795,187 @@ fun SelectorField(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AiFeaturesStep(
+    isAiEnabled: Boolean,
+    onAiToggle: (Boolean) -> Unit,
+    isTranslationEnabled: Boolean,
+    onTranslationToggle: (Boolean) -> Unit,
+    isSummaryEnabled: Boolean,
+    onSummaryToggle: (Boolean) -> Unit,
+    isSmartTagsEnabled: Boolean,
+    onSmartTagsToggle: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = "On-Device AI\nUpgrades",
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 42.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "StreamFolio runs local models directly on your device for absolute privacy.",
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // Global AI Switch Card
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    if (isAiEnabled)
+                        EmeraldPrimary.copy(alpha = 0.08f)
+                    else
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                )
+                .border(
+                    1.dp,
+                    if (isAiEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+                    RoundedCornerShape(18.dp)
+                )
+                .clickable { onAiToggle(!isAiEnabled) }
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isAiEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = "Enable Local AI features",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Powered privately by Gemini Nano",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+            Switch(
+                checked = isAiEnabled,
+                onCheckedChange = onAiToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = EmeraldPrimary
+                )
+            )
+        }
+
+        AnimatedVisibility(visible = isAiEnabled) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = "INDIVIDUAL SERVICES",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                    letterSpacing = 1.sp
+                )
+
+                // Sub-Toggle 1: Translation
+                SubToggleRow(
+                    title = "Offline AI Translation",
+                    subtitle = "Translate foreign feeds entirely offline",
+                    checked = isTranslationEnabled,
+                    onCheckedChange = onTranslationToggle
+                )
+
+                // Sub-Toggle 2: Summaries
+                SubToggleRow(
+                    title = "Key Insights Generator",
+                    subtitle = "Generate 3-bullet points summaries",
+                    checked = isSummaryEnabled,
+                    onCheckedChange = onSummaryToggle
+                )
+
+                // Sub-Toggle 3: Smart Tags
+                SubToggleRow(
+                    title = "Smart Categories & Tags",
+                    subtitle = "Automatically tag articles for sorting",
+                    checked = isSmartTagsEnabled,
+                    onCheckedChange = onSmartTagsToggle
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .clickable { onCheckedChange(!checked) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.scale(0.85f),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = EmeraldPrimary
+            )
+        )
     }
 }

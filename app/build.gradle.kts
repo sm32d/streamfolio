@@ -69,6 +69,8 @@ dependencies {
     
     // On-Device GenAI Summarization (Gemini Nano via AICore)
     implementation("com.google.mlkit:genai-summarization:1.0.0-beta1")
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language.id)
 
     testImplementation(libs.junit)
     testImplementation("xmlpull:xmlpull:1.1.3.4a")

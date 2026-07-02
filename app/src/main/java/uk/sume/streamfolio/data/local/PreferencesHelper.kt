@@ -56,4 +56,28 @@ class PreferencesHelper(context: Context) {
     var readerLineSpacing: Float
         get() = prefs.getFloat("reader_line_spacing", 1.5f)
         set(value) = prefs.edit().putFloat("reader_line_spacing", value).apply()
+
+    var isAiEnabled: Boolean
+        get() = prefs.getBoolean("ai_enabled", false)
+        set(value) = prefs.edit().putBoolean("ai_enabled", value).apply()
+
+    var isTranslationEnabled: Boolean
+        get() = prefs.getBoolean("ai_translation_enabled", true)
+        set(value) = prefs.edit().putBoolean("ai_translation_enabled", value).apply()
+
+    var isSummaryEnabled: Boolean
+        get() = prefs.getBoolean("ai_summary_enabled", true)
+        set(value) = prefs.edit().putBoolean("ai_summary_enabled", value).apply()
+
+    var isSmartTagsEnabled: Boolean
+        get() = prefs.getBoolean("ai_smart_tags_enabled", true)
+        set(value) = prefs.edit().putBoolean("ai_smart_tags_enabled", value).apply()
+
+    var translationTargetLanguage: String
+        get() = prefs.getString("ai_translation_target_lang", "en") ?: "en"
+        set(value) = prefs.edit().putString("ai_translation_target_lang", value).apply()
+
+    var hasSeenAiSpotlight: Boolean
+        get() = prefs.getBoolean("has_seen_ai_spotlight", false)
+        set(value) = prefs.edit().putBoolean("has_seen_ai_spotlight", value).apply()
 }

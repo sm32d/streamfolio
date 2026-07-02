@@ -18,13 +18,14 @@ import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import java.util.concurrent.TimeUnit
 
-class NewsRepository(context: Context) {
+class NewsRepository(private val context: Context) {
 
     private val db = AppDatabase.getDatabase(context)
     private val articleDao = db.articleDao()
     private val customFeedDao = db.customFeedDao()
     private val prefs = PreferencesHelper(context)
     private val parser = RssParser()
+    private val aiSummaryHelper by lazy { AiSummaryHelper(context) }
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -84,6 +85,7 @@ class NewsRepository(context: Context) {
         insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
         triggerArticleBodyPreScrape(allArticles)
+        triggerArticleTagging(allArticles)
     }
 
     // Fetch multiple Custom RSS Feeds for a single category/tab in parallel
@@ -144,6 +146,7 @@ class NewsRepository(context: Context) {
         insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
         triggerArticleBodyPreScrape(allArticles)
+        triggerArticleTagging(allArticles)
     }
 
     private suspend fun insertAndPruneArticles(allArticles: List<Article>, category: String) {
@@ -308,6 +311,126 @@ class NewsRepository(context: Context) {
                 }
             }
         }
+    }
+
+    private suspend fun triggerArticleTagging(articles: List<Article>) {
+        if (!prefs.isAiEnabled || !prefs.isSmartTagsEnabled) return
+        withContext(Dispatchers.IO) {
+            val untagged = articleDao.getArticlesWithoutTags(20)
+            if (untagged.isEmpty()) return@withContext
+
+            untagged.forEach { article ->
+                launch {
+                    try {
+                        var aiSummary = ""
+                        try {
+                            val status = aiSummaryHelper.checkFeatureStatus()
+                            if (status != com.google.mlkit.genai.common.FeatureStatus.DOWNLOADABLE &&
+                                status != com.google.mlkit.genai.common.FeatureStatus.DOWNLOADING &&
+                                status != com.google.mlkit.genai.common.FeatureStatus.UNAVAILABLE) {
+                                val result = aiSummaryHelper.summarizeText(article.title + "\n" + article.description)
+                                aiSummary = result.summary
+                            }
+                        } catch (e: Exception) {
+                            Log.d("NewsRepository", "Nano summarizer unavailable for tagging. Using text-parsing fallback.")
+                        }
+
+                        val tags = extractTagsFromContent(article.title, article.description, aiSummary)
+                        if (tags.isNotBlank()) {
+                            articleDao.updateTags(article.link, tags)
+                        } else {
+                            articleDao.updateTags(article.link, "")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("NewsRepository", "Failed tagging for ${article.link}", e)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun extractTagsFromContent(title: String, description: String, aiSummary: String): String {
+        val content = "$title $description $aiSummary".lowercase()
+        val tags = mutableSetOf<String>()
+
+        val keywordToTagMap = mapOf(
+            "artificial intelligence" to "#AI",
+            "chatgpt" to "#AI",
+            "machine learning" to "#AI",
+            "gemini" to "#AI",
+            "inflation" to "#Inflation",
+            "interest rate" to "#Inflation",
+            "federal reserve" to "#Inflation",
+            "economy" to "#Economy",
+            "recession" to "#Economy",
+            "stocks" to "#Markets",
+            "market" to "#Markets",
+            "nasdaq" to "#Markets",
+            "s&p 500" to "#Markets",
+            "dow jones" to "#Markets",
+            "football" to "#Sports",
+            "soccer" to "#Sports",
+            "basketball" to "#Sports",
+            "nba" to "#Sports",
+            "world cup" to "#WorldCup",
+            "olympics" to "#Sports",
+            "bitcoin" to "#Crypto",
+            "ethereum" to "#Crypto",
+            "cryptocurrency" to "#Crypto",
+            "election" to "#Politics",
+            "senate" to "#Politics",
+            "biden" to "#Politics",
+            "trump" to "#Politics",
+            "president" to "#Politics",
+            "climate" to "#Climate",
+            "warming" to "#Climate",
+            "greenhouse" to "#Climate",
+            "carbon" to "#Climate",
+            "cancer" to "#Health",
+            "fda" to "#Health",
+            "vaccine" to "#Health",
+            "medicine" to "#Health",
+            "space" to "#Space",
+            "nasa" to "#Space",
+            "spacex" to "#Space",
+            "mars" to "#Space"
+        )
+
+        for ((keyword, tag) in keywordToTagMap) {
+            if (content.contains(keyword)) {
+                tags.add(tag)
+            }
+        }
+
+        val words = "$title $description".split(Regex("[^a-zA-Z0-9#]")).filter { it.isNotBlank() }
+        val stopWords = setOf(
+            "the", "a", "an", "and", "but", "or", "for", "nor", "on", "at", "to", "from", "by", 
+            "in", "of", "with", "this", "that", "these", "those", "is", "are", "was", "were", 
+            "be", "been", "being", "have", "has", "had", "do", "does", "did", "will", "would", 
+            "should", "can", "could", "may", "might", "must", "about", "above", "after", "again",
+            "against", "all", "am", "any", "as", "at", "be", "because", "been", "before", "being",
+            "below", "between", "both", "but", "by", "could", "did", "do", "does", "doing", "down",
+            "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "he",
+            "her", "here", "hers", "herself", "him", "himself", "his", "how", "i", "if", "in", "into",
+            "is", "it", "its", "itself", "me", "more", "most", "my", "myself", "no", "nor", "not", "of",
+            "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out",
+            "over", "own", "same", "she", "should", "so", "some", "such", "than", "that", "the", "their",
+            "theirs", "them", "themselves", "then", "there", "theirs", "these", "they", "this", "those",
+            "through", "to", "too", "under", "until", "up", "very", "was", "we", "were", "what", "when",
+            "where", "which", "while", "who", "whom", "why", "with", "would", "you", "your", "yours",
+            "yourself", "yourselves"
+        )
+
+        for (word in words) {
+            if (word.isNotEmpty() && word[0].isUpperCase()) {
+                val lowerWord = word.lowercase()
+                if (lowerWord !in stopWords && lowerWord.length > 2) {
+                    tags.add("#${word.replace("#", "")}")
+                }
+            }
+        }
+
+        return tags.take(4).joinToString(", ")
     }
 
     suspend fun getArticleByLink(link: String): Article? = articleDao.getArticleByLink(link)
