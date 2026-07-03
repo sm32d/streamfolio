@@ -189,6 +189,31 @@ fun HomeScreen(
     val listArticles = remember(filteredArticles) {
         filteredArticles.drop(3)
     }
+    
+    val pageSize = 12
+    var visibleListCount by remember(listArticles) { mutableStateOf(minOf(pageSize, listArticles.size)) }
+    var isPaging by remember(listArticles) { mutableStateOf(false) }
+    
+    val pagedListArticles = remember(listArticles, visibleListCount) {
+        listArticles.take(visibleListCount)
+    }
+    
+    val shouldLoadMore by remember(scrollState, listArticles.size) {
+        derivedStateOf {
+            val hasMore = visibleListCount < listArticles.size
+            val total = scrollState.layoutInfo.totalItemsCount
+            val lastVisible = scrollState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            hasMore && total > 0 && lastVisible >= total - 4
+        }
+    }
+    
+    LaunchedEffect(shouldLoadMore) {
+        if (shouldLoadMore && !isPaging) {
+            isPaging = true
+            visibleListCount = (visibleListCount + pageSize).coerceAtMost(listArticles.size)
+            isPaging = false
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -561,7 +586,7 @@ fun HomeScreen(
                             }
                         }
                     } else {
-                        items(listArticles) { article ->
+                        items(pagedListArticles) { article ->
                             ArticleListItem(
                                 article = article,
                                 sharedTransitionScope = sharedTransitionScope,
@@ -577,6 +602,23 @@ fun HomeScreen(
                                     Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
                                 }
                             )
+                        }
+                        
+                        if (visibleListCount < listArticles.size) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(28.dp),
+                                        color = EmeraldPrimary,
+                                        strokeWidth = 3.dp
+                                    )
+                                }
+                            }
                         }
                     }
                 }

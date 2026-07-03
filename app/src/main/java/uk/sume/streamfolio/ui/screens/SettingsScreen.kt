@@ -1866,6 +1866,34 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     )
                                 }
                             }
+                            
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF3B82F6).copy(alpha = 0.08f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = Color(0xFF3B82F6),
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .padding(top = 1.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "First-time translation downloads a language pack of about 30MB and needs an internet connection. After download, translations run offline on-device.",
+                                        fontSize = 11.sp,
+                                        lineHeight = 16.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f)
+                                    )
+                                }
+                            }
 
                             DropdownMenu(
                                 expanded = showLangDropdown,
