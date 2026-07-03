@@ -47,6 +47,25 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE thumbnailUrl IS NULL ORDER BY pubDate DESC LIMIT :limit")
     suspend fun getArticlesWithoutThumbnail(limit: Int): List<Article>
 
+    @Query(
+        """
+        SELECT * FROM articles
+        WHERE category = :category
+          AND (
+            LOWER(sourceName) LIKE '%straits times%'
+            OR LOWER(sourceUrl) LIKE '%straitstimes.com%'
+          )
+          AND (
+            thumbnailUrl IS NULL
+            OR thumbnailUrl = ''
+            OR thumbnailUrl = 'failed'
+          )
+        ORDER BY pubDate DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getStraitsTimesArticlesNeedingThumbnailRetry(category: String, limit: Int): List<Article>
+
     @Query("UPDATE articles SET fullText = :fullText WHERE link = :link")
     suspend fun updateFullText(link: String, fullText: String?)
 

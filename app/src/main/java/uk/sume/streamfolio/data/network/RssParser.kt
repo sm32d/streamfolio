@@ -111,8 +111,9 @@ class RssParser {
                                 }
                                 name.equals("enclosure", ignoreCase = true) -> {
                                     val type = parser.getAttributeValue(null, "type") ?: ""
-                                    if (type.startsWith("image/") || type.contains("image")) {
-                                        currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")?.trim()
+                                    val url = parser.getAttributeValue(null, "url")?.trim()
+                                    if (!url.isNullOrBlank() && (type.startsWith("image/") || type.contains("image") || url.matches(Regex("(?i).+\\.(png|jpe?g|webp|gif)(\\?.*)?$")))) {
+                                        currentArticleBuilder.thumbnailUrl = url
                                     }
                                 }
                                 name.equals("media:content", ignoreCase = true) -> {
@@ -124,6 +125,9 @@ class RssParser {
                                 }
                                 name.equals("media:thumbnail", ignoreCase = true) -> {
                                     currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "url")?.trim()
+                                }
+                                name.equals("itunes:image", ignoreCase = true) -> {
+                                    currentArticleBuilder.thumbnailUrl = parser.getAttributeValue(null, "href")?.trim()
                                 }
                             }
                         } else if (name.equals("title", ignoreCase = true)) {
@@ -194,6 +198,10 @@ class RssParser {
                 cleanSource = channelFallback
             }
             
+            if (thumbnailUrl.isNullOrBlank()) {
+                thumbnailUrl = extractFirstImageUrlFromHtml(description.orEmpty(), articleLink)
+            }
+            
             // Try resolving publisher from URL domains (robust for curated feeds)
             val resolvedName = DefaultFeedsConfig.getPublisherName(articleLink)
             if (resolvedName != "Unknown Source") {
@@ -228,6 +236,25 @@ class RssParser {
                 isBookmarked = false,
                 customFeedId = customFeedId
             )
+        }
+        
+        private fun extractFirstImageUrlFromHtml(html: String, articleLink: String): String? {
+            val match = Regex("(?i)<img[^>]+src=[\"']([^\"']+)[\"']").find(html) ?: return null
+            val src = match.groupValues.getOrNull(1)?.trim().orEmpty()
+            if (src.isBlank()) return null
+            if (src.startsWith("http://") || src.startsWith("https://")) return src
+            if (src.startsWith("//")) return "https:$src"
+            if (src.startsWith("/")) {
+                return try {
+                    val uri = java.net.URI(articleLink)
+                    val scheme = uri.scheme ?: "https"
+                    val host = uri.host ?: return null
+                    "$scheme://$host$src"
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            return null
         }
 
         private fun normalizePubDate(rawDate: String?): String {

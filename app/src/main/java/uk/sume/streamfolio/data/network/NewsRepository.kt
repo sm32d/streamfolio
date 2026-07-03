@@ -84,6 +84,7 @@ class NewsRepository(private val context: Context) {
         
         insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+        triggerStraitsTimesThumbnailRetry(category, allArticles)
         triggerArticleBodyPreScrape(allArticles)
         triggerArticleTagging(allArticles)
     }
@@ -145,6 +146,7 @@ class NewsRepository(private val context: Context) {
         
         insertAndPruneArticles(allArticles, category)
         triggerThumbnailResolution(allArticles)
+        triggerStraitsTimesThumbnailRetry(category, allArticles)
         triggerArticleBodyPreScrape(allArticles)
         triggerArticleTagging(allArticles)
     }
@@ -283,10 +285,28 @@ class NewsRepository(private val context: Context) {
     private suspend fun triggerThumbnailResolution(articles: List<Article>) {
         withContext(Dispatchers.IO) {
             articles.take(15).forEach { article ->
-                if (article.thumbnailUrl == null) {
+                if (article.thumbnailUrl.isNullOrBlank()) {
                     launch {
                         resolveThumbnail(article.link)
                     }
+                }
+            }
+        }
+    }
+
+    private suspend fun triggerStraitsTimesThumbnailRetry(category: String, fetchedArticles: List<Article>) {
+        val hasStraitsTimesInRefresh = fetchedArticles.any { article ->
+            article.sourceName.contains("Straits Times", ignoreCase = true) ||
+                article.sourceUrl.contains("straitstimes.com", ignoreCase = true) ||
+                article.link.contains("straitstimes.com", ignoreCase = true)
+        }
+        if (!hasStraitsTimesInRefresh) return
+
+        withContext(Dispatchers.IO) {
+            val retryCandidates = articleDao.getStraitsTimesArticlesNeedingThumbnailRetry(category, 12)
+            retryCandidates.forEach { article ->
+                launch {
+                    resolveThumbnail(article.link)
                 }
             }
         }
@@ -591,6 +611,9 @@ class NewsRepository(private val context: Context) {
                 imageUrl = doc.select("meta[name=twitter:image]").attr("content")
             }
             if (imageUrl.isBlank()) {
+                imageUrl = extractImageFromStructuredData(doc.html())
+            }
+            if (imageUrl.isBlank()) {
                 // Fallback to first large image in article if meta tags are missing
                 imageUrl = doc.select("article img, main img").firstOrNull()?.attr("abs:src") ?: ""
             }
@@ -612,6 +635,27 @@ class NewsRepository(private val context: Context) {
             Log.e("NewsRepository", "Failed resolving thumbnail for $articleLink", e)
             articleDao.updateThumbnailUrl(articleLink, "failed")
         }
+    }
+
+    private fun extractImageFromStructuredData(html: String): String {
+        val patterns = listOf(
+            Regex(""""image"\s*:\s*\{[\s\S]*?"url"\s*:\s*"([^"]+)""""),
+            Regex("""\\"image\\"\s*:\s*\{[\s\S]*?\\"url\\"\s*:\s*\\"([^\\]+)\\""""),
+            Regex("""https://cassette\.sphdigital\.com\.sg/image/[^"\\\s<]+""")
+        )
+
+        for (pattern in patterns) {
+            val match = pattern.find(html) ?: continue
+            val value = match.groups[1]?.value ?: match.value
+            val normalized = value
+                .replace("\\/", "/")
+                .trim()
+                .removeSuffix("\\")
+            if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+                return normalized
+            }
+        }
+        return ""
     }
 
     // Scrapes clean text for Reader mode and TTS player

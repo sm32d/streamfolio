@@ -412,7 +412,10 @@ fun DetailScreen(
                                     AsyncImage(
                                         model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
                                         contentDescription = null,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))

@@ -17,6 +17,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -39,6 +40,7 @@ import android.widget.Toast
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.ui.components.SkeletonLoader
 import uk.sume.streamfolio.ui.components.SwipeableCard
@@ -66,6 +69,7 @@ import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.launch
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
+import okhttp3.Headers
 import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -89,7 +93,9 @@ fun HomeScreen(
     val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
     val hasSeenAiSpotlight by viewModel.hasSeenAiSpotlight.collectAsState()
 
-    val scrollState = rememberLazyListState()
+    val scrollState = rememberSaveable(saver = LazyListState.Saver) {
+        LazyListState()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.tabResetEvent.collect { route ->
@@ -191,8 +197,17 @@ fun HomeScreen(
     }
     
     val pageSize = 12
-    var visibleListCount by remember(listArticles) { mutableStateOf(minOf(pageSize, listArticles.size)) }
+    var visibleListCount by rememberSaveable(selectedCategory, selectedPublisher) {
+        mutableIntStateOf(pageSize)
+    }
     var isPaging by remember(listArticles) { mutableStateOf(false) }
+    
+    LaunchedEffect(listArticles.size) {
+        val minimumVisible = minOf(pageSize, listArticles.size)
+        visibleListCount = visibleListCount
+            .coerceAtLeast(minimumVisible)
+            .coerceAtMost(listArticles.size)
+    }
     
     val pagedListArticles = remember(listArticles, visibleListCount) {
         listArticles.take(visibleListCount)
@@ -394,10 +409,12 @@ fun HomeScreen(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             AsyncImage(
-                                                model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
+                                        model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
                                                 contentDescription = name,
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Fit
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
                                             )
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
@@ -639,6 +656,7 @@ fun TrendingCard(
     onQueueClick: () -> Unit,
     onTap: () -> Unit
 ) {
+    val context = LocalContext.current
     val thumbnail = article.thumbnailUrl
     val isGoogleLogo = thumbnail?.let {
         it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
@@ -654,8 +672,21 @@ fun TrendingCard(
         if (hasValidThumbnail) {
             // Thumbnail Image
             with(sharedTransitionScope) {
+                val request = remember(thumbnail) {
+                    ImageRequest.Builder(context)
+                        .data(thumbnail)
+                        .headers(
+                            Headers.Builder()
+                                .add(
+                                    "User-Agent",
+                                    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                )
+                                .build()
+                        )
+                        .build()
+                }
                 AsyncImage(
-                    model = thumbnail,
+                    model = request,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
@@ -982,8 +1013,21 @@ fun ArticleListItem(
                     ) {
                         if (hasValidThumbnail) {
                             with(sharedTransitionScope) {
+                                val request = remember(thumbnail) {
+                                    ImageRequest.Builder(context)
+                                        .data(thumbnail)
+                                        .headers(
+                                            Headers.Builder()
+                                                .add(
+                                                    "User-Agent",
+                                                    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                                )
+                                                .build()
+                                        )
+                                        .build()
+                                }
                                 AsyncImage(
-                                    model = thumbnail,
+                                    model = request,
                                     contentDescription = null,
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -1205,24 +1249,24 @@ fun ArticleListItem(
 
 // Extract publisher domain helper
 fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: String = ""): String {
-    if (sourceUrl.isNotBlank()) {
+    if (articleLink.isNotBlank()) {
         try {
-            val uri = Uri.parse(sourceUrl)
+            val uri = Uri.parse(articleLink)
             var host = uri.host
             if (!host.isNullOrEmpty() && !host.contains("google.com")) {
-                if (host.startsWith("www.")) host = host.substring(4)
+                host = normalizePublisherHost(host)
                 return host
             }
         } catch (e: Exception) {
             // ignore
         }
     }
-    if (articleLink.isNotBlank()) {
+    if (sourceUrl.isNotBlank()) {
         try {
-            val uri = Uri.parse(articleLink)
+            val uri = Uri.parse(sourceUrl)
             var host = uri.host
             if (!host.isNullOrEmpty() && !host.contains("google.com")) {
-                if (host.startsWith("www.")) host = host.substring(4)
+                host = normalizePublisherHost(host)
                 return host
             }
         } catch (e: Exception) {
@@ -1230,16 +1274,36 @@ fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: Strin
         }
     }
     return when (sourceName.lowercase()) {
-        "bbc news", "bbc" -> "bbc.co.uk"
-        "cnn" -> "cnn.com"
-        "reuters" -> "reuters.com"
-        "associated press", "ap" -> "apnews.com"
-        "the new york times", "nytimes" -> "nytimes.com"
-        "bloomberg" -> "bloomberg.com"
-        "nbc news" -> "nbcnews.com"
-        "guardian" -> "theguardian.com"
-        else -> "google.com" // generic fallback for favicon
+        else -> {
+            val lower = sourceName.lowercase()
+            when {
+                lower.contains("bbc") -> "bbc.co.uk"
+                lower.contains("npr") -> "npr.org"
+                lower.contains("straits times") || lower == "st" -> "straitstimes.com"
+                lower.contains("cna") || lower.contains("channel newsasia") -> "channelnewsasia.com"
+                lower.contains("science daily") || lower.contains("sciencedaily") -> "sciencedaily.com"
+                lower.contains("yahoo") -> "yahoo.com"
+                lower.contains("reuters") -> "reuters.com"
+                lower.contains("associated press") || lower == "ap" -> "apnews.com"
+                lower.contains("new york times") || lower.contains("nytimes") -> "nytimes.com"
+                lower.contains("bloomberg") -> "bloomberg.com"
+                lower.contains("nbc") -> "nbcnews.com"
+                lower.contains("guardian") -> "theguardian.com"
+                else -> "google.com"
+            }
+        }
     }
+}
+
+private fun normalizePublisherHost(host: String): String {
+    var h = host.lowercase()
+    if (h.startsWith("www.")) h = h.substring(4)
+    if (h.startsWith("feeds.")) h = h.substring(6)
+    if (h.startsWith("rss.")) h = h.substring(4)
+    if (h.startsWith("m.")) h = h.substring(2)
+    if (h.startsWith("mobile.")) h = h.removePrefix("mobile.")
+    if (h.endsWith("bbci.co.uk")) return "bbc.co.uk"
+    return h
 }
 
 // Convert pubDate format to relative time helper
