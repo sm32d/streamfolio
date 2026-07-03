@@ -548,7 +548,7 @@ fun DetailScreen(
                                                         )
                                                         Spacer(modifier = Modifier.width(8.dp))
                                                         Text(
-                                                            text = "Summarization Error",
+                                                            text = "Summary Unavailable",
                                                             fontWeight = FontWeight.Bold,
                                                             fontSize = 12.sp,
                                                             color = MaterialTheme.colorScheme.error
@@ -556,7 +556,7 @@ fun DetailScreen(
                                                     }
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
-                                                        text = "This feature requires Gemini Nano (AICore), which is not available on this device.",
+                                                        text = "AI insights require Gemini Nano (AICore), which is not available on this device. The standard article preview is shown below instead.",
                                                         fontSize = 11.sp,
                                                         lineHeight = 15.sp,
                                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)

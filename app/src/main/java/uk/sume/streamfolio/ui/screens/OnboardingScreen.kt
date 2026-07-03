@@ -936,23 +936,31 @@ private fun AiFeaturesStep(
                 val isGeminiOk = isGeminiSupported != false
                 SubToggleRow(
                     title = "Key Insights Generator",
-                    subtitle = "Generate 3-bullet points summaries",
+                    subtitle = if (isGeminiOk) {
+                        "Generate 3-bullet point summaries"
+                    } else {
+                        "Unavailable on this device; you can still read the normal article content without AI insights"
+                    },
                     checked = if (isGeminiOk) isSummaryEnabled else false,
                     onCheckedChange = onSummaryToggle,
                     enabled = isGeminiOk,
-                    errorText = if (!isGeminiOk) "Requires Gemini Nano (unsupported on this device)" else null
+                    errorText = if (!isGeminiOk) "Requires Gemini Nano. On unsupported devices, AI insights are disabled, but the regular article content remains available." else null
                 )
 
                 // Sub-Toggle 3: Smart Tags
                 SubToggleRow(
                     title = "Smart Categories & Tags",
-                    subtitle = "Automatically suggest tags dynamically",
-                    checked = if (isGeminiOk) isSmartTagsEnabled else false,
+                    subtitle = if (isGeminiOk) {
+                        "Automatically suggest tags dynamically with Gemini enhancement"
+                    } else {
+                        "Use basic keyword tagging on unsupported devices"
+                    },
+                    checked = isSmartTagsEnabled,
                     onCheckedChange = onSmartTagsToggle,
-                    enabled = isGeminiOk,
+                    enabled = true,
                     isBeta = true,
                     warningText = "Tags are experimental and may occasionally be inaccurate.",
-                    errorText = if (!isGeminiOk) "Requires Gemini Nano (unsupported on this device)" else null
+                    errorText = if (!isGeminiOk) "Gemini Nano is unavailable, so Smart Tags will use a basic fallback instead." else null
                 )
             }
         }

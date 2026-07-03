@@ -1951,8 +1951,11 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 )
                                 Text(
-                                    text = if (isGeminiAvail) "Provide 3 key takeaways of parsed articles"
-                                           else "Requires Gemini Nano (unsupported on this device)",
+                                    text = if (isGeminiAvail) {
+                                        "Provide 3 key takeaways of parsed articles"
+                                    } else {
+                                        "Requires Gemini Nano; unsupported devices still show the regular article content without AI insights"
+                                    },
                                     fontSize = 11.sp,
                                     color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                            else MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
@@ -2005,7 +2008,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                         text = "Smart Categories & Tags",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    color = MaterialTheme.colorScheme.onSurface
                                     )
                                     if (isGeminiAvail) {
                                         Surface(
@@ -2024,27 +2027,31 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     }
                                 }
                                 Text(
-                                    text = if (isGeminiAvail) "Automatically suggest tags dynamically"
-                                           else "Requires Gemini Nano (unsupported on this device)",
+                                    text = if (isGeminiAvail) {
+                                        "Automatically suggest tags dynamically with Gemini enhancement"
+                                    } else {
+                                        "Uses basic keyword tagging when Gemini Nano is unavailable"
+                                    },
                                     fontSize = 11.sp,
-                                    color = if (isGeminiAvail) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                           else MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
-                                if (isGeminiAvail) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Tags are experimental and may occasionally be inaccurate.",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFFD97706)
-                                    )
-                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (isGeminiAvail) {
+                                        "Tags are experimental and may occasionally be inaccurate."
+                                    } else {
+                                        "Fallback tagging is more basic and may be less precise."
+                                    },
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFD97706)
+                                )
                             }
                         }
                         Switch(
-                            checked = isSmartTagsEnabled && isGeminiAvail,
-                            onCheckedChange = { if (isGeminiAvail) viewModel.setSmartTagsEnabled(it) },
-                            enabled = isGeminiAvail,
+                            checked = isSmartTagsEnabled,
+                            onCheckedChange = { viewModel.setSmartTagsEnabled(it) },
+                            enabled = true,
                             modifier = Modifier.scale(0.85f),
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
