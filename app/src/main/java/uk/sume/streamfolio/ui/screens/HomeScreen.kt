@@ -478,6 +478,7 @@ fun HomeScreen(
                                     ) {
                                          TrendingCard(
                                              article = article,
+                                             viewModel = viewModel,
                                              sharedTransitionScope = sharedTransitionScope,
                                              animatedVisibilityScope = animatedVisibilityScope,
                                              onBookmarkClick = {
@@ -606,6 +607,7 @@ fun HomeScreen(
                         items(pagedListArticles) { article ->
                             ArticleListItem(
                                 article = article,
+                                viewModel = viewModel,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 onTap = {
@@ -649,6 +651,7 @@ fun HomeScreen(
 @Composable
 fun TrendingCard(
     article: Article,
+    viewModel: NewsViewModel? = null,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBookmarkClick: () -> Unit,
@@ -662,6 +665,12 @@ fun TrendingCard(
         it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
     } ?: false
     val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+
+    LaunchedEffect(article.link, thumbnail) {
+        if (!hasValidThumbnail && viewModel != null) {
+            viewModel.requestThumbnailOnDemand(article)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -866,6 +875,7 @@ fun TrendingCard(
 @Composable
 fun ArticleListItem(
     article: Article,
+    viewModel: NewsViewModel? = null,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onTap: () -> Unit,
@@ -1004,6 +1014,12 @@ fun ArticleListItem(
                         it.contains("googleusercontent.com") || it.contains("gstatic.com") || it.contains("google.com")
                     } ?: false
                     val hasValidThumbnail = thumbnail != null && thumbnail != "failed" && !isGoogleLogo
+
+                    LaunchedEffect(article.link, thumbnail) {
+                        if (!hasValidThumbnail && viewModel != null) {
+                            viewModel.requestThumbnailOnDemand(article)
+                        }
+                    }
 
                     // Left Thumbnail Area with Overlaid Play Button
                     Box(

@@ -23,6 +23,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = NewsRepository(application)
     val prefs = PreferencesHelper(application)
     val ttsHelper = TtsHelper(application)
+    private val requestedThumbnailRetries = mutableSetOf<String>()
 
     // AI Translation States & Logic
     private val aiTranslateHelper by lazy { uk.sume.streamfolio.data.network.AiHelperFactory.createTranslateHelper(getApplication()) }
@@ -743,6 +744,21 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     fun fetchSingleFeed(url: String, category: String) {
         viewModelScope.launch {
             repository.fetchSingleFeed(url, category)
+        }
+    }
+
+    fun requestThumbnailOnDemand(article: Article) {
+        val link = article.link
+        val needsThumbnail = article.thumbnailUrl.isNullOrBlank() || article.thumbnailUrl == "failed"
+        if (!needsThumbnail) return
+        if (!requestedThumbnailRetries.add(link)) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                repository.resolveThumbnailIfNeeded(link)
+            } catch (e: Exception) {
+                android.util.Log.d("NewsViewModel", "On-demand thumbnail retry failed for $link: ${e.message}")
+            }
         }
     }
 

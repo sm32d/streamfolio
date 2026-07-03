@@ -19,6 +19,10 @@ import uk.sume.streamfolio.data.model.CustomFeed
 import java.util.concurrent.TimeUnit
 
 class NewsRepository(private val context: Context) {
+    companion object {
+        private const val THUMBNAIL_RESOLUTION_BATCH_SIZE = 40
+        private const val STRAITS_TIMES_THUMBNAIL_RETRY_BATCH_SIZE = 30
+    }
 
     private val db = AppDatabase.getDatabase(context)
     private val articleDao = db.articleDao()
@@ -284,26 +288,47 @@ class NewsRepository(private val context: Context) {
     // Resolve thumbnails asynchronously for a list of articles in parallel
     private suspend fun triggerThumbnailResolution(articles: List<Article>) {
         withContext(Dispatchers.IO) {
-            articles.take(15).forEach { article ->
-                if (article.thumbnailUrl.isNullOrBlank()) {
+            articles
+                .filter { it.thumbnailUrl.isNullOrBlank() }
+                .take(THUMBNAIL_RESOLUTION_BATCH_SIZE)
+                .forEach { article ->
                     launch {
                         resolveThumbnail(article.link)
                     }
                 }
+        }
+    }
+
+    private fun isStraitsTimesArticle(article: Article): Boolean {
+        return article.sourceName.contains("Straits Times", ignoreCase = true) ||
+            article.sourceUrl.contains("straitstimes.com", ignoreCase = true) ||
+            article.link.contains("straitstimes.com", ignoreCase = true)
+    }
+
+    private suspend fun triggerStraitsTimesFreshArticleRetry(fetchedArticles: List<Article>) {
+        withContext(Dispatchers.IO) {
+            fetchedArticles
+                .filter { isStraitsTimesArticle(it) && it.thumbnailUrl.isNullOrBlank() }
+                .take(STRAITS_TIMES_THUMBNAIL_RETRY_BATCH_SIZE)
+                .forEach { article ->
+                    launch {
+                        resolveThumbnail(article.link)
+                    }
             }
         }
     }
 
     private suspend fun triggerStraitsTimesThumbnailRetry(category: String, fetchedArticles: List<Article>) {
-        val hasStraitsTimesInRefresh = fetchedArticles.any { article ->
-            article.sourceName.contains("Straits Times", ignoreCase = true) ||
-                article.sourceUrl.contains("straitstimes.com", ignoreCase = true) ||
-                article.link.contains("straitstimes.com", ignoreCase = true)
-        }
+        val hasStraitsTimesInRefresh = fetchedArticles.any { article -> isStraitsTimesArticle(article) }
         if (!hasStraitsTimesInRefresh) return
 
+        triggerStraitsTimesFreshArticleRetry(fetchedArticles)
+
         withContext(Dispatchers.IO) {
-            val retryCandidates = articleDao.getStraitsTimesArticlesNeedingThumbnailRetry(category, 12)
+            val retryCandidates = articleDao.getStraitsTimesArticlesNeedingThumbnailRetry(
+                category,
+                STRAITS_TIMES_THUMBNAIL_RETRY_BATCH_SIZE
+            )
             retryCandidates.forEach { article ->
                 launch {
                     resolveThumbnail(article.link)
@@ -530,6 +555,13 @@ class NewsRepository(private val context: Context) {
     }
 
     suspend fun getArticleByLink(link: String): Article? = articleDao.getArticleByLink(link)
+
+    suspend fun resolveThumbnailIfNeeded(link: String) = withContext(Dispatchers.IO) {
+        val article = articleDao.getArticleByLink(link) ?: return@withContext
+        if (article.thumbnailUrl.isNullOrBlank() || article.thumbnailUrl == "failed") {
+            resolveThumbnail(link)
+        }
+    }
 
     suspend fun insertArticle(article: Article) = withContext(Dispatchers.IO) {
         articleDao.insertOrUpdateArticles(listOf(article))
