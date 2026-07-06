@@ -163,6 +163,38 @@ object DefaultFeedsConfig {
             "Business" to listOf(
                 "https://www.tagesschau.de/wirtschaft/index~rdf.xml"
             )
+        ),
+        "HK" to mapOf(
+            "Top Stories" to listOf(
+                "https://hongkongfp.com/feed/",
+                "https://www.scmp.com/rss/91/feed",
+                "https://rthk.hk/rthk/news/rss/e_expressnews_elocal.xml",
+                "https://www.news.gov.hk/rss/news/topstories_en.xml"
+            ),
+            "World" to listOf(
+                "https://www.scmp.com/rss/5/feed",
+                "https://rthk.hk/rthk/news/rss/e_expressnews_einternational.xml"
+            ),
+            "Business" to listOf(
+                "https://www.scmp.com/rss/92/feed",
+                "https://rthk.hk/rthk/news/rss/e_expressnews_efinance.xml"
+            ),
+            "Technology" to listOf(
+                "https://www.scmp.com/rss/36/feed",
+                "https://fintechnews.hk/feed/"
+            ),
+            "Sports" to listOf(
+                "https://www.scmp.com/rss/95/feed",
+                "https://rthk.hk/rthk/news/rss/e_expressnews_esport.xml"
+            ),
+            "Health" to listOf(
+                "https://www.scmp.com/rss/32/feed"
+            ),
+            "Entertainment" to listOf(
+                "https://www.scmp.com/rss/94/feed",
+                "https://www.orientalsunday.hk/feed/",
+                "https://eastweek.stheadline.com/rss"
+            )
         )
     )
 
@@ -193,6 +225,13 @@ object DefaultFeedsConfig {
 
     fun getPublisherName(url: String): String {
         return when {
+            url.contains("hongkongfp.com") -> "Hong Kong Free Press"
+            url.contains("scmp.com") -> "South China Morning Post"
+            url.contains("rthk.hk") -> "RTHK News"
+            url.contains("news.gov.hk") -> "GovHK"
+            url.contains("fintechnews.hk") -> "Fintech News HK"
+            url.contains("orientalsunday.hk") -> "Oriental Sunday"
+            url.contains("stheadline.com") -> "East Week"
             url.contains("npr.org") -> "NPR"
             url.contains("apnews.com") || url.contains("ap.xml") -> "Associated Press (AP)"
             url.contains("nytimes.com") -> "The New York Times"

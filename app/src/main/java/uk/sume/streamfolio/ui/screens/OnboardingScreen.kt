@@ -94,7 +94,7 @@ import java.util.Locale
 fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
     val systemLocale = Locale.getDefault()
     val defaultLang = systemLocale.language.takeIf { it in listOf("en", "es", "fr", "de", "hi", "zh") } ?: "en"
-    val defaultRegion = systemLocale.country.takeIf { it in listOf("US", "GB", "CA", "FR", "DE", "IN", "AU", "SG") } ?: "US"
+    val defaultRegion = systemLocale.country.takeIf { it in listOf("US", "GB", "CA", "FR", "DE", "IN", "AU", "SG", "HK") } ?: "US"
 
     var selectedLang by rememberSaveable { mutableStateOf(defaultLang) }
     var selectedRegion by rememberSaveable { mutableStateOf(defaultRegion) }
@@ -472,7 +472,8 @@ private fun LanguageRegionStep(
         "DE" to "🇩🇪 Germany",
         "IN" to "🇮🇳 India",
         "AU" to "🇦🇺 Australia",
-        "SG" to "🇸🇬 Singapore"
+        "SG" to "🇸🇬 Singapore",
+        "HK" to "🇭🇰 Hong Kong"
     )
     val cacheOptions = mapOf(
         "1" to "1 Day",

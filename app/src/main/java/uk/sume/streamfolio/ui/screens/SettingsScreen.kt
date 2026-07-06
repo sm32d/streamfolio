@@ -296,7 +296,8 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
         "DE" to "🇩🇪 Germany",
         "IN" to "🇮🇳 India",
         "AU" to "🇦🇺 Australia",
-        "SG" to "🇸🇬 Singapore"
+        "SG" to "🇸🇬 Singapore",
+        "HK" to "🇭🇰 Hong Kong"
     )
     val cacheOptions = mapOf(
         "1" to "1 Day",
@@ -919,6 +920,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                 "US" -> "🇺🇸 United States"
                                 "GB" -> "🇬🇧 United Kingdom"
                                 "SG" -> "🇸🇬 Singapore"
+                                "HK" -> "🇭🇰 Hong Kong"
                                 "IN" -> "🇮🇳 India"
                                 "CA" -> "🇨🇦 Canada"
                                 "AU" -> "🇦🇺 Australia"
@@ -1112,6 +1114,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                     "US" -> "🇺🇸 United States"
                                     "GB" -> "🇬🇧 United Kingdom"
                                     "SG" -> "🇸🇬 Singapore"
+                                    "HK" -> "🇭🇰 Hong Kong"
                                     "IN" -> "🇮🇳 India"
                                     "CA" -> "🇨🇦 Canada"
                                     "AU" -> "🇦🇺 Australia"
