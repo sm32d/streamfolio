@@ -75,6 +75,8 @@ fun DetailScreen(
     val translatedBody by viewModel.translatedBody.collectAsState()
     val isTranslationLoading by viewModel.isTranslationLoading.collectAsState()
     val translationError by viewModel.translationError.collectAsState()
+    val articleLanguage by viewModel.articleLanguage.collectAsState()
+    val targetLang by viewModel.translationTargetLanguage.collectAsState()
 
     val context = LocalContext.current
 
@@ -980,7 +982,8 @@ fun DetailScreen(
                         )
                     }
 
-                    if (isAiEnabled && isTranslationEnabled) {
+                    val showTranslateOption = isAiEnabled && isTranslationEnabled && (articleLanguage == null || articleLanguage != targetLang)
+                    if (showTranslateOption) {
                         val isTranslated = translatedTitle.isNotEmpty()
                         Row(
                             modifier = Modifier.clickable {

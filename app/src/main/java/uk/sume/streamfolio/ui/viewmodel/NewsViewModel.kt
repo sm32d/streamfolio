@@ -111,6 +111,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentArticleDetail = MutableStateFlow<Article?>(null)
     val currentArticleDetail: StateFlow<Article?> = _currentArticleDetail.asStateFlow()
 
+    private val _articleLanguage = MutableStateFlow<String?>(null)
+    val articleLanguage: StateFlow<String?> = _articleLanguage.asStateFlow()
+
     fun setShowLyricsVisualizer(show: Boolean) {
         _showLyricsVisualizer.value = show
     }
@@ -445,6 +448,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
             _isLoadingBody.value = true
             _articleBody.value = ""
+            _articleLanguage.value = null
             resetAiSummary()
             ttsHelper.stop() // Stop playing previous article
             
@@ -514,9 +518,17 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             }
             val currentBody = _articleBody.value
             val currentTitle = _currentArticleDetail.value?.title ?: ""
-            if (prefs.isAiEnabled && prefs.isTranslationEnabled && currentBody.isNotBlank() && 
+            if (currentBody.isNotBlank() && 
                 !currentBody.startsWith("Failed to load") && !currentBody.startsWith("Unable to parse") && !currentBody.startsWith("Unable to load")) {
-                translateArticleText(currentTitle, currentBody)
+                val helper = aiTranslateHelper
+                if (helper != null) {
+                    val lang = helper.identifyLanguage(currentTitle + " " + currentBody.take(100))
+                    _articleLanguage.value = lang
+                    val target = _translationTargetLanguage.value
+                    if (prefs.isAiEnabled && prefs.isTranslationEnabled && lang != target) {
+                        translateArticleText(currentTitle, currentBody)
+                    }
+                }
             }
         }
     }
@@ -637,6 +649,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 val detectedSrc = helper.identifyLanguage(title + " " + body.take(100))
                 val target = _translationTargetLanguage.value
+                
+                if (detectedSrc == target) {
+                    return@launch
+                }
 
                 val tTitle = helper.translateText(title, detectedSrc, target)
                 val tBody = helper.translateText(body, detectedSrc, target)
