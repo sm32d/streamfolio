@@ -412,13 +412,20 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleBookmark(article: Article) {
         viewModelScope.launch {
-            repository.toggleBookmark(article.link, !article.isBookmarked)
+            val newStatus = !article.isBookmarked
+            repository.toggleBookmark(article.link, newStatus)
+            if (_currentArticleDetail.value?.link == article.link) {
+                _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = newStatus)
+            }
         }
     }
 
     fun deleteBookmark(article: Article) {
         viewModelScope.launch {
             repository.toggleBookmark(article.link, false)
+            if (_currentArticleDetail.value?.link == article.link) {
+                _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = false)
+            }
         }
     }
 

@@ -917,7 +917,8 @@ fun ArticleListItem(
                 }
                 else -> false
             }
-        }
+        },
+        positionalThreshold = { distance -> distance * 0.75f }
     )
 
     SwipeToDismissBox(

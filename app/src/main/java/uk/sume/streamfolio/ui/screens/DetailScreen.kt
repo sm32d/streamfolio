@@ -933,20 +933,24 @@ fun DetailScreen(
                 ) {
                     // Save Bookmark Action
                     Row(
-                        modifier = Modifier.clickable { viewModel.toggleBookmark(article) },
+                        modifier = Modifier.clickable {
+                            if (article != null) {
+                                viewModel.toggleBookmark(article)
+                            }
+                        },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = if (article.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            imageVector = if (article != null && article.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = "Save",
-                            tint = if (article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            tint = if (article != null && article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (article.isBookmarked) "Saved" else "Save",
+                            text = if (article != null && article.isBookmarked) "Saved" else "Save",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (article != null && article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
                     }
 
