@@ -769,6 +769,35 @@ fun DetailScreen(
 
                                 val paragraphs = bodyToShow.split("\n\n").filter { it.isNotBlank() }
                                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    if (translatedBody.isNotEmpty()) {
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = EmeraldPrimary.copy(alpha = 0.08f)
+                                            ),
+                                            shape = RoundedCornerShape(12.dp),
+                                            border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.2f))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Translate,
+                                                    contentDescription = null,
+                                                    tint = EmeraldPrimary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = "Automatically translated to your target language",
+                                                    fontSize = 12.sp,
+                                                    color = EmeraldPrimary,
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                        }
+                                    }
                                     if (showSuggestionBanner) {
                                         Card(
                                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),

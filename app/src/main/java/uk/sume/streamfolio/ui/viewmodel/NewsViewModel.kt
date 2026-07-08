@@ -505,6 +505,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     _isLoadingBody.value = false
                 }
             }
+            val currentBody = _articleBody.value
+            val currentTitle = _currentArticleDetail.value?.title ?: ""
+            if (prefs.isAiEnabled && prefs.isTranslationEnabled && currentBody.isNotBlank() && 
+                !currentBody.startsWith("Failed to load") && !currentBody.startsWith("Unable to parse") && !currentBody.startsWith("Unable to load")) {
+                translateArticleText(currentTitle, currentBody)
+            }
         }
     }
 

@@ -74,8 +74,8 @@ class PreferencesHelper(context: Context) {
         set(value) = prefs.edit().putBoolean("ai_smart_tags_enabled", value).apply()
 
     var translationTargetLanguage: String
-        get() = prefs.getString("ai_translation_target_lang", "en") ?: "en"
-        set(value) = prefs.edit().putString("ai_translation_target_lang", value).apply()
+        get() = language
+        set(value) { language = value }
 
     var hasSeenAiSpotlight: Boolean
         get() = prefs.getBoolean("has_seen_ai_spotlight", false)

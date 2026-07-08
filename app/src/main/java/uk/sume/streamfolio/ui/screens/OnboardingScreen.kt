@@ -120,7 +120,14 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
     }
 
     var currentStep by rememberSaveable { mutableStateOf(0) }
-    val totalSteps = 4
+    val showPreferences = isDefaultFeedsEnabled || (isAiEnabled && isTranslationEnabled)
+    val totalSteps = if (showPreferences) 4 else 3
+
+    LaunchedEffect(totalSteps) {
+        if (currentStep >= totalSteps) {
+            currentStep = totalSteps - 1
+        }
+    }
 
     // Pulse animation for final button
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -179,21 +186,15 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                 ) { step ->
                     when (step) {
                         0 -> WelcomeStep(systemLocale)
-                        1 -> LanguageRegionStep(
-                            selectedLang = selectedLang,
-                            onLangSelected = { selectedLang = it },
-                            selectedRegion = selectedRegion,
-                            onRegionSelected = { selectedRegion = it },
-                            selectedCacheDays = selectedCacheDays,
-                            onCacheDaysSelected = { selectedCacheDays = it }
-                        )
-                        2 -> DefaultFeedsStep(
+                        1 -> DefaultFeedsAndCacheStep(
                             isEnabled = isDefaultFeedsEnabled,
                             onToggle = { isDefaultFeedsEnabled = it },
                             selectedCats = selectedCats,
-                            onCatsChanged = { selectedCats = it }
+                            onCatsChanged = { selectedCats = it },
+                            selectedCacheDays = selectedCacheDays,
+                            onCacheDaysSelected = { selectedCacheDays = it }
                         )
-                        3 -> AiFeaturesStep(
+                        2 -> AiFeaturesStep(
                             isAiEnabled = isAiEnabled,
                             onAiToggle = { isAiEnabled = it },
                             isTranslationEnabled = isTranslationEnabled,
@@ -203,6 +204,14 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             isSmartTagsEnabled = isSmartTagsEnabled,
                             onSmartTagsToggle = { isSmartTagsEnabled = it },
                             isGeminiSupported = isGeminiSupported
+                        )
+                        3 -> TranslationRegionStep(
+                            showLang = isAiEnabled && isTranslationEnabled,
+                            selectedLang = selectedLang,
+                            onLangSelected = { selectedLang = it },
+                            showRegion = isDefaultFeedsEnabled,
+                            selectedRegion = selectedRegion,
+                            onRegionSelected = { selectedRegion = it }
                         )
                     }
                 }
@@ -446,34 +455,26 @@ private fun FeatureRow(emoji: String, title: String, subtitle: String) {
     }
 }
 
-/** Step 1 – Language & Region */
+/** Step 1 – Default Feeds & Offline Cache Configuration */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun LanguageRegionStep(
-    selectedLang: String,
-    onLangSelected: (String) -> Unit,
-    selectedRegion: String,
-    onRegionSelected: (String) -> Unit,
+private fun DefaultFeedsAndCacheStep(
+    isEnabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    selectedCats: Set<String>,
+    onCatsChanged: (Set<String>) -> Unit,
     selectedCacheDays: String,
     onCacheDaysSelected: (String) -> Unit
 ) {
-    val languages = mapOf(
-        "en" to "🇬🇧 English",
-        "es" to "🇪🇸 Español",
-        "fr" to "🇫🇷 Français",
-        "de" to "🇩🇪 Deutsch",
-        "hi" to "🇮🇳 हिन्दी",
-        "zh" to "🇨🇳 中文"
-    )
-    val regions = mapOf(
-        "US" to "🇺🇸 United States",
-        "GB" to "🇬🇧 United Kingdom",
-        "CA" to "🇨🇦 Canada",
-        "FR" to "🇫🇷 France",
-        "DE" to "🇩🇪 Germany",
-        "IN" to "🇮🇳 India",
-        "AU" to "🇦🇺 Australia",
-        "SG" to "🇸🇬 Singapore",
-        "HK" to "🇭🇰 Hong Kong"
+    val availableCategories = listOf(
+        "🗞️ Top Stories" to "Top Stories",
+        "🌍 World" to "World",
+        "💼 Business" to "Business",
+        "💻 Technology" to "Technology",
+        "🔬 Science" to "Science",
+        "⚽ Sports" to "Sports",
+        "❤️ Health" to "Health",
+        "🎬 Entertainment" to "Entertainment"
     )
     val cacheOptions = mapOf(
         "1" to "1 Day",
@@ -491,79 +492,6 @@ private fun LanguageRegionStep(
         horizontalAlignment = Alignment.Start
     ) {
         Text(
-            text = "Language &\nRegion",
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Bold,
-            lineHeight = 42.sp,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Choose the language and country for your news feed.",
-            fontSize = 15.sp,
-            lineHeight = 22.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
-
-        Spacer(modifier = Modifier.height(36.dp))
-
-        SelectorField(
-            label = "Feed Language",
-            icon = Icons.Default.Language,
-            value = languages[selectedLang] ?: "English",
-            options = languages,
-            onSelected = onLangSelected
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        SelectorField(
-            label = "Region / Country",
-            icon = Icons.Default.Place,
-            value = regions[selectedRegion] ?: "United States",
-            options = regions,
-            onSelected = onRegionSelected
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        SelectorField(
-            label = "Offline Cache History",
-            icon = Icons.Default.History,
-            value = cacheOptions[selectedCacheDays] ?: "Keep All",
-            options = cacheOptions,
-            onSelected = onCacheDaysSelected
-        )
-    }
-}
-
-/** Step 2 – Default Curated Feeds & categories */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun DefaultFeedsStep(
-    isEnabled: Boolean,
-    onToggle: (Boolean) -> Unit,
-    selectedCats: Set<String>,
-    onCatsChanged: (Set<String>) -> Unit
-) {
-    val availableCategories = listOf(
-        "🗞️ Top Stories" to "Top Stories",
-        "🌍 World" to "World",
-        "💼 Business" to "Business",
-        "💻 Technology" to "Technology",
-        "🔬 Science" to "Science",
-        "⚽ Sports" to "Sports",
-        "❤️ Health" to "Health",
-        "🎬 Entertainment" to "Entertainment"
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.Start
-    ) {
-        Text(
             text = "Personalise\nYour Feed",
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
@@ -572,7 +500,7 @@ private fun DefaultFeedsStep(
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Enable default curated categories and pick your interests.",
+            text = "Enable default curated categories, choose your interests, and set database retention.",
             fontSize = 15.sp,
             lineHeight = 22.sp,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
@@ -685,6 +613,107 @@ private fun DefaultFeedsStep(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        SelectorField(
+            label = "Offline Cache History",
+            icon = Icons.Default.History,
+            value = cacheOptions[selectedCacheDays] ?: "Keep All",
+            options = cacheOptions,
+            onSelected = onCacheDaysSelected
+        )
+    }
+}
+
+/** Step 3 (Conditional) – Translation & Region Selection */
+@Composable
+private fun TranslationRegionStep(
+    showLang: Boolean,
+    selectedLang: String,
+    onLangSelected: (String) -> Unit,
+    showRegion: Boolean,
+    selectedRegion: String,
+    onRegionSelected: (String) -> Unit
+) {
+    val languages = mapOf(
+        "en" to "🇬🇧 English",
+        "es" to "🇪🇸 Español",
+        "fr" to "🇫🇷 Français",
+        "de" to "🇩🇪 Deutsch",
+        "hi" to "🇮🇳 हिन्दी",
+        "zh" to "🇨🇳 中文"
+    )
+    val regions = mapOf(
+        "US" to "🇺🇸 United States",
+        "GB" to "🇬🇧 United Kingdom",
+        "CA" to "🇨🇦 Canada",
+        "FR" to "🇫🇷 France",
+        "DE" to "🇩🇪 Germany",
+        "IN" to "🇮🇳 India",
+        "AU" to "🇦🇺 Australia",
+        "SG" to "🇸🇬 Singapore",
+        "HK" to "🇭🇰 Hong Kong"
+    )
+
+    val headerText = when {
+        showLang && showRegion -> "Translation &\nRegion"
+        showRegion -> "Region\nPreferences"
+        else -> "Translation\nPreferences"
+    }
+
+    val descText = when {
+        showLang && showRegion -> "Set your target translation language and region."
+        showRegion -> "Select the country for your curated default news feeds."
+        else -> "Select your target language for offline AI translations."
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            text = headerText,
+            fontSize = 34.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 42.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = descText,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(36.dp))
+
+        if (showRegion) {
+            SelectorField(
+                label = "Region / Country",
+                icon = Icons.Default.Place,
+                value = regions[selectedRegion] ?: "United States",
+                options = regions,
+                onSelected = onRegionSelected
+            )
+        }
+
+        if (showLang && showRegion) {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
+
+        if (showLang) {
+            SelectorField(
+                label = "Target Language",
+                icon = Icons.Default.Language,
+                value = languages[selectedLang] ?: "English",
+                options = languages,
+                onSelected = onLangSelected
+            )
         }
     }
 }

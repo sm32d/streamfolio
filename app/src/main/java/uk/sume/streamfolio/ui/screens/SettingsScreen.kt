@@ -330,22 +330,9 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
 
             SettingsSubHeader(
                 title = "Preferences",
-                description = "Choose the default feed language, source regions, and database cache retention durations that best match your news reading preferences.",
+                description = "Choose the source regions and database cache retention durations that best match your news reading preferences.",
                 icon = Icons.Default.Tune
             )
-
-            SettingsSelectorField(
-                label = "Feed Language",
-                icon = Icons.Default.Language,
-                value = languages[selectedLang] ?: "English",
-                options = languages,
-                onSelected = {
-                    selectedLang = it
-                    viewModel.updatePreferences(it, selectedRegion)
-                }
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
 
             SettingsSelectorField(
                 label = "Region / Country",
@@ -354,7 +341,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 options = regions,
                 onSelected = {
                     selectedRegion = it
-                    viewModel.updatePreferences(selectedLang, it)
+                    viewModel.updatePreferences(viewModel.prefs.language, it)
                 }
             )
 
