@@ -7,9 +7,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Intent
 import androidx.lifecycle.ViewModelProvider
+import androidx.work.*
 import uk.sume.streamfolio.ui.navigation.AppNavigation
 import uk.sume.streamfolio.ui.theme.NewsTheme
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.worker.NewsSyncWorker
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     private lateinit var viewModel: NewsViewModel
@@ -24,11 +27,29 @@ class MainActivity : ComponentActivity() {
             viewModel.setPendingArticleUrl(url)
         }
 
+        setupBackgroundSync()
+
         setContent {
             NewsTheme {
                 AppNavigation(viewModel = viewModel)
             }
         }
+    }
+
+    private fun setupBackgroundSync() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val syncRequest = PeriodicWorkRequestBuilder<NewsSyncWorker>(6, TimeUnit.HOURS)
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork(
+            "NewsBackgroundSync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncRequest
+        )
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -776,4 +776,22 @@ class NewsRepository(private val context: Context) {
     suspend fun clearAllTags() = withContext(Dispatchers.IO) {
         articleDao.clearAllTags()
     }
+
+    suspend fun updateAiSummary(link: String, aiSummary: String?) = withContext(Dispatchers.IO) {
+        articleDao.updateAiSummary(link, aiSummary)
+    }
+
+    suspend fun updateTranslation(
+        link: String,
+        translatedTitle: String?,
+        translatedBody: String?,
+        translatedLanguage: String?,
+        detectedLanguage: String?
+    ) = withContext(Dispatchers.IO) {
+        articleDao.updateTranslation(link, translatedTitle, translatedBody, translatedLanguage, detectedLanguage)
+    }
+
+    suspend fun updateDetectedLanguage(link: String, detectedLanguage: String?) = withContext(Dispatchers.IO) {
+        articleDao.updateDetectedLanguage(link, detectedLanguage)
+    }
 }

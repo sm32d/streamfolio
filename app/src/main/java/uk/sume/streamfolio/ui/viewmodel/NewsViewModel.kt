@@ -450,6 +450,13 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             _articleBody.value = ""
             _articleLanguage.value = null
             resetAiSummary()
+            if (art?.aiSummary != null) {
+                if (art.aiSummary == "blocked_by_safety_policy") {
+                    _aiSummaryState.value = AiSummaryState.Error("This article touches upon sensitive topics that trigger Gemini Nano's built-in local safety policies.")
+                } else {
+                    _aiSummaryState.value = AiSummaryState.Success(art.aiSummary)
+                }
+            }
             ttsHelper.stop() // Stop playing previous article
             
             var cachedArticle = art
@@ -520,12 +527,26 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             val currentTitle = _currentArticleDetail.value?.title ?: ""
             if (currentBody.isNotBlank() && 
                 !currentBody.startsWith("Failed to load") && !currentBody.startsWith("Unable to parse") && !currentBody.startsWith("Unable to load")) {
-                val helper = aiTranslateHelper
-                if (helper != null) {
-                    val lang = helper.identifyLanguage(currentTitle + " " + currentBody.take(100))
-                    _articleLanguage.value = lang
-                    val target = _translationTargetLanguage.value
-                    if (prefs.isAiEnabled && prefs.isTranslationEnabled && lang != target) {
+                val cachedArt = repository.getArticleByLink(url)
+                val lang = cachedArt?.detectedLanguage ?: run {
+                    val helper = aiTranslateHelper
+                    val detected = if (helper != null) {
+                        helper.identifyLanguage(currentTitle + " " + currentBody.take(100))
+                    } else {
+                        "en"
+                    }
+                    if (cachedArt != null) {
+                        repository.updateDetectedLanguage(url, detected)
+                    }
+                    detected
+                }
+                _articleLanguage.value = lang
+                val target = _translationTargetLanguage.value
+                if (prefs.isAiEnabled && prefs.isTranslationEnabled && lang != target) {
+                    if (cachedArt?.translatedLanguage == target && cachedArt.translatedTitle != null && cachedArt.translatedBody != null) {
+                        _translatedTitle.value = cachedArt.translatedTitle
+                        _translatedBody.value = cachedArt.translatedBody
+                    } else {
                         translateArticleText(currentTitle, currentBody)
                     }
                 }
@@ -659,6 +680,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
                 _translatedTitle.value = tTitle
                 _translatedBody.value = tBody
+                
+                _currentArticleDetail.value?.link?.let { link ->
+                    repository.updateTranslation(link, tTitle, tBody, target, detectedSrc)
+                }
             } catch (e: Exception) {
                 _translationError.value = e.message ?: "Translation download or inference failed."
             } finally {
@@ -738,6 +763,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     helper.downloadFeature()
                     val summary = helper.summarizeText(text)
                     _aiSummaryState.value = AiSummaryState.Success(summary)
+                    _currentArticleDetail.value?.link?.let { link ->
+                        repository.updateAiSummary(link, summary)
+                    }
                     return@launch
                 } else if (status == 2) { // DOWNLOADING
                     _aiSummaryState.value = AiSummaryState.DownloadingModel
@@ -749,12 +777,22 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 
                 val summary = helper.summarizeText(text)
                 _aiSummaryState.value = AiSummaryState.Success(summary)
+                _currentArticleDetail.value?.link?.let { link ->
+                    repository.updateAiSummary(link, summary)
+                }
             } catch (e: Throwable) {
                 val msg = e.message ?: "Failed to generate summary."
                 if (msg.contains("AICore", ignoreCase = true)) {
                     _aiSummaryState.value = AiSummaryState.Error("Gemini Nano (AICore) is not available or requires update on this device.")
                 } else {
                     _aiSummaryState.value = AiSummaryState.Error(msg)
+                    val isSafetyBlock = msg.contains("safety policy check failed", ignoreCase = true) ||
+                                       (e is com.google.mlkit.genai.common.GenAiException && msg.contains("safety", ignoreCase = true))
+                    if (isSafetyBlock) {
+                        _currentArticleDetail.value?.link?.let { link ->
+                            repository.updateAiSummary(link, "blocked_by_safety_policy")
+                        }
+                    }
                 }
             }
         }

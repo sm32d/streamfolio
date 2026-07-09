@@ -69,6 +69,15 @@ interface ArticleDao {
     @Query("UPDATE articles SET fullText = :fullText WHERE link = :link")
     suspend fun updateFullText(link: String, fullText: String?)
 
+    @Query("UPDATE articles SET aiSummary = :aiSummary WHERE link = :link")
+    suspend fun updateAiSummary(link: String, aiSummary: String?)
+
+    @Query("UPDATE articles SET translatedTitle = :translatedTitle, translatedBody = :translatedBody, translatedLanguage = :translatedLanguage, detectedLanguage = :detectedLanguage WHERE link = :link")
+    suspend fun updateTranslation(link: String, translatedTitle: String?, translatedBody: String?, translatedLanguage: String?, detectedLanguage: String?)
+
+    @Query("UPDATE articles SET detectedLanguage = :detectedLanguage WHERE link = :link")
+    suspend fun updateDetectedLanguage(link: String, detectedLanguage: String?)
+
     @Query("SELECT * FROM articles WHERE fullText IS NULL AND category != 'bookmarks' ORDER BY pubDate DESC LIMIT :limit")
     suspend fun getArticlesWithoutFullText(limit: Int): List<Article>
 

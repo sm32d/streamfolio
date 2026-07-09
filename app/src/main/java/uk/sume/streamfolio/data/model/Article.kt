@@ -17,5 +17,10 @@ data class Article(
     val isBookmarked: Boolean = false,
     val customFeedId: Int? = null,
     val fullText: String? = null,
-    val tags: String? = null
+    val tags: String? = null,
+    val aiSummary: String? = null,
+    val translatedTitle: String? = null,
+    val translatedBody: String? = null,
+    val translatedLanguage: String? = null,
+    val detectedLanguage: String? = null
 )

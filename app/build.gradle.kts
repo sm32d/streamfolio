@@ -72,6 +72,9 @@ dependencies {
     implementation("com.google.mlkit:genai-summarization:1.0.0-beta1")
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language.id)
+    
+    // WorkManager Background Sync
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation(libs.junit)
     testImplementation("xmlpull:xmlpull:1.1.3.4a")
