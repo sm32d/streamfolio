@@ -84,4 +84,12 @@ class PreferencesHelper(context: Context) {
     var hasClearedOldTags: Boolean
         get() = prefs.getBoolean("has_cleared_old_tags_v3", false)
         set(value) = prefs.edit().putBoolean("has_cleared_old_tags_v3", value).apply()
+
+    var swipeLeftAction: String
+        get() = prefs.getString("swipe_left_action", "bookmark") ?: "bookmark"
+        set(value) = prefs.edit().putString("swipe_left_action", value).apply()
+
+    var swipeRightAction: String
+        get() = prefs.getString("swipe_right_action", "share") ?: "share"
+        set(value) = prefs.edit().putString("swipe_right_action", value).apply()
 }

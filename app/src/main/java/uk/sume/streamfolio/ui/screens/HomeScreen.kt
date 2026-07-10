@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -804,11 +806,25 @@ fun TrendingCard(
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = formatPubDate(article.pubDate),
-                        fontSize = 11.sp,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = formatPubDate(article.pubDate),
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "•",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = calculateReadingTime(article),
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    }
                 }
 
                 // Primary Play Button establishing hierarchy
@@ -891,29 +907,47 @@ fun ArticleListItem(
     val showRemoveConfirmationState = remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val swipeLeftAction = viewModel?.swipeLeftAction?.collectAsState()?.value ?: "bookmark"
+    val swipeRightAction = viewModel?.swipeRightAction?.collectAsState()?.value ?: "share"
+
+    fun executeSwipeAction(action: String): Boolean {
+        when (action) {
+            "bookmark" -> {
+                if (currentArticle.isBookmarked) {
+                    showRemoveConfirmationState.value = true
+                } else {
+                    currentOnBookmarkToggle()
+                }
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            "share" -> {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
+                    putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: ${currentArticle.link}")
+                }
+                context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            "read" -> {
+                viewModel?.toggleReadStatus(currentArticle)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            "none" -> {
+                // do nothing
+            }
+        }
+        return false
+    }
+
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
             when (value) {
                 SwipeToDismissBoxValue.EndToStart -> {
-                    if (currentArticle.isBookmarked) {
-                        scope.launch {
-                            showRemoveConfirmationState.value = true
-                        }
-                    } else {
-                        currentOnBookmarkToggle()
-                    }
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    false
+                    executeSwipeAction(swipeLeftAction)
                 }
                 SwipeToDismissBoxValue.StartToEnd -> {
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
-                        putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: ${currentArticle.link}")
-                    }
-                    context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    false
+                    executeSwipeAction(swipeRightAction)
                 }
                 else -> false
             }
@@ -925,53 +959,54 @@ fun ArticleListItem(
         state = dismissState,
         backgroundContent = {
             val direction = dismissState.dismissDirection
-            val color = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF00B0FF).copy(alpha = 0.2f)
-                SwipeToDismissBoxValue.EndToStart -> {
-                    if (article.isBookmarked) {
-                        Color(0xFFEF5350).copy(alpha = 0.2f)
-                    } else {
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                    }
+            val action = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> swipeRightAction
+                SwipeToDismissBoxValue.EndToStart -> swipeLeftAction
+                else -> "none"
+            }
+            
+            if (action == "none") {
+                Box(Modifier.fillMaxSize())
+            } else {
+                val color = when (action) {
+                    "bookmark" -> if (article.isBookmarked) Color(0xFFEF5350).copy(alpha = 0.2f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                    "share" -> Color(0xFF00B0FF).copy(alpha = 0.2f)
+                    "read" -> Color(0xFF8B5CF6).copy(alpha = 0.2f)
+                    else -> Color.Transparent
                 }
-                else -> Color.Transparent
-            }
-            val contentColor = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF00B0FF)
-                SwipeToDismissBoxValue.EndToStart -> {
-                    if (article.isBookmarked) {
-                        Color(0xFFEF5350)
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    }
+                val contentColor = when (action) {
+                    "bookmark" -> if (article.isBookmarked) Color(0xFFEF5350) else MaterialTheme.colorScheme.primary
+                    "share" -> Color(0xFF00B0FF)
+                    "read" -> Color(0xFF8B5CF6)
+                    else -> Color.Transparent
                 }
-                else -> Color.Transparent
-            }
-            val alignment = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                else -> Alignment.Center
-            }
-            val icon = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Share
-                SwipeToDismissBoxValue.EndToStart -> if (article.isBookmarked) Icons.Default.Delete else Icons.Outlined.BookmarkAdd
-                else -> null
-            }
-            val label = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> "Share"
-                SwipeToDismissBoxValue.EndToStart -> if (article.isBookmarked) "Remove" else "Save"
-                else -> ""
-            }
+                val alignment = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+                val icon = when (action) {
+                    "bookmark" -> if (article.isBookmarked) Icons.Default.Delete else Icons.Outlined.BookmarkAdd
+                    "share" -> Icons.Default.Share
+                    "read" -> if (article.isRead) Icons.Default.Close else Icons.Default.Done
+                    else -> null
+                }
+                val label = when (action) {
+                    "bookmark" -> if (article.isBookmarked) "Remove" else "Save"
+                    "share" -> "Share"
+                    "read" -> if (article.isRead) "Unread" else "Read"
+                    else -> ""
+                }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(color)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = alignment
-            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(color)
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = alignment
+                ) {
                 if (icon != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -987,7 +1022,8 @@ fun ArticleListItem(
                     }
                 }
             }
-        },
+        }
+    },
         content = {
             Card(
                 modifier = Modifier
@@ -998,6 +1034,7 @@ fun ArticleListItem(
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         RoundedCornerShape(20.dp)
                     )
+                    .graphicsLayer(alpha = if (article.isRead) 0.55f else 1.0f)
                     .clickable(onClick = onTap),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
@@ -1134,11 +1171,25 @@ fun ArticleListItem(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = formatPubDate(article.pubDate),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = formatPubDate(article.pubDate),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "•",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = calculateReadingTime(article),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                )
+                            }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(
                                     onClick = onQueueClick,
@@ -1321,6 +1372,18 @@ private fun normalizePublisherHost(host: String): String {
     if (h.startsWith("mobile.")) h = h.removePrefix("mobile.")
     if (h.endsWith("bbci.co.uk")) return "bbc.co.uk"
     return h
+}
+
+fun calculateReadingTime(article: Article): String {
+    val textToCount = when {
+        !article.fullText.isNullOrBlank() && !article.fullText.startsWith("Failed") && !article.fullText.startsWith("Unable") -> article.fullText
+        !article.description.isNullOrBlank() -> article.description
+        else -> article.title
+    }
+    val words = textToCount.split(Regex("\\s+")).filter { it.isNotBlank() }.size
+    val wpm = 200
+    val minutes = kotlin.math.max(1, (words + wpm - 1) / wpm)
+    return "$minutes min read"
 }
 
 // Convert pubDate format to relative time helper

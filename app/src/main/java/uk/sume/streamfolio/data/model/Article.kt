@@ -22,5 +22,6 @@ data class Article(
     val translatedTitle: String? = null,
     val translatedBody: String? = null,
     val translatedLanguage: String? = null,
-    val detectedLanguage: String? = null
+    val detectedLanguage: String? = null,
+    val isRead: Boolean = false
 )

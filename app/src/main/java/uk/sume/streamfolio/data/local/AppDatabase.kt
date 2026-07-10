@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 
-@Database(entities = [Article::class, CustomFeed::class], version = 4, exportSchema = false)
+@Database(entities = [Article::class, CustomFeed::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun customFeedDao(): CustomFeedDao

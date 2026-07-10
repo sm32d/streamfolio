@@ -67,7 +67,6 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 120.dp)
@@ -113,6 +112,14 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                     title = "Custom RSS Feeds",
                     subtitle = "Add and manage private RSS publishers",
                     onClick = { navController.navigate("settings_feeds") }
+                )
+                CardDivider()
+                SettingsRow(
+                    icon = Icons.Default.Swipe,
+                    iconBg = Color(0xFFEC4899),
+                    title = "Swipe Gestures",
+                    subtitle = "Customize left & right swipe actions",
+                    onClick = { navController.navigate("settings_gestures") }
                 )
             }
 
@@ -321,7 +328,6 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 120.dp)
@@ -394,7 +400,6 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 120.dp)
@@ -591,7 +596,6 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
         ) {
             SubPageTopBar(title = "Reorder Category Tabs", onBack = { navController.popBackStack() })
@@ -800,7 +804,6 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .padding(horizontal = 24.dp)
         ) {
             SubPageTopBar(title = "Default Feed Providers", onBack = { navController.popBackStack() })
@@ -1232,7 +1235,6 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
@@ -1506,9 +1508,14 @@ private fun InfoNote(text: String) {
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("ℹ️", fontSize = 14.sp)
+        Icon(
+            imageVector = Icons.Default.Info,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp)
+        )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = text,
@@ -1710,7 +1717,6 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 120.dp)
@@ -1964,7 +1970,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                         )
                     }
 
-                    CardDivider()
+
 
                     Row(
                         modifier = Modifier
@@ -2051,6 +2057,71 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+// ─── Sub-page: Swipe Gestures ───────────────────────────────────────────
+@Composable
+fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewModel) {
+    val swipeLeftAction by viewModel.swipeLeftAction.collectAsState()
+    val swipeRightAction by viewModel.swipeRightAction.collectAsState()
+
+    val options = mapOf(
+        "bookmark" to "📌 Toggle Bookmark",
+        "share" to "📤 Share Article",
+        "read" to "📖 Toggle Read Status",
+        "none" to "❌ None / Disable"
+    )
+
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            SubPageTopBar(title = "Swipe Gestures", onBack = { navController.popBackStack() })
+
+            SettingsSubHeader(
+                title = "Gesture Actions",
+                description = "Configure the actions executed when you swipe articles to the left or to the right on your feed listings.",
+                icon = Icons.Default.Swipe
+            )
+
+            SettingsSelectorField(
+                label = "Swipe Left Action",
+                icon = Icons.Default.KeyboardArrowLeft,
+                value = options[swipeLeftAction] ?: "Toggle Bookmark",
+                options = options,
+                onSelected = {
+                    viewModel.setSwipeLeftAction(it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            SettingsSelectorField(
+                label = "Swipe Right Action",
+                icon = Icons.Default.KeyboardArrowRight,
+                value = options[swipeRightAction] ?: "Share",
+                options = options,
+                onSelected = {
+                    viewModel.setSwipeRightAction(it)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+            InfoNote("Swiping actions are responsive and trigger instantly with subtle haptic feedback.")
         }
     }
 }

@@ -285,6 +285,35 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 SettingsFeedsScreen(navController = navController, viewModel = viewModel)
             }
             composable(
+                route = "settings_gestures",
+                enterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                exitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popEnterTransition = {
+                    slideIntoContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                }
+            ) {
+                SettingsGesturesScreen(navController = navController, viewModel = viewModel)
+            }
+            composable(
                 route = "detail_screen/{url}",
                 arguments = listOf(navArgument("url") { type = NavType.StringType }),
                 enterTransition = {

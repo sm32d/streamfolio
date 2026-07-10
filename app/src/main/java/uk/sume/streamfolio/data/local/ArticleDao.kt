@@ -21,7 +21,16 @@ interface ArticleDao {
         for (article in articles) {
             val existing = getArticleByLink(article.link)
             if (existing != null) {
-                val updated = article.copy(isBookmarked = existing.isBookmarked)
+                val updated = article.copy(
+                    isBookmarked = existing.isBookmarked,
+                    isRead = existing.isRead,
+                    fullText = existing.fullText,
+                    aiSummary = existing.aiSummary,
+                    translatedTitle = existing.translatedTitle,
+                    translatedBody = existing.translatedBody,
+                    translatedLanguage = existing.translatedLanguage,
+                    detectedLanguage = existing.detectedLanguage
+                )
                 updateArticle(updated)
             } else {
                 insertArticle(article)
@@ -77,6 +86,9 @@ interface ArticleDao {
 
     @Query("UPDATE articles SET detectedLanguage = :detectedLanguage WHERE link = :link")
     suspend fun updateDetectedLanguage(link: String, detectedLanguage: String?)
+
+    @Query("UPDATE articles SET isRead = :isRead WHERE link = :link")
+    suspend fun updateReadStatus(link: String, isRead: Boolean)
 
     @Query("SELECT * FROM articles WHERE fullText IS NULL AND category != 'bookmarks' ORDER BY pubDate DESC LIMIT :limit")
     suspend fun getArticlesWithoutFullText(limit: Int): List<Article>

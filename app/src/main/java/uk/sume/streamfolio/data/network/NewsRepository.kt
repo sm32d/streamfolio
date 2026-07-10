@@ -794,4 +794,8 @@ class NewsRepository(private val context: Context) {
     suspend fun updateDetectedLanguage(link: String, detectedLanguage: String?) = withContext(Dispatchers.IO) {
         articleDao.updateDetectedLanguage(link, detectedLanguage)
     }
+
+    suspend fun updateReadStatus(link: String, isRead: Boolean) = withContext(Dispatchers.IO) {
+        articleDao.updateReadStatus(link, isRead)
+    }
 }

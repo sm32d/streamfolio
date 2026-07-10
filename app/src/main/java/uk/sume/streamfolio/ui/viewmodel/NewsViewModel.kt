@@ -460,6 +460,11 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             ttsHelper.stop() // Stop playing previous article
             
             var cachedArticle = art
+            if (cachedArticle != null) {
+                repository.updateReadStatus(url, true)
+                _currentArticleDetail.value = cachedArticle.copy(isRead = true)
+            }
+
             if (cachedArticle != null && cachedArticle.fullText != null) {
                 _articleBody.value = cachedArticle.fullText
                 _isLoadingBody.value = false
@@ -496,7 +501,8 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                             sourceName = source,
                             sourceUrl = realUrl,
                             category = "TOP STORIES",
-                            thumbnailUrl = thumb.ifBlank { null }
+                            thumbnailUrl = thumb.ifBlank { null },
+                            isRead = true
                         )
                     }
                     _currentArticleDetail.value = transientArticle
@@ -618,6 +624,42 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     // Dynamic Tag Filter state
     private val _selectedDynamicTag = MutableStateFlow<String?>(null)
     val selectedDynamicTag: StateFlow<String?> = _selectedDynamicTag.asStateFlow()
+
+    private val _swipeLeftAction = MutableStateFlow(prefs.swipeLeftAction)
+    val swipeLeftAction: StateFlow<String> = _swipeLeftAction.asStateFlow()
+
+    private val _swipeRightAction = MutableStateFlow(prefs.swipeRightAction)
+    val swipeRightAction: StateFlow<String> = _swipeRightAction.asStateFlow()
+
+
+    fun setSwipeLeftAction(action: String) {
+        prefs.swipeLeftAction = action
+        _swipeLeftAction.value = action
+    }
+
+    fun setSwipeRightAction(action: String) {
+        prefs.swipeRightAction = action
+        _swipeRightAction.value = action
+    }
+
+    fun toggleReadStatus(article: Article) {
+        viewModelScope.launch {
+            val newStatus = !article.isRead
+            repository.updateReadStatus(article.link, newStatus)
+            if (_currentArticleDetail.value?.link == article.link) {
+                _currentArticleDetail.value = _currentArticleDetail.value?.copy(isRead = newStatus)
+            }
+        }
+    }
+
+    fun markAsRead(article: Article) {
+        viewModelScope.launch {
+            repository.updateReadStatus(article.link, true)
+            if (_currentArticleDetail.value?.link == article.link) {
+                _currentArticleDetail.value = _currentArticleDetail.value?.copy(isRead = true)
+            }
+        }
+    }
 
     fun setDynamicTagFilter(tag: String?) {
         _selectedDynamicTag.value = tag
