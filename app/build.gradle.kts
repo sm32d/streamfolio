@@ -61,6 +61,7 @@ dependencies {
     
     // Navigation & Image Loading
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.media)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     

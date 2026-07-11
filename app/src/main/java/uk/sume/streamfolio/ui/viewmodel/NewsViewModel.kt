@@ -12,18 +12,19 @@ import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.data.network.NewsRepository
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
-import uk.sume.streamfolio.ui.components.TtsHelper
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
 import uk.sume.streamfolio.util.OpmlFeed
+import uk.sume.streamfolio.playback.TtsPlaybackManager
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = NewsRepository(application)
     val prefs = PreferencesHelper(application)
-    val ttsHelper = TtsHelper(application)
+    private val playbackManager = TtsPlaybackManager.getInstance(application)
+    val ttsHelper = playbackManager.ttsHelper
     private val requestedThumbnailRetries = mutableSetOf<String>()
 
     // AI Translation States & Logic
@@ -51,10 +52,6 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val aiSummaryState: StateFlow<AiSummaryState> = _aiSummaryState
 
     init {
-        ttsHelper.setSpeechRate(prefs.ttsSpeechRate)
-        ttsHelper.onArticleCompleted = {
-            advanceTtsPlaylist()
-        }
         viewModelScope.launch(Dispatchers.Main) {
             if (!prefs.hasClearedOldTags) {
                 repository.clearAllTags()
@@ -121,7 +118,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun seekTtsToParagraph(index: Int) {
-        ttsHelper.seekToParagraph(index)
+        playbackManager.seekToParagraph(index)
     }
 
     fun updateReaderFontFamily(font: String) {
@@ -139,129 +136,36 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         readerLineSpacing.value = spacing
     }
 
-    // TTS Playlist state
-    private val _ttsPlaylist = MutableStateFlow<List<Article>>(emptyList())
-    val ttsPlaylist: StateFlow<List<Article>> = _ttsPlaylist
+    // TTS playback state shared with the foreground playback service
+    val ttsPlaylist: StateFlow<List<Article>> = playbackManager.ttsPlaylist
+    val currentTtsArticleIndex: StateFlow<Int> = playbackManager.currentTtsArticleIndex
+    val ttsSpeechRate: StateFlow<Float> = playbackManager.ttsSpeechRate
+    val sleepTimerRemainingMillis: StateFlow<Long?> = playbackManager.sleepTimerRemainingMillis
+    val ttsArticleBody: StateFlow<String> = playbackManager.articleBody
+    val isTtsLoadingBody: StateFlow<Boolean> = playbackManager.isLoadingBody
 
-    private val _currentTtsArticleIndex = MutableStateFlow<Int>(-1)
-    val currentTtsArticleIndex: StateFlow<Int> = _currentTtsArticleIndex
+    fun addToTtsPlaylist(article: Article) = playbackManager.addToTtsPlaylist(article)
 
-    fun addToTtsPlaylist(article: Article) {
-        val current = _ttsPlaylist.value.toMutableList()
-        if (!current.any { it.link == article.link }) {
-            current.add(article)
-            _ttsPlaylist.value = current
-            if (_currentTtsArticleIndex.value == -1) {
-                _currentTtsArticleIndex.value = 0
-            }
-        }
-    }
+    fun removeFromTtsPlaylist(article: Article) = playbackManager.removeFromTtsPlaylist(article)
 
-    fun removeFromTtsPlaylist(article: Article) {
-        val current = _ttsPlaylist.value.toMutableList()
-        val index = current.indexOfFirst { it.link == article.link }
-        if (index != -1) {
-            current.removeAt(index)
-            _ttsPlaylist.value = current
-            
-            val activeIdx = _currentTtsArticleIndex.value
-            if (activeIdx == index) {
-                if (current.isEmpty()) {
-                    stopSpeakingPlaylist()
-                } else {
-                    val nextIdx = if (index < current.size) index else current.size - 1
-                    playTtsPlaylist(nextIdx)
-                }
-            } else if (index < activeIdx) {
-                _currentTtsArticleIndex.value = activeIdx - 1
-            }
-        }
-    }
+    fun clearTtsPlaylist() = playbackManager.clearTtsPlaylist()
 
-    fun clearTtsPlaylist() {
-        stopSpeakingPlaylist()
-        _ttsPlaylist.value = emptyList()
-    }
+    fun moveTtsPlaylistItem(fromIndex: Int, toIndex: Int) =
+        playbackManager.moveTtsPlaylistItem(fromIndex, toIndex)
 
-    fun moveTtsPlaylistItem(fromIndex: Int, toIndex: Int) {
-        val current = _ttsPlaylist.value.toMutableList()
-        if (fromIndex in current.indices && toIndex in current.indices) {
-            val item = current.removeAt(fromIndex)
-            current.add(toIndex, item)
-            _ttsPlaylist.value = current
-            
-            // Adjust current playing index if it was moved
-            val activeIdx = _currentTtsArticleIndex.value
-            if (activeIdx == fromIndex) {
-                _currentTtsArticleIndex.value = toIndex
-            } else if (activeIdx in (fromIndex + 1)..toIndex) {
-                _currentTtsArticleIndex.value = activeIdx - 1
-            } else if (activeIdx in toIndex..<fromIndex) {
-                _currentTtsArticleIndex.value = activeIdx + 1
-            }
-        }
-    }
+    fun playTtsPlaylist(startIndex: Int) = playbackManager.playTtsPlaylist(startIndex)
 
-    fun playTtsPlaylist(startIndex: Int) {
-        val list = _ttsPlaylist.value
-        if (startIndex < 0 || startIndex >= list.size) return
-        
-        _currentTtsArticleIndex.value = startIndex
-        val article = list[startIndex]
-        
-        viewModelScope.launch {
-            _isLoadingBody.value = true
-            _articleBody.value = ""
-            ttsHelper.stop()
-            
-            val cached = repository.getArticleByLink(article.link)
-            val textToSpeak = if (cached != null && cached.fullText != null) {
-                _articleBody.value = cached.fullText
-                cached.fullText
-            } else {
-                val body = repository.fetchArticleBody(article.link)
-                _articleBody.value = body
-                if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
-                    repository.updateFullText(article.link, body)
-                }
-                body
-            }
-            _isLoadingBody.value = false
-            ttsHelper.play(textToSpeak)
-        }
-    }
+    fun stopSpeakingPlaylist() = playbackManager.stopSpeakingPlaylist()
 
-    fun stopSpeakingPlaylist() {
-        ttsHelper.stop()
-        _currentTtsArticleIndex.value = -1
-        _articleBody.value = ""
-    }
+    fun playOrPausePlaylist() = playbackManager.togglePlayback()
 
-    fun playOrPausePlaylist() {
-        if (ttsHelper.isPlaying.value) {
-            ttsHelper.pause()
-        } else {
-            val idx = _currentTtsArticleIndex.value
-            if (idx != -1) {
-                if (_articleBody.value.isEmpty()) {
-                    playTtsPlaylist(idx)
-                } else {
-                    ttsHelper.resume()
-                }
-            } else if (_ttsPlaylist.value.isNotEmpty()) {
-                playTtsPlaylist(0)
-            }
-        }
-    }
+    fun advanceTtsPlaylist() = playbackManager.advanceTtsPlaylist()
 
-    fun advanceTtsPlaylist() {
-        val nextIndex = _currentTtsArticleIndex.value + 1
-        if (nextIndex < _ttsPlaylist.value.size) {
-            playTtsPlaylist(nextIndex)
-        } else {
-            stopSpeakingPlaylist()
-        }
-    }
+    fun playPreviousTtsArticle() = playbackManager.playPreviousArticle()
+
+    fun setSleepTimer(durationMinutes: Int?) = playbackManager.setSleepTimer(durationMinutes)
+
+    fun cancelSleepTimer() = playbackManager.cancelSleepTimer()
 
     // Current category selector
     private val _selectedCategory = MutableStateFlow("Top Stories")
@@ -329,10 +233,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     // Reader Mode State
     private val _articleBody = MutableStateFlow("")
-    val articleBody: StateFlow<String> = _articleBody
+    val articleBody: StateFlow<String> = _articleBody.asStateFlow()
 
     private val _isLoadingBody = MutableStateFlow(false)
-    val isLoadingBody: StateFlow<Boolean> = _isLoadingBody
+    val isLoadingBody: StateFlow<Boolean> = _isLoadingBody.asStateFlow()
 
     // Page Refresh States
     private val _isRefreshing = MutableStateFlow(false)
@@ -441,10 +345,11 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
             // Check if this article is already active in the reader/speech playlist.
             // If yes, do not clear the body or stop the playback.
-            val list = _ttsPlaylist.value
-            val activeIdx = _currentTtsArticleIndex.value
+            val list = ttsPlaylist.value
+            val activeIdx = currentTtsArticleIndex.value
             if (activeIdx != -1 && activeIdx < list.size && list[activeIdx].link == url) {
-                // Keep playing, do not stop!
+                _articleBody.value = ttsArticleBody.value
+                _isLoadingBody.value = isTtsLoadingBody.value
                 return@launch
             }
 
@@ -563,18 +468,11 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun speakArticle(article: Article) {
-        val list = _ttsPlaylist.value
-        val activeIdx = _currentTtsArticleIndex.value
-        if (activeIdx != -1 && activeIdx < list.size && list[activeIdx].link == article.link) {
-            playOrPausePlaylist()
-        } else {
-            _ttsPlaylist.value = listOf(article)
-            playTtsPlaylist(0)
-        }
+        playbackManager.speakArticle(article)
     }
 
     fun stopSpeaking() {
-        ttsHelper.stop()
+        playbackManager.stopSpeakingPlaylist()
     }
 
     // Custom Feed actions
@@ -625,8 +523,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _hasSeenAiSpotlight.value = prefs.hasSeenAiSpotlight
         _swipeLeftAction.value = prefs.swipeLeftAction
         _swipeRightAction.value = prefs.swipeRightAction
-        _ttsSpeechRate.value = prefs.ttsSpeechRate
-        ttsHelper.setSpeechRate(prefs.ttsSpeechRate)
+        playbackManager.setTtsSpeechRate(prefs.ttsSpeechRate)
     }
 
     fun restoreSettingsBackup(backupJson: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
@@ -697,13 +594,8 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _swipeRightAction = MutableStateFlow(prefs.swipeRightAction)
     val swipeRightAction: StateFlow<String> = _swipeRightAction.asStateFlow()
 
-    private val _ttsSpeechRate = MutableStateFlow(prefs.ttsSpeechRate)
-    val ttsSpeechRate: StateFlow<Float> = _ttsSpeechRate.asStateFlow()
-
     fun setTtsSpeechRate(rate: Float) {
-        prefs.ttsSpeechRate = rate
-        _ttsSpeechRate.value = rate
-        ttsHelper.setSpeechRate(rate)
+        playbackManager.setTtsSpeechRate(rate)
     }
 
     fun setSwipeLeftAction(action: String) {
@@ -949,10 +841,6 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _prefsChangedSignal.value = _prefsChangedSignal.value + 1
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        ttsHelper.shutdown()
-    }
 }
 
 sealed interface AiSummaryState {

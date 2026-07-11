@@ -53,6 +53,7 @@ fun TtsMiniPlayer(
     val playlist by viewModel.ttsPlaylist.collectAsState()
     val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
     val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+    val sleepTimerRemainingMillis by viewModel.sleepTimerRemainingMillis.collectAsState()
 
     if (playlist.isEmpty() || currentIndex == -1 || currentIndex >= playlist.size) {
         return
@@ -121,13 +122,32 @@ fun TtsMiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
-                    text = article.sourceName,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = article.sourceName,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    sleepTimerRemainingMillis?.let { remaining ->
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Bedtime,
+                            contentDescription = "Sleep timer active",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = formatSleepTimerLabel(remaining),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1
+                        )
+                    }
+                }
             }
 
             // Play / Pause Button
@@ -170,9 +190,11 @@ fun TtsLyricsVisualizer(
     val playlist by viewModel.ttsPlaylist.collectAsState()
     val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
     val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
-    val articleBody by viewModel.articleBody.collectAsState()
+    val articleBody by viewModel.ttsArticleBody.collectAsState()
     val ttsParagraphIndex by viewModel.ttsHelper.currentParagraphIndex.collectAsState()
     val currentWordRange by viewModel.currentWordRange.collectAsState()
+    val currentSpeed by viewModel.ttsSpeechRate.collectAsState()
+    val sleepTimerRemainingMillis by viewModel.sleepTimerRemainingMillis.collectAsState()
 
     if (playlist.isEmpty() || currentIndex == -1 || currentIndex >= playlist.size) {
         onDismiss()
@@ -184,6 +206,8 @@ fun TtsLyricsVisualizer(
     val lazyListState = rememberLazyListState()
 
     var showQueueInsideVisualizer by remember { mutableStateOf(false) }
+    var isSpeedMenuExpanded by remember { mutableStateOf(false) }
+    var isSleepMenuExpanded by remember { mutableStateOf(false) }
 
     // Auto-scroll centering
     LaunchedEffect(ttsParagraphIndex, showQueueInsideVisualizer) {
@@ -600,44 +624,51 @@ fun TtsLyricsVisualizer(
                             trackColor = activeTextColor.copy(alpha = 0.1f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        var isSpeedMenuExpanded by remember { mutableStateOf(false) }
-                        val currentSpeed by viewModel.ttsSpeechRate.collectAsState()
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.Start,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
+                                text = "Article ${currentIndex + 1} of ${playlist.size} • Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
                                 fontSize = 11.sp,
                                 color = activeTextColor.copy(alpha = 0.5f),
                                 fontWeight = FontWeight.Medium
                             )
-                            
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box {
-                                TextButton(
+                                AssistChip(
                                     onClick = { isSpeedMenuExpanded = true },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                    modifier = Modifier.height(24.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.Speed,
-                                            contentDescription = "Playback Speed",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                    label = {
                                         Text(
                                             text = "${currentSpeed}x",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
-                                    }
-                                }
-                                
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Speed,
+                                            contentDescription = "Playback speed",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = bottomDockBg,
+                                        labelColor = activeTextColor,
+                                        leadingIconContentColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+
                                 DropdownMenu(
                                     expanded = isSpeedMenuExpanded,
                                     onDismissRequest = { isSpeedMenuExpanded = false },
@@ -651,12 +682,79 @@ fun TtsLyricsVisualizer(
                                                     text = if (speed == 1.0f) "1.0x (Normal)" else "${speed}x",
                                                     fontSize = 13.sp,
                                                     fontWeight = if (speed == currentSpeed) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (speed == currentSpeed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    color = if (speed == currentSpeed) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurface
+                                                    }
                                                 )
                                             },
                                             onClick = {
                                                 viewModel.setTtsSpeechRate(speed)
                                                 isSpeedMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Box {
+                                AssistChip(
+                                    onClick = { isSleepMenuExpanded = true },
+                                    label = {
+                                        Text(
+                                            text = sleepTimerRemainingMillis?.let(::formatSleepTimerLabel) ?: "Sleep timer",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Bedtime,
+                                            contentDescription = "Sleep timer",
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        containerColor = if (sleepTimerRemainingMillis != null) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                        } else {
+                                            bottomDockBg
+                                        },
+                                        labelColor = if (sleepTimerRemainingMillis != null) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            activeTextColor
+                                        },
+                                        leadingIconContentColor = if (sleepTimerRemainingMillis != null) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            dockIconTint
+                                        }
+                                    )
+                                )
+
+                                DropdownMenu(
+                                    expanded = isSleepMenuExpanded,
+                                    onDismissRequest = { isSleepMenuExpanded = false },
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ) {
+                                    listOf(15, 30, 45, 60).forEach { minutes ->
+                                        DropdownMenuItem(
+                                            text = { Text("Stop in $minutes min") },
+                                            onClick = {
+                                                viewModel.setSleepTimer(minutes)
+                                                isSleepMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                    if (sleepTimerRemainingMillis != null) {
+                                        HorizontalDivider()
+                                        DropdownMenuItem(
+                                            text = { Text("Turn off timer") },
+                                            onClick = {
+                                                viewModel.cancelSleepTimer()
+                                                isSleepMenuExpanded = false
                                             }
                                         )
                                     }
@@ -695,24 +793,19 @@ fun TtsLyricsVisualizer(
                         ) {
                             // Previous Button
                             IconButton(
-                                onClick = {
-                                    val prevIdx = ttsParagraphIndex - 1
-                                    if (prevIdx >= 0) {
-                                        viewModel.seekTtsToParagraph(prevIdx)
-                                    }
-                                },
-                                enabled = ttsParagraphIndex > 0,
+                                onClick = { viewModel.playPreviousTtsArticle() },
+                                enabled = currentIndex > 0,
                                 modifier = Modifier
                                     .size(44.dp)
                                     .background(
-                                        if (ttsParagraphIndex > 0) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
+                                        if (currentIndex > 0) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
                                         CircleShape
                                     )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipPrevious,
-                                    contentDescription = "Previous Paragraph",
-                                    tint = if (ttsParagraphIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                    contentDescription = "Previous Article",
+                                    tint = if (currentIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -743,24 +836,19 @@ fun TtsLyricsVisualizer(
 
                             // Next Button
                             IconButton(
-                                onClick = {
-                                    val nextIdx = ttsParagraphIndex + 1
-                                    if (nextIdx < paragraphs.size) {
-                                        viewModel.seekTtsToParagraph(nextIdx)
-                                    }
-                                },
-                                enabled = ttsParagraphIndex < paragraphs.size - 1,
+                                onClick = { viewModel.advanceTtsPlaylist() },
+                                enabled = currentIndex < playlist.size - 1,
                                 modifier = Modifier
                                     .size(44.dp)
                                     .background(
-                                        if (ttsParagraphIndex < paragraphs.size - 1) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
+                                        if (currentIndex < playlist.size - 1) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
                                         CircleShape
                                     )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.SkipNext,
-                                    contentDescription = "Next Paragraph",
-                                    tint = if (ttsParagraphIndex < paragraphs.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                    contentDescription = "Next Article",
+                                    tint = if (currentIndex < playlist.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -769,5 +857,16 @@ fun TtsLyricsVisualizer(
                 }
             }
         }
+    }
+}
+
+private fun formatSleepTimerLabel(remainingMillis: Long): String {
+    val totalSeconds = (remainingMillis / 1_000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return if (minutes > 0L) {
+        "${minutes}m left"
+    } else {
+        "${seconds}s left"
     }
 }
