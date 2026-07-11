@@ -206,6 +206,7 @@ fun TtsLyricsVisualizer(
     val lazyListState = rememberLazyListState()
 
     var showQueueInsideVisualizer by remember { mutableStateOf(false) }
+    var showTranscriptView by remember { mutableStateOf(true) }
     var isSpeedMenuExpanded by remember { mutableStateOf(false) }
     var isSleepMenuExpanded by remember { mutableStateOf(false) }
 
@@ -324,7 +325,6 @@ fun TtsLyricsVisualizer(
                     )
                 }
                 
-                // Right queue toggle button
                 IconButton(
                     onClick = { showQueueInsideVisualizer = !showQueueInsideVisualizer },
                     modifier = Modifier
@@ -346,7 +346,7 @@ fun TtsLyricsVisualizer(
 
             // Immersive Crossfading Body Content
             AnimatedContent(
-                targetState = showQueueInsideVisualizer,
+                targetState = Pair(showQueueInsideVisualizer, showTranscriptView),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -354,7 +354,7 @@ fun TtsLyricsVisualizer(
                     fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
                 },
                 label = "VisualizerContent"
-            ) { showQueue ->
+            ) { (showQueue, showTranscript) ->
                 if (showQueue) {
                     // Apple Music Drag to Reorder Queue List
                     Column(
@@ -527,7 +527,7 @@ fun TtsLyricsVisualizer(
                             }
                         }
                     }
-                } else {
+                } else if (showTranscript) {
                     // Scrolling Lyrics List
                     if (paragraphs.isEmpty() || paragraphs[0].startsWith("Failed to load") || paragraphs[0].startsWith("Unable to parse")) {
                         Box(
@@ -595,6 +595,64 @@ fun TtsLyricsVisualizer(
                             }
                         }
                     }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(240.dp)
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .background(controlBtnBg)
+                            ) {
+                                if (article.thumbnailUrl != null && article.thumbnailUrl != "failed" && !article.thumbnailUrl.contains("google")) {
+                                    AsyncImage(
+                                        model = article.thumbnailUrl,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Hearing,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier
+                                            .size(64.dp)
+                                            .align(Alignment.Center)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Text(
+                                text = article.title,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                color = activeTextColor
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = article.sourceName,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = activeTextColor.copy(alpha = 0.55f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
 
@@ -627,139 +685,21 @@ fun TtsLyricsVisualizer(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Start,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Article ${currentIndex + 1} of ${playlist.size} • Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
+                                text = "Article ${currentIndex + 1} of ${playlist.size}",
                                 fontSize = 11.sp,
                                 color = activeTextColor.copy(alpha = 0.5f),
                                 fontWeight = FontWeight.Medium
                             )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box {
-                                AssistChip(
-                                    onClick = { isSpeedMenuExpanded = true },
-                                    label = {
-                                        Text(
-                                            text = "${currentSpeed}x",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Speed,
-                                            contentDescription = "Playback speed",
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = bottomDockBg,
-                                        labelColor = activeTextColor,
-                                        leadingIconContentColor = MaterialTheme.colorScheme.primary
-                                    )
-                                )
-
-                                DropdownMenu(
-                                    expanded = isSpeedMenuExpanded,
-                                    onDismissRequest = { isSpeedMenuExpanded = false },
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ) {
-                                    val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
-                                    speeds.forEach { speed ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = if (speed == 1.0f) "1.0x (Normal)" else "${speed}x",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = if (speed == currentSpeed) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (speed == currentSpeed) {
-                                                        MaterialTheme.colorScheme.primary
-                                                    } else {
-                                                        MaterialTheme.colorScheme.onSurface
-                                                    }
-                                                )
-                                            },
-                                            onClick = {
-                                                viewModel.setTtsSpeechRate(speed)
-                                                isSpeedMenuExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Box {
-                                AssistChip(
-                                    onClick = { isSleepMenuExpanded = true },
-                                    label = {
-                                        Text(
-                                            text = sleepTimerRemainingMillis?.let(::formatSleepTimerLabel) ?: "Sleep timer",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Bedtime,
-                                            contentDescription = "Sleep timer",
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = if (sleepTimerRemainingMillis != null) {
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                        } else {
-                                            bottomDockBg
-                                        },
-                                        labelColor = if (sleepTimerRemainingMillis != null) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            activeTextColor
-                                        },
-                                        leadingIconContentColor = if (sleepTimerRemainingMillis != null) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            dockIconTint
-                                        }
-                                    )
-                                )
-
-                                DropdownMenu(
-                                    expanded = isSleepMenuExpanded,
-                                    onDismissRequest = { isSleepMenuExpanded = false },
-                                    containerColor = MaterialTheme.colorScheme.surface
-                                ) {
-                                    listOf(15, 30, 45, 60).forEach { minutes ->
-                                        DropdownMenuItem(
-                                            text = { Text("Stop in $minutes min") },
-                                            onClick = {
-                                                viewModel.setSleepTimer(minutes)
-                                                isSleepMenuExpanded = false
-                                            }
-                                        )
-                                    }
-                                    if (sleepTimerRemainingMillis != null) {
-                                        HorizontalDivider()
-                                        DropdownMenuItem(
-                                            text = { Text("Turn off timer") },
-                                            onClick = {
-                                                viewModel.cancelSleepTimer()
-                                                isSleepMenuExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
+                            Text(
+                                text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
+                                fontSize = 11.sp,
+                                color = activeTextColor.copy(alpha = 0.5f),
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
                 }
@@ -855,10 +795,268 @@ fun TtsLyricsVisualizer(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        BottomUtilityIconButton(
+                            icon = Icons.Default.Speed,
+                            contentDescription = "Playback speed ${currentSpeed}x",
+                            isActive = currentSpeed != 1.0f,
+                            tint = if (currentSpeed != 1.0f) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                dockIconTint.copy(alpha = 0.82f)
+                            },
+                            onClick = { isSpeedMenuExpanded = true }
+                        )
+
+                        DropdownMenu(
+                            expanded = isSpeedMenuExpanded,
+                            onDismissRequest = { isSpeedMenuExpanded = false },
+                            modifier = Modifier.width(260.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 8.dp,
+                            shadowElevation = 16.dp,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                            )
+                        ) {
+                            UtilityMenuHeader(
+                                title = "Playback speed",
+                                subtitle = "Current: ${formatSpeedOptionLabel(currentSpeed)}"
+                            )
+                            HorizontalDivider()
+
+                            val speeds = listOf(
+                                SpeedOption(0.75f, "0.75x", "Relaxed"),
+                                SpeedOption(1.0f, "1.0x", "Normal"),
+                                SpeedOption(1.25f, "1.25x", "Steady"),
+                                SpeedOption(1.5f, "1.5x", "Faster"),
+                                SpeedOption(1.75f, "1.75x", "Quick"),
+                                SpeedOption(2.0f, "2.0x", "Fastest")
+                            )
+                            speeds.forEach { speedOption ->
+                                UtilityMenuItem(
+                                    title = speedOption.label,
+                                    subtitle = speedOption.subtitle,
+                                    leadingIcon = Icons.Default.Speed,
+                                    selected = speedOption.rate == currentSpeed,
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    onClick = {
+                                        viewModel.setTtsSpeechRate(speedOption.rate)
+                                        isSpeedMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Box(contentAlignment = Alignment.Center) {
+                        BottomUtilityIconButton(
+                            icon = Icons.Default.Bedtime,
+                            contentDescription = sleepTimerRemainingMillis?.let {
+                                "Sleep timer active, ${formatSleepTimerLabel(it)}"
+                            } ?: "Sleep timer",
+                            isActive = sleepTimerRemainingMillis != null,
+                            tint = if (sleepTimerRemainingMillis != null) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                dockIconTint.copy(alpha = 0.82f)
+                            },
+                            onClick = { isSleepMenuExpanded = true }
+                        )
+
+                        DropdownMenu(
+                            expanded = isSleepMenuExpanded,
+                            onDismissRequest = { isSleepMenuExpanded = false },
+                            modifier = Modifier.width(280.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 8.dp,
+                            shadowElevation = 16.dp,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                            )
+                        ) {
+                            UtilityMenuHeader(
+                                title = "Sleep timer",
+                                subtitle = sleepTimerRemainingMillis?.let(::formatSleepTimerLabel)
+                                    ?: "Stops playback automatically"
+                            )
+                            HorizontalDivider()
+
+                            listOf(15, 30, 45, 60).forEach { minutes ->
+                                UtilityMenuItem(
+                                    title = "$minutes min",
+                                    subtitle = "Stop playback after $minutes minutes",
+                                    leadingIcon = Icons.Default.Bedtime,
+                                    selected = false,
+                                    selectedColor = MaterialTheme.colorScheme.primary,
+                                    onClick = {
+                                        viewModel.setSleepTimer(minutes)
+                                        isSleepMenuExpanded = false
+                                    }
+                                )
+                            }
+                            if (sleepTimerRemainingMillis != null) {
+                                HorizontalDivider()
+                                UtilityMenuItem(
+                                    title = "Turn off timer",
+                                    subtitle = "Continue playback without auto-stop",
+                                    leadingIcon = Icons.Default.Close,
+                                    selected = false,
+                                    selectedColor = MaterialTheme.colorScheme.error,
+                                    onClick = {
+                                        viewModel.cancelSleepTimer()
+                                        isSleepMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    BottomUtilityIconButton(
+                        icon = Icons.Default.FormatQuote,
+                        contentDescription = if (showTranscriptView) {
+                            "Show thumbnail"
+                        } else {
+                            "Show transcript"
+                        },
+                        tint = if (showTranscriptView) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            dockIconTint.copy(alpha = 0.82f)
+                        },
+                        onClick = {
+                            showTranscriptView = !showTranscriptView
+                            showQueueInsideVisualizer = false
+                        }
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+private fun BottomUtilityIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    tint: Color,
+    isActive: Boolean = false,
+    onClick: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp, horizontal = 18.dp)
+            .background(
+                color = if (isActive) tint.copy(alpha = 0.14f) else Color.Transparent,
+                shape = RoundedCornerShape(18.dp)
+            )
+            .padding(12.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
+
+@Composable
+private fun UtilityMenuHeader(
+    title: String,
+    subtitle: String
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = subtitle,
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+    }
+}
+
+@Composable
+private fun UtilityMenuItem(
+    title: String,
+    subtitle: String,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    selectedColor: Color,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                if (selected) selectedColor.copy(alpha = 0.10f) else Color.Transparent,
+                RoundedCornerShape(14.dp)
+            ),
+        text = {
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (selected) selectedColor else MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.58f)
+                )
+            }
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = leadingIcon,
+                contentDescription = null,
+                tint = if (selected) selectedColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+            )
+        },
+        trailingIcon = {
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = selectedColor
+                )
+            }
+        },
+        onClick = onClick
+    )
+}
+
+private data class SpeedOption(
+    val rate: Float,
+    val label: String,
+    val subtitle: String
+)
 
 private fun formatSleepTimerLabel(remainingMillis: Long): String {
     val totalSeconds = (remainingMillis / 1_000L).coerceAtLeast(0L)
@@ -869,4 +1067,8 @@ private fun formatSleepTimerLabel(remainingMillis: Long): String {
     } else {
         "${seconds}s left"
     }
+}
+
+private fun formatSpeedOptionLabel(rate: Float): String {
+    return if (rate == 1.0f) "1.0x (Normal)" else "${rate}x"
 }
