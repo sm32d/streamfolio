@@ -22,6 +22,9 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
     private val _currentWordRange = MutableStateFlow<Pair<Int, Int>?>(null)
     val currentWordRange: StateFlow<Pair<Int, Int>?> = _currentWordRange
 
+    private val _speechRate = MutableStateFlow(1.0f)
+    val speechRate: StateFlow<Float> = _speechRate
+
     private var paragraphsList: List<String> = emptyList()
     private var activeParagraphOffset = 0
     private var lastPausedCharOffset = 0
@@ -90,6 +93,7 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 tts?.setLanguage(Locale.US)
             }
+            tts?.setSpeechRate(_speechRate.value)
             isInitialized = true
         } else {
             Log.e("TtsHelper", "Initialization failed")
@@ -169,6 +173,18 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, index.toString())
         
         tts?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, index.toString())
+    }
+
+    fun setSpeechRate(rate: Float) {
+        _speechRate.value = rate
+        if (isInitialized) {
+            tts?.setSpeechRate(rate)
+            if (_isPlaying.value) {
+                // Instantly re-trigger playback to apply the speed rate changes
+                pause()
+                resume()
+            }
+        }
     }
 
     fun shutdown() {

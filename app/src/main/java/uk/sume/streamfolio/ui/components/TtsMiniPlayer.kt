@@ -600,23 +600,68 @@ fun TtsLyricsVisualizer(
                             trackColor = activeTextColor.copy(alpha = 0.1f)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
+                        var isSpeedMenuExpanded by remember { mutableStateOf(false) }
+                        val currentSpeed by viewModel.ttsSpeechRate.collectAsState()
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Paragraph ${ttsParagraphIndex + 1}",
+                                text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
                                 fontSize = 11.sp,
                                 color = activeTextColor.copy(alpha = 0.5f),
                                 fontWeight = FontWeight.Medium
                             )
-                            Text(
-                                text = "${paragraphs.size} total",
-                                fontSize = 11.sp,
-                                color = activeTextColor.copy(alpha = 0.5f),
-                                fontWeight = FontWeight.Medium
-                            )
+                            
+                            Box {
+                                TextButton(
+                                    onClick = { isSpeedMenuExpanded = true },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(24.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Default.Speed,
+                                            contentDescription = "Playback Speed",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "${currentSpeed}x",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = isSpeedMenuExpanded,
+                                    onDismissRequest = { isSpeedMenuExpanded = false },
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ) {
+                                    val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+                                    speeds.forEach { speed ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = if (speed == 1.0f) "1.0x (Normal)" else "${speed}x",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = if (speed == currentSpeed) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (speed == currentSpeed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            },
+                                            onClick = {
+                                                viewModel.setTtsSpeechRate(speed)
+                                                isSpeedMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

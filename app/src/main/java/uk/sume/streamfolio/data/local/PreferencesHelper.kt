@@ -92,4 +92,8 @@ class PreferencesHelper(context: Context) {
     var swipeRightAction: String
         get() = prefs.getString("swipe_right_action", "share") ?: "share"
         set(value) = prefs.edit().putString("swipe_right_action", value).apply()
+
+    var ttsSpeechRate: Float
+        get() = prefs.getFloat("tts_speech_rate", 1.0f)
+        set(value) = prefs.edit().putFloat("tts_speech_rate", value).apply()
 }

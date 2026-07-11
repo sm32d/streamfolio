@@ -51,6 +51,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val aiSummaryState: StateFlow<AiSummaryState> = _aiSummaryState
 
     init {
+        ttsHelper.setSpeechRate(prefs.ttsSpeechRate)
         ttsHelper.onArticleCompleted = {
             advanceTtsPlaylist()
         }
@@ -624,6 +625,8 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _hasSeenAiSpotlight.value = prefs.hasSeenAiSpotlight
         _swipeLeftAction.value = prefs.swipeLeftAction
         _swipeRightAction.value = prefs.swipeRightAction
+        _ttsSpeechRate.value = prefs.ttsSpeechRate
+        ttsHelper.setSpeechRate(prefs.ttsSpeechRate)
     }
 
     fun restoreSettingsBackup(backupJson: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
@@ -694,6 +697,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _swipeRightAction = MutableStateFlow(prefs.swipeRightAction)
     val swipeRightAction: StateFlow<String> = _swipeRightAction.asStateFlow()
 
+    private val _ttsSpeechRate = MutableStateFlow(prefs.ttsSpeechRate)
+    val ttsSpeechRate: StateFlow<Float> = _ttsSpeechRate.asStateFlow()
+
+    fun setTtsSpeechRate(rate: Float) {
+        prefs.ttsSpeechRate = rate
+        _ttsSpeechRate.value = rate
+        ttsHelper.setSpeechRate(rate)
+    }
 
     fun setSwipeLeftAction(action: String) {
         prefs.swipeLeftAction = action
