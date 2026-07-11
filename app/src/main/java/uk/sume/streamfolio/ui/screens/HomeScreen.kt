@@ -1225,26 +1225,26 @@ fun ArticleListItem(
     )
 
     if (showRemoveConfirmationState.value) {
-        Dialog(onDismissRequest = { showRemoveConfirmationState.value = false }) {
-            Card(
+        ModalBottomSheet(
+            onDismissRequest = { showRemoveConfirmationState.value = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp),
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(40.dp)
                             .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
@@ -1252,62 +1252,55 @@ fun ArticleListItem(
                             imageVector = Icons.Default.Delete,
                             contentDescription = null,
                             tint = Color(0xFFEF5350),
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "Remove Bookmark",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "Are you sure you want to remove this article from your saved bookmarks?",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center,
-                        lineHeight = 18.sp
-                    )
+                Text(
+                    text = "Are you sure you want to remove this article from your saved bookmarks?",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    lineHeight = 20.sp
+                )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showRemoveConfirmationState.value = false },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
                     ) {
-                        OutlinedButton(
-                            onClick = { showRemoveConfirmationState.value = false },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                        ) {
-                            Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        }
+                        Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
 
-                        Button(
-                            onClick = {
-                                showRemoveConfirmationState.value = false
-                                currentOnBookmarkToggle()
-                            },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFEF5350),
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Text("Remove", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        }
+                    Button(
+                        onClick = {
+                            showRemoveConfirmationState.value = false
+                            currentOnBookmarkToggle()
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Remove", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

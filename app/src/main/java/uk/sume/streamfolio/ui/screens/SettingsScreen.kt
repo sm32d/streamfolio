@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -43,13 +44,22 @@ import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.theme.EmeraldSecondary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import uk.sume.streamfolio.util.OpmlHelper
+import uk.sume.streamfolio.util.OpmlFeed
+import java.io.File
+import androidx.core.content.FileProvider
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.platform.LocalContext
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import uk.sume.streamfolio.data.network.CuratedProvider
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
+import uk.sume.streamfolio.data.model.CustomFeed
 
 // ─── Main Settings Screen ───────────────────────────────────────────────────
 
@@ -120,6 +130,21 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                     title = "Swipe Gestures",
                     subtitle = "Customize left & right swipe actions",
                     onClick = { navController.navigate("settings_gestures") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Section: Data Management
+            SectionLabel("Data Management")
+            Spacer(modifier = Modifier.height(10.dp))
+            SettingsCard {
+                SettingsRow(
+                    icon = Icons.Default.Backup,
+                    iconBg = Color(0xFF10B981),
+                    title = "Backup & Restore",
+                    subtitle = "Import/export feeds and settings backup",
+                    onClick = { navController.navigate("settings_backup") }
                 )
             }
 
@@ -1215,6 +1240,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
 
 // ─── Sub-page: Custom RSS Feeds ─────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) {
     val customFeeds by viewModel.customFeeds.collectAsState()
@@ -1223,8 +1249,96 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
     var feedUrl by remember { mutableStateOf("") }
     var feedCategory by remember { mutableStateOf("") }
 
+    var feedToDelete by remember { mutableStateOf<CustomFeed?>(null) }
+    var selectedListCategory by remember { mutableStateOf("All") }
+
+    val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
     val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    // Delete Confirmation Dialog
+    if (feedToDelete != null) {
+        ModalBottomSheet(
+            onDismissRequest = { feedToDelete = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFEF5350),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Delete Feed",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "Are you sure you want to unsubscribe from \"${feedToDelete?.title}\"?",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { feedToDelete = null },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                    ) {
+                        Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            feedToDelete?.let { viewModel.removeCustomRssFeed(it) }
+                            feedToDelete = null
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Delete", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -1244,9 +1358,11 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
 
             SettingsSubHeader(
                 title = "Custom RSS Feeds",
-                description = "Add private RSS publishers, custom URLs, or import OPML files directly to subscribe to independent publications and specialized topics.",
+                description = "Add private RSS publishers, custom URLs, and subscribe to independent publications and specialized topics.",
                 icon = Icons.Default.RssFeed
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Add Custom Feed form card
             Column(
@@ -1294,7 +1410,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                 OutlinedTextField(
                     value = feedUrl,
                     onValueChange = { feedUrl = it },
-                    label = { Text("RSS Feed or OPML URL") },
+                    label = { Text("RSS Feed URL") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
@@ -1345,9 +1461,49 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
             if (customFeeds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(28.dp))
                 SectionLabel("Active Feeds  ·  ${customFeeds.size}")
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Scrollable category filter chips
+                val categories = remember(customFeeds) {
+                    listOf("All") + customFeeds.map { it.category }.distinct().sorted()
+                }
+                
+                if (!categories.contains(selectedListCategory)) {
+                    selectedListCategory = "All"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    categories.forEach { category ->
+                        val isSelected = category == selectedListCategory
+                        Surface(
+                            modifier = Modifier.clickable { selectedListCategory = category },
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                            border = BorderStroke(1.dp, if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                        ) {
+                            Text(
+                                text = category,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                val filteredFeeds = remember(customFeeds, selectedListCategory) {
+                    if (selectedListCategory == "All") customFeeds
+                    else customFeeds.filter { it.category == selectedListCategory }
+                }
+
                 SettingsCard {
-                    customFeeds.forEachIndexed { index, feed ->
+                    filteredFeeds.forEachIndexed { index, feed ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1374,18 +1530,27 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                         maxLines = 1
                                     )
-                                    Text(
-                                        "Tab: ${feed.category}",
-                                        fontSize = 11.sp,
-                                        color = EmeraldPrimary.copy(alpha = 0.8f)
-                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = EmeraldPrimary.copy(alpha = 0.1f),
+                                        border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.15f))
+                                    ) {
+                                        Text(
+                                            text = feed.category,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = EmeraldPrimary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
                                 }
                             }
-                            IconButton(onClick = { viewModel.removeCustomRssFeed(feed) }) {
+                            IconButton(onClick = { feedToDelete = feed }) {
                                 Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
                             }
                         }
-                        if (index < customFeeds.lastIndex) CardDivider()
+                        if (index < filteredFeeds.lastIndex) CardDivider()
                     }
                 }
             } else {
@@ -1395,6 +1560,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
         }
     }
 }
+
 
 // ─── Shared Components ───────────────────────────────────────────────────────
 
@@ -2122,6 +2288,640 @@ fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewMode
 
             Spacer(modifier = Modifier.height(28.dp))
             InfoNote("Swiping actions are responsive and trigger instantly with subtle haptic feedback.")
+        }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel) {
+    val customFeeds by viewModel.customFeeds.collectAsState()
+    val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
+    val bgBrush = if (isDark) DarkGradient else LightGradient
+
+    var parsedFeedsToImport by remember { mutableStateOf<List<OpmlFeed>?>(null) }
+    var fullBackupJsonToRestore by remember { mutableStateOf<String?>(null) }
+
+    val opmlPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val parsed = OpmlHelper.parseOpml(inputStream)
+                    if (parsed.isNotEmpty()) {
+                        parsedFeedsToImport = parsed
+                    } else {
+                        Toast.makeText(context, "No RSS feeds found in this OPML file.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to parse OPML: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val backupPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val jsonText = inputStream.bufferedReader().use { it.readText() }
+                    if (jsonText.contains("custom_feeds") && jsonText.contains("preferences")) {
+                        fullBackupJsonToRestore = jsonText
+                    } else {
+                        Toast.makeText(context, "Invalid backup file.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun exportSubscriptions(feeds: List<CustomFeed>) {
+        if (feeds.isEmpty()) {
+            Toast.makeText(context, "You have no custom feeds to export.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        try {
+            val xmlContent = OpmlHelper.exportFeedsToOpml(feeds)
+            val tempFile = File(context.cacheDir, "streamfolio_subscriptions.opml")
+            tempFile.writeText(xmlContent)
+            
+            val authority = "${context.packageName}.fileprovider"
+            val uri = FileProvider.getUriForFile(context, authority, tempFile)
+            
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/xml"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Export OPML Subscriptions"))
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to export OPML: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun exportFullBackup(feeds: List<CustomFeed>) {
+        try {
+            val backupJson = uk.sume.streamfolio.util.BackupHelper.generateBackupJson(context, feeds)
+            val tempFile = File(context.cacheDir, "streamfolio_backup.json")
+            tempFile.writeText(backupJson)
+            
+            val authority = "${context.packageName}.fileprovider"
+            val uri = FileProvider.getUriForFile(context, authority, tempFile)
+            
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "Export StreamFolio Backup"))
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to export backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // OPML Import Confirmation Bottom Sheet
+    if (parsedFeedsToImport != null) {
+        val feeds = remember(parsedFeedsToImport, customFeeds) {
+            val existingUrls = customFeeds.map { it.url.trim().lowercase() }.toSet()
+            parsedFeedsToImport!!.filter { opmlFeed ->
+                var formattedUrl = opmlFeed.xmlUrl.trim()
+                if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                    formattedUrl = "https://$formattedUrl"
+                }
+                !existingUrls.contains(formattedUrl.lowercase())
+            }
+        }
+
+        if (feeds.isEmpty()) {
+            LaunchedEffect(Unit) {
+                Toast.makeText(context, "All feeds in this OPML are already imported!", Toast.LENGTH_LONG).show()
+                parsedFeedsToImport = null
+            }
+        } else {
+            val uniqueCategories = remember(feeds) { feeds.map { it.category }.distinct() }
+            val categoryMapping = remember(feeds) {
+                mutableStateMapOf<String, String>().apply {
+                    uniqueCategories.forEach { put(it, it) }
+                }
+            }
+            val selectedCategories = remember(feeds) {
+                mutableStateOf(uniqueCategories.toSet())
+            }
+
+            ModalBottomSheet(
+                onDismissRequest = { parsedFeedsToImport = null },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                dragHandle = { BottomSheetDefaults.DragHandle() },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp)
+                ) {
+                    Text(
+                        text = "Import Feeds (${feeds.size} found)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Map OPML folders to StreamFolio tabs, or uncheck categories you don't want to import.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        uniqueCategories.forEach { originalCategory ->
+                            val mappedVal = categoryMapping[originalCategory] ?: originalCategory
+                            val isChecked = selectedCategories.value.contains(originalCategory)
+                            val categoryFeeds = remember(feeds) { feeds.filter { it.category == originalCategory } }
+                            val feedCount = categoryFeeds.size
+                            
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Checkbox(
+                                                checked = isChecked,
+                                                onCheckedChange = { checked ->
+                                                    if (checked) {
+                                                        selectedCategories.value = selectedCategories.value + originalCategory
+                                                    } else {
+                                                        selectedCategories.value = selectedCategories.value - originalCategory
+                                                    }
+                                                },
+                                                colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = originalCategory,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        Text(
+                                            text = "$feedCount feed${if (feedCount > 1) "s" else ""}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = EmeraldPrimary
+                                        )
+                                    }
+                                    
+                                    if (isChecked) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Column(
+                                            modifier = Modifier.padding(start = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "Feeds to import:",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                            )
+                                            categoryFeeds.forEach { f ->
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(CircleShape)
+                                                            .background(EmeraldPrimary)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = f.title,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = mappedVal,
+                                            onValueChange = { newVal ->
+                                                categoryMapping[originalCategory] = newVal
+                                            },
+                                            label = { Text("StreamFolio Category Tab Name") },
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { parsedFeedsToImport = null },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.importCustomRssFeeds(
+                                    feeds = feeds,
+                                    categoryMapping = categoryMapping.toMap(),
+                                    selectedCategories = selectedCategories.value
+                                )
+                                parsedFeedsToImport = null
+                                Toast.makeText(context, "Feeds imported successfully!", Toast.LENGTH_SHORT).show()
+                            },
+                            enabled = selectedCategories.value.isNotEmpty(),
+                            modifier = Modifier.weight(1.5f),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary, contentColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Import Selected", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Settings Restore Confirmation Dialog
+    if (fullBackupJsonToRestore != null) {
+        val backupJson = fullBackupJsonToRestore!!
+        ModalBottomSheet(
+            onDismissRequest = { fullBackupJsonToRestore = null },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFEF5350),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Restore Settings",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "This will overwrite all of your current custom RSS feeds, swipe action choices, categories, and translation preferences. Are you sure you want to proceed?",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    lineHeight = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { fullBackupJsonToRestore = null },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                    ) {
+                        Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.restoreSettingsBackup(
+                                backupJson = backupJson,
+                                onSuccess = {
+                                    Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { e ->
+                                    Toast.makeText(context, "Restore failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                            )
+                            fullBackupJsonToRestore = null
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Restore", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bgBrush)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 120.dp)
+        ) {
+            SubPageTopBar(title = "Backup & Restore", onBack = { navController.popBackStack() })
+
+            SettingsSubHeader(
+                title = "Backup & Restore",
+                description = "Export and import your custom RSS subscriptions, or create a full application settings backup to restore StreamFolio on another device.",
+                icon = Icons.Default.Backup
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+            SectionLabel("Full Settings Backup")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Import Settings Backup
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { backupPickerLauncher.launch("*/*") },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SettingsBackupRestore,
+                                contentDescription = "Import Backup",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Import Settings",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Restore app preferences",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                // Export Settings Backup
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { exportFullBackup(customFeeds) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Save,
+                                contentDescription = "Export Backup",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Export Settings",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Backup preferences & feeds",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(36.dp))
+            SectionLabel("OPML Feed Outline")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Import OPML
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { opmlPickerLauncher.launch("*/*") },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudUpload,
+                                contentDescription = "Import",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Import OPML",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Upload subscription list",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
+                // Export OPML
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { exportSubscriptions(customFeeds) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = "Export",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Export OPML",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Save subscription list",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+            InfoNote("Full Settings Backups generate a standard text JSON file that securely restores feeds, category orders, UI gestures, and translation choices.")
         }
     }
 }

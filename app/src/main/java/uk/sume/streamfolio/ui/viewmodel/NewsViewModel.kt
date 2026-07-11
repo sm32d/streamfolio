@@ -16,6 +16,7 @@ import uk.sume.streamfolio.ui.components.TtsHelper
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
+import uk.sume.streamfolio.util.OpmlFeed
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
@@ -581,6 +582,68 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             val feed = CustomFeed(title = title, url = url, category = category)
             repository.addCustomFeed(feed)
             refreshCurrentFeed()
+        }
+    }
+
+    fun importCustomRssFeeds(feeds: List<OpmlFeed>, categoryMapping: Map<String, String>, selectedCategories: Set<String>) {
+        viewModelScope.launch {
+            val existingFeeds = repository.getAllCustomFeedsSync()
+            val existingUrls = existingFeeds.map { it.url.trim().lowercase() }.toSet()
+            
+            for (opmlFeed in feeds) {
+                if (selectedCategories.contains(opmlFeed.category)) {
+                    val mappedCategory = categoryMapping[opmlFeed.category] ?: opmlFeed.category
+                    var formattedUrl = opmlFeed.xmlUrl.trim()
+                    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                        formattedUrl = "https://$formattedUrl"
+                    }
+                    if (existingUrls.contains(formattedUrl.lowercase())) {
+                        continue
+                    }
+                    val feed = CustomFeed(
+                        title = opmlFeed.title.trim(),
+                        url = formattedUrl,
+                        category = mappedCategory.trim()
+                    )
+                    repository.addCustomFeed(feed)
+                }
+            }
+            refreshCurrentFeed()
+        }
+    }
+
+    private fun reloadPreferencesToStateFlows() {
+        readerFontFamily.value = prefs.readerFontFamily
+        readerFontSize.value = prefs.readerFontSize
+        readerLineSpacing.value = prefs.readerLineSpacing
+        _isAiEnabled.value = prefs.isAiEnabled
+        _isTranslationEnabled.value = prefs.isTranslationEnabled
+        _isSummaryEnabled.value = prefs.isSummaryEnabled
+        _isSmartTagsEnabled.value = prefs.isSmartTagsEnabled
+        _translationTargetLanguage.value = prefs.translationTargetLanguage
+        _hasSeenAiSpotlight.value = prefs.hasSeenAiSpotlight
+        _swipeLeftAction.value = prefs.swipeLeftAction
+        _swipeRightAction.value = prefs.swipeRightAction
+    }
+
+    fun restoreSettingsBackup(backupJson: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
+        android.util.Log.d("StreamFolioBackup", "Restoring backup JSON: $backupJson")
+        viewModelScope.launch {
+            try {
+                repository.deleteAllCustomFeeds()
+                val parsed = uk.sume.streamfolio.util.BackupHelper.parseBackupJson(backupJson)
+                repository.addCustomFeeds(parsed.customFeeds)
+                parsed.applyPreferences(prefs)
+                reloadPreferencesToStateFlows()
+                refreshCurrentFeed()
+                withContext(Dispatchers.Main) {
+                    onSuccess()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onError(e)
+                }
+            }
         }
     }
 

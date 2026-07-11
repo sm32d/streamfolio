@@ -747,8 +747,11 @@ class NewsRepository(private val context: Context) {
 
     // Custom Feed actions
     fun getCustomFeeds(): Flow<List<CustomFeed>> = customFeedDao.getAllFeeds()
+    suspend fun getAllCustomFeedsSync(): List<CustomFeed> = customFeedDao.getAllFeedsSync()
     suspend fun addCustomFeed(feed: CustomFeed) = customFeedDao.insertFeed(feed)
+    suspend fun addCustomFeeds(feeds: List<CustomFeed>) = customFeedDao.insertFeeds(feeds)
     suspend fun deleteCustomFeed(feed: CustomFeed) = customFeedDao.deleteFeed(feed)
+    suspend fun deleteAllCustomFeeds() = customFeedDao.deleteAllFeeds()
 
     suspend fun deleteArticlesForFeed(sourceUrl: String) = withContext(Dispatchers.IO) {
         articleDao.deleteArticlesBySourceUrl(sourceUrl)

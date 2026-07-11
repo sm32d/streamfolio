@@ -19,6 +19,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +34,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -84,12 +88,33 @@ import uk.sume.streamfolio.ui.theme.EmeraldPrimary
 import uk.sume.streamfolio.ui.theme.EmeraldSecondary
 import uk.sume.streamfolio.ui.theme.LightGradient
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.SettingsBackupRestore
+import androidx.compose.material.icons.filled.Backup
+import uk.sume.streamfolio.util.OpmlHelper
+import uk.sume.streamfolio.util.OpmlFeed
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.OutlinedButton
 import java.util.Locale
 
 /**
  * Premium full-screen onboarding wizard with step-by-step flow.
  * Design is consistent with the rest of the app's glassmorphic aesthetic.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
     val systemLocale = Locale.getDefault()
@@ -121,7 +146,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
 
     var currentStep by rememberSaveable { mutableStateOf(0) }
     val showPreferences = isDefaultFeedsEnabled || (isAiEnabled && isTranslationEnabled)
-    val totalSteps = if (showPreferences) 4 else 3
+    val totalSteps = if (showPreferences) 5 else 4
 
     LaunchedEffect(totalSteps) {
         if (currentStep >= totalSteps) {
@@ -186,7 +211,19 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                 ) { step ->
                     when (step) {
                         0 -> WelcomeStep(systemLocale)
-                        1 -> DefaultFeedsAndCacheStep(
+                        1 -> ImportBackupStep(
+                            viewModel = viewModel,
+                            onImportSuccess = {
+                                viewModel.prefs.isCompletedOnboarding = true
+                                navController.navigate("home_screen") {
+                                    popUpTo("onboarding") { inclusive = true }
+                                }
+                            },
+                            onOpmlImportSuccess = {
+                                currentStep++
+                            }
+                        )
+                        2 -> DefaultFeedsAndCacheStep(
                             isEnabled = isDefaultFeedsEnabled,
                             onToggle = { isDefaultFeedsEnabled = it },
                             selectedCats = selectedCats,
@@ -194,7 +231,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             selectedCacheDays = selectedCacheDays,
                             onCacheDaysSelected = { selectedCacheDays = it }
                         )
-                        2 -> AiFeaturesStep(
+                        3 -> AiFeaturesStep(
                             isAiEnabled = isAiEnabled,
                             onAiToggle = { isAiEnabled = it },
                             isTranslationEnabled = isTranslationEnabled,
@@ -205,7 +242,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
                             onSmartTagsToggle = { isSmartTagsEnabled = it },
                             isGeminiSupported = isGeminiSupported
                         )
-                        3 -> TranslationRegionStep(
+                        4 -> TranslationRegionStep(
                             showLang = isAiEnabled && isTranslationEnabled,
                             selectedLang = selectedLang,
                             onLangSelected = { selectedLang = it },
@@ -343,6 +380,424 @@ private fun BottomNavigation(
                 color = Color.White
             )
         }
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ImportBackupStep(
+    viewModel: NewsViewModel,
+    onImportSuccess: () -> Unit,
+    onOpmlImportSuccess: () -> Unit
+) {
+    val context = LocalContext.current
+    var parsedFeedsToImport by remember { mutableStateOf<List<OpmlFeed>?>(null) }
+
+    val backupPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val jsonText = inputStream.bufferedReader().use { it.readText() }
+                    if (jsonText.contains("custom_feeds") && jsonText.contains("preferences")) {
+                        viewModel.restoreSettingsBackup(
+                            backupJson = jsonText,
+                            onSuccess = {
+                                Toast.makeText(context, "Welcome back! Backup restored successfully.", Toast.LENGTH_LONG).show()
+                                onImportSuccess()
+                            },
+                            onError = { e ->
+                                Toast.makeText(context, "Restore failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        )
+                    } else {
+                        Toast.makeText(context, "Invalid backup file structure.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read backup file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val opmlPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    val parsed = OpmlHelper.parseOpml(inputStream)
+                    if (parsed.isNotEmpty()) {
+                        parsedFeedsToImport = parsed
+                    } else {
+                        Toast.makeText(context, "No RSS feeds found in this OPML file.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to parse OPML: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    // OPML Import Confirmation Bottom Sheet (within Onboarding screen)
+    if (parsedFeedsToImport != null) {
+        val customFeeds by viewModel.customFeeds.collectAsState()
+        val feeds = remember(parsedFeedsToImport, customFeeds) {
+            val existingUrls = customFeeds.map { it.url.trim().lowercase() }.toSet()
+            parsedFeedsToImport!!.filter { opmlFeed ->
+                var formattedUrl = opmlFeed.xmlUrl.trim()
+                if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                    formattedUrl = "https://$formattedUrl"
+                }
+                !existingUrls.contains(formattedUrl.lowercase())
+            }
+        }
+
+        if (feeds.isEmpty()) {
+            LaunchedEffect(Unit) {
+                Toast.makeText(context, "All feeds in this OPML are already imported!", Toast.LENGTH_LONG).show()
+                parsedFeedsToImport = null
+            }
+        } else {
+            val uniqueCategories = remember(feeds) { feeds.map { it.category }.distinct() }
+            val categoryMapping = remember(feeds) {
+                mutableStateMapOf<String, String>().apply {
+                    uniqueCategories.forEach { put(it, it) }
+                }
+            }
+            val selectedCategories = remember(feeds) {
+                mutableStateOf(uniqueCategories.toSet())
+            }
+
+            ModalBottomSheet(
+                onDismissRequest = { parsedFeedsToImport = null },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                dragHandle = { BottomSheetDefaults.DragHandle() },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp)
+                ) {
+                    Text(
+                        text = "Import Feeds (${feeds.size} found)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Map OPML folders to StreamFolio tabs, or uncheck categories you don't want to import.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        uniqueCategories.forEach { originalCategory ->
+                            val mappedVal = categoryMapping[originalCategory] ?: originalCategory
+                            val isChecked = selectedCategories.value.contains(originalCategory)
+                            val categoryFeeds = remember(feeds) { feeds.filter { it.category == originalCategory } }
+                            val feedCount = categoryFeeds.size
+                            
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Checkbox(
+                                                checked = isChecked,
+                                                onCheckedChange = { checked ->
+                                                    if (checked) {
+                                                        selectedCategories.value = selectedCategories.value + originalCategory
+                                                    } else {
+                                                        selectedCategories.value = selectedCategories.value - originalCategory
+                                                    }
+                                                },
+                                                colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = originalCategory,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        Text(
+                                            text = "$feedCount feed${if (feedCount > 1) "s" else ""}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = EmeraldPrimary
+                                        )
+                                    }
+                                    
+                                    if (isChecked) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Column(
+                                            modifier = Modifier.padding(start = 12.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = "Feeds to import:",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                            )
+                                            categoryFeeds.forEach { f ->
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(CircleShape)
+                                                            .background(EmeraldPrimary)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = f.title,
+                                                        fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        OutlinedTextField(
+                                            value = mappedVal,
+                                            onValueChange = { newVal ->
+                                                categoryMapping[originalCategory] = newVal
+                                            },
+                                            label = { Text("StreamFolio Category Tab Name") },
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { parsedFeedsToImport = null },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.importCustomRssFeeds(
+                                    feeds = feeds,
+                                    categoryMapping = categoryMapping.toMap(),
+                                    selectedCategories = selectedCategories.value
+                                )
+                                parsedFeedsToImport = null
+                                Toast.makeText(context, "Feeds imported successfully! Continuing setup...", Toast.LENGTH_LONG).show()
+                                onOpmlImportSuccess()
+                            },
+                            enabled = selectedCategories.value.isNotEmpty(),
+                            modifier = Modifier.weight(1.5f),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary, contentColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Import Selected", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(EmeraldPrimary, EmeraldSecondary)
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Backup,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = "Already have a backup?",
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 38.sp,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "StreamFolio allows you to easily restore subscriptions or configuration backups from other devices. Choose an import source below.",
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+        )
+
+        Spacer(modifier = Modifier.height(36.dp))
+
+        // Option 1: Full App Settings Backup
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { backupPickerLauncher.launch("*/*") },
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SettingsBackupRestore,
+                        contentDescription = "Restore Full Backup",
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Import Settings Backup",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Restores all feeds & preferences. Skips setup wizard.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Option 2: Standard OPML Subscriptions
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { opmlPickerLauncher.launch("*/*") },
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CloudUpload,
+                        contentDescription = "Import OPML",
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Import OPML Subscriptions",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Imports feeds only. Continue setup wizard.",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = "Otherwise, click Continue below to proceed with normal setup.",
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+        )
     }
 }
 

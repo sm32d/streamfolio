@@ -129,8 +129,14 @@ interface CustomFeedDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFeed(feed: CustomFeed)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFeeds(feeds: List<CustomFeed>)
+
     @Delete
     suspend fun deleteFeed(feed: CustomFeed)
+
+    @Query("DELETE FROM custom_feeds")
+    suspend fun deleteAllFeeds()
 
     @Query("SELECT * FROM custom_feeds ORDER BY id DESC")
     fun getAllFeeds(): Flow<List<CustomFeed>>
