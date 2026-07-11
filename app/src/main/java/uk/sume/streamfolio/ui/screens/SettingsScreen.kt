@@ -109,6 +109,21 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 )
                 CardDivider()
                 SettingsRow(
+                    icon = Icons.Default.Swipe,
+                    iconBg = Color(0xFFEC4899),
+                    title = "Swipe Gestures",
+                    subtitle = "Customize left & right swipe actions",
+                    onClick = { navController.navigate("settings_gestures") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Section: Data Management
+            SectionLabel("Data Management")
+            Spacer(modifier = Modifier.height(10.dp))
+            SettingsCard {
+                SettingsRow(
                     icon = Icons.Default.List,
                     iconBg = Color(0xFF6366F1),
                     title = "Manage Content & Sources",
@@ -124,21 +139,6 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                     onClick = { navController.navigate("settings_feeds") }
                 )
                 CardDivider()
-                SettingsRow(
-                    icon = Icons.Default.Swipe,
-                    iconBg = Color(0xFFEC4899),
-                    title = "Swipe Gestures",
-                    subtitle = "Customize left & right swipe actions",
-                    onClick = { navController.navigate("settings_gestures") }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Section: Data Management
-            SectionLabel("Data Management")
-            Spacer(modifier = Modifier.height(10.dp))
-            SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Backup,
                     iconBg = Color(0xFF10B981),
