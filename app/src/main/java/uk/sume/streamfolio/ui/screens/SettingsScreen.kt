@@ -1,4 +1,4 @@
-package uk.sume.streamfolio.ui.screens
+﻿package uk.sume.streamfolio.ui.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -39,10 +39,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import uk.sume.streamfolio.ui.theme.DarkGradient
-import uk.sume.streamfolio.ui.theme.EmeraldPrimary
-import uk.sume.streamfolio.ui.theme.EmeraldSecondary
-import uk.sume.streamfolio.ui.theme.LightGradient
+import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+
+
+
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -66,7 +66,7 @@ import uk.sume.streamfolio.data.model.CustomFeed
 @Composable
 fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -102,7 +102,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Tune,
-                    iconBg = EmeraldPrimary,
+                    iconBg = MaterialTheme.colorScheme.primary,
                     title = "Preferences",
                     subtitle = "Language & region for your news feed",
                     onClick = { navController.navigate("settings_preferences") }
@@ -180,7 +180,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             .size(44.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(
-                                Brush.linearGradient(listOf(EmeraldPrimary, EmeraldSecondary))
+                                Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary))
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -342,7 +342,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
     var cacheDays by remember { mutableStateOf(viewModel.prefs.cacheHistoryDays.toString()) }
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -389,6 +389,70 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 }
             )
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "THEME & STYLE",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val useDynamicColors by viewModel.useDynamicColors.collectAsState()
+
+            SettingsCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF8B5CF6)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Dynamic Colors",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Use Material You colors from your wallpaper",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                    Switch(
+                        checked = useDynamicColors,
+                        onCheckedChange = { checked ->
+                            viewModel.setUseDynamicColors(checked)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(28.dp))
             InfoNote("Changing language or region will refresh your news feed immediately.")
         }
@@ -414,7 +478,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
     var selectedCats by remember { mutableStateOf(viewModel.prefs.selectedCategories) }
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -443,12 +507,12 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(
-                        if (isDefaultFeedsEnabled) EmeraldPrimary.copy(alpha = 0.08f)
+                        if (isDefaultFeedsEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                     )
                     .border(
                         1.dp,
-                        if (isDefaultFeedsEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+                        if (isDefaultFeedsEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent,
                         RoundedCornerShape(18.dp)
                     )
                     .clickable(
@@ -471,7 +535,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                             .size(40.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isDefaultFeedsEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                                if (isDefaultFeedsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -506,7 +570,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
-                        checkedTrackColor = EmeraldPrimary
+                        checkedTrackColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -587,7 +651,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
 @Composable
 fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel) {
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     val customFeeds by viewModel.customFeeds.collectAsState()
     val isDefaultFeedsEnabled = viewModel.prefs.isDefaultFeedsEnabled
@@ -779,7 +843,7 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
 @Composable
 fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewModel) {
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
     
     val allProviders = remember { DefaultFeedsConfig.getAllCuratedProviders() }
     val groupedProviders = remember(allProviders) {
@@ -846,8 +910,8 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         .fillMaxWidth()
                         .padding(bottom = 16.dp),
                     shape = RoundedCornerShape(12.dp),
-                    color = EmeraldPrimary.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.25f))
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -858,13 +922,13 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                             text = "Showing category: $categoryFilter",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = EmeraldPrimary
+                            color = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = "Show All",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
-                            color = EmeraldPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.clickable { categoryFilter = null }
                         )
                     }
@@ -887,7 +951,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { groupByCategory = false }
-                        .background(if (!groupByCategory) EmeraldPrimary else Color.Transparent)
+                        .background(if (!groupByCategory) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -904,7 +968,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
                         .clickable { groupByCategory = true }
-                        .background(if (groupByCategory) EmeraldPrimary else Color.Transparent)
+                        .background(if (groupByCategory) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -955,19 +1019,19 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                     text = regionName,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = EmeraldPrimary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                                    border = BorderStroke(1.dp, if (isActiveRegion) EmeraldPrimary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                    color = if (isActiveRegion) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                                    border = BorderStroke(1.dp, if (isActiveRegion) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                                 ) {
                                       Text(
                                           text = if (isActiveRegion) "Active Region" else "Inactive",
                                           fontSize = 11.sp,
                                           fontWeight = FontWeight.SemiBold,
-                                          color = if (isActiveRegion) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                          color = if (isActiveRegion) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                           modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                       )
                                 }
@@ -1070,7 +1134,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                             },
                                             colors = SwitchDefaults.colors(
                                                 checkedThumbColor = Color.White,
-                                                checkedTrackColor = EmeraldPrimary
+                                                checkedTrackColor = MaterialTheme.colorScheme.primary
                                             )
                                         )
                                     }
@@ -1103,7 +1167,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                 text = categoryName,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = EmeraldPrimary
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                         
@@ -1219,7 +1283,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                         },
                                         colors = SwitchDefaults.colors(
                                             checkedThumbColor = Color.White,
-                                            checkedTrackColor = EmeraldPrimary
+                                            checkedTrackColor = MaterialTheme.colorScheme.primary
                                         )
                                     )
                                 }
@@ -1254,7 +1318,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
 
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     // Delete Confirmation Dialog
     if (feedToDelete != null) {
@@ -1404,7 +1468,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     label = { Text("Feed Name  e.g. Wired Tech") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -1413,7 +1477,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     label = { Text("RSS Feed URL") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
@@ -1422,7 +1486,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     label = { Text("Tab Label  e.g. Tech, Finance") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -1449,7 +1513,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = EmeraldPrimary,
+                        containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White
                     )
                 ) {
@@ -1483,8 +1547,8 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                         Surface(
                             modifier = Modifier.clickable { selectedListCategory = category },
                             shape = RoundedCornerShape(20.dp),
-                            color = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
-                            border = BorderStroke(1.dp, if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface.copy(alpha = 0.3f),
+                            border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                         ) {
                             Text(
                                 text = category,
@@ -1516,10 +1580,10 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.RssFeed, null, tint = EmeraldPrimary, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.RssFeed, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                 }
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
@@ -1533,14 +1597,14 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = EmeraldPrimary.copy(alpha = 0.1f),
-                                        border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.15f))
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                     ) {
                                         Text(
                                             text = feed.category,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = EmeraldPrimary,
+                                            color = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -1697,8 +1761,8 @@ private fun CategoryToggleChip(label: String, isSelected: Boolean, onClick: () -
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .border(1.dp, if (isSelected) EmeraldPrimary else Color.Transparent, RoundedCornerShape(12.dp))
+            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(12.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -1759,7 +1823,7 @@ private fun SettingsSelectorField(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = EmeraldPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -1872,7 +1936,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
     )
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -1908,13 +1972,13 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(EmeraldPrimary.copy(alpha = 0.15f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -1938,7 +2002,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                         onCheckedChange = { viewModel.setAiEnabled(it) },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = EmeraldPrimary
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }
@@ -1992,7 +2056,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 modifier = Modifier.scale(0.85f),
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = EmeraldPrimary
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
@@ -2019,7 +2083,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                         text = languagesMap[targetLang] ?: "English",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = EmeraldPrimary
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                     Icon(
                                         imageVector = Icons.Default.ArrowDropDown,
@@ -2131,7 +2195,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                             modifier = Modifier.scale(0.85f),
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = EmeraldPrimary
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -2217,7 +2281,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                             modifier = Modifier.scale(0.85f),
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = EmeraldPrimary
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
                     }
@@ -2241,7 +2305,7 @@ fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewMode
     )
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -2298,7 +2362,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
     val customFeeds by viewModel.customFeeds.collectAsState()
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     var parsedFeedsToImport by remember { mutableStateOf<List<OpmlFeed>?>(null) }
     var fullBackupJsonToRestore by remember { mutableStateOf<String?>(null) }
@@ -2483,7 +2547,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                                                         selectedCategories.value = selectedCategories.value - originalCategory
                                                     }
                                                 },
-                                                colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
+                                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
@@ -2497,7 +2561,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                                             text = "$feedCount feed${if (feedCount > 1) "s" else ""}",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = EmeraldPrimary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                     
@@ -2522,7 +2586,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                                                         modifier = Modifier
                                                             .size(5.dp)
                                                             .clip(CircleShape)
-                                                            .background(EmeraldPrimary)
+                                                            .background(MaterialTheme.colorScheme.primary)
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                     Text(
@@ -2545,7 +2609,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(10.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                                         )
                                     }
                                 }
@@ -2577,7 +2641,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             },
                             enabled = selectedCategories.value.isNotEmpty(),
                             modifier = Modifier.weight(1.5f),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary, contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = Color.White),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Import Selected", fontWeight = FontWeight.Bold)
@@ -2732,13 +2796,13 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SettingsBackupRestore,
                                 contentDescription = "Import Backup",
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -2782,13 +2846,13 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Save,
                                 contentDescription = "Export Backup",
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -2841,13 +2905,13 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CloudUpload,
                                 contentDescription = "Import",
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -2891,13 +2955,13 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CloudDownload,
                                 contentDescription = "Export",
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }

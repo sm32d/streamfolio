@@ -96,4 +96,8 @@ class PreferencesHelper(context: Context) {
     var ttsSpeechRate: Float
         get() = prefs.getFloat("tts_speech_rate", 1.0f)
         set(value) = prefs.edit().putFloat("tts_speech_rate", value).apply()
+
+    var useDynamicColors: Boolean
+        get() = prefs.getBoolean("use_dynamic_colors", false)
+        set(value) = prefs.edit().putBoolean("use_dynamic_colors", value).apply()
 }

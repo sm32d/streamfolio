@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.viewmodel.compose.viewModel
 import android.content.Intent
 import androidx.lifecycle.ViewModelProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.work.*
 import uk.sume.streamfolio.ui.navigation.AppNavigation
 import uk.sume.streamfolio.ui.theme.NewsTheme
@@ -30,7 +32,8 @@ class MainActivity : ComponentActivity() {
         setupBackgroundSync()
 
         setContent {
-            NewsTheme {
+            val useDynamicColors by viewModel.useDynamicColors.collectAsState()
+            NewsTheme(dynamicColor = useDynamicColors) {
                 AppNavigation(viewModel = viewModel)
             }
         }

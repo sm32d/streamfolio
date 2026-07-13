@@ -1,4 +1,4 @@
-package uk.sume.streamfolio
+﻿package uk.sume.streamfolio
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import uk.sume.streamfolio.data.local.AppDatabase
-import uk.sume.streamfolio.ui.theme.DarkGradient
-import uk.sume.streamfolio.ui.theme.EmeraldPrimary
-import uk.sume.streamfolio.ui.theme.LightGradient
+import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+
+
 import uk.sume.streamfolio.ui.theme.NewsTheme
 
 class WidgetConfigureActivity : ComponentActivity() {
@@ -112,7 +112,7 @@ fun WidgetConfigureScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     var selectedFormat by remember { mutableStateOf("spotlight") } // "spotlight" or "list"
     var selectedCategory by remember { mutableStateOf("all") } // "all", "bookmarks", or specific category name
@@ -199,12 +199,12 @@ fun WidgetConfigureScreen(
                                 .height(90.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(
-                                    if (selectedFormat == "spotlight") EmeraldPrimary.copy(alpha = 0.15f)
+                                    if (selectedFormat == "spotlight") MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                 )
                                 .border(
                                     1.5.dp,
-                                    if (selectedFormat == "spotlight") EmeraldPrimary else Color.Transparent,
+                                    if (selectedFormat == "spotlight") MaterialTheme.colorScheme.primary else Color.Transparent,
                                     RoundedCornerShape(16.dp)
                                 )
                                 .clickable { selectedFormat = "spotlight" }
@@ -225,12 +225,12 @@ fun WidgetConfigureScreen(
                                 .height(90.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(
-                                    if (selectedFormat == "list") EmeraldPrimary.copy(alpha = 0.15f)
+                                    if (selectedFormat == "list") MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                                 )
                                 .border(
                                     1.5.dp,
-                                    if (selectedFormat == "list") EmeraldPrimary else Color.Transparent,
+                                    if (selectedFormat == "list") MaterialTheme.colorScheme.primary else Color.Transparent,
                                     RoundedCornerShape(16.dp)
                                 )
                                 .clickable { selectedFormat = "list" }
@@ -284,12 +284,12 @@ fun WidgetConfigureScreen(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
-                                        if (isSelected) EmeraldPrimary.copy(alpha = 0.12f)
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                     )
                                     .border(
                                         1.dp,
-                                        if (isSelected) EmeraldPrimary else Color.Transparent,
+                                        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                                         RoundedCornerShape(12.dp)
                                     )
                                     .clickable { selectedCategory = prefValue }
@@ -299,7 +299,7 @@ fun WidgetConfigureScreen(
                                     text = cat,
                                     fontSize = 14.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -338,12 +338,12 @@ fun WidgetConfigureScreen(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isSelected) EmeraldPrimary.copy(alpha = 0.12f)
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                     )
                                     .border(
                                         1.dp,
-                                        if (isSelected) EmeraldPrimary else Color.Transparent,
+                                        if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                                         RoundedCornerShape(10.dp)
                                     )
                                     .clickable { selectedLimit = limit }
@@ -354,7 +354,7 @@ fun WidgetConfigureScreen(
                                     text = "$limit",
                                     fontSize = 14.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -381,7 +381,7 @@ fun WidgetConfigureScreen(
                 Button(
                     onClick = { onSave(selectedFormat, selectedCategory, selectedLimit) },
                     modifier = Modifier.weight(1.5f),
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Save Widget", fontWeight = FontWeight.Bold, color = Color.White)

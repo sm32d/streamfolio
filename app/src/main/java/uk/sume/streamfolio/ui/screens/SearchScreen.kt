@@ -1,4 +1,4 @@
-package uk.sume.streamfolio.ui.screens
+﻿package uk.sume.streamfolio.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -20,9 +20,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import uk.sume.streamfolio.ui.theme.DarkGradient
-import uk.sume.streamfolio.ui.theme.EmeraldPrimary
-import uk.sume.streamfolio.ui.theme.LightGradient
+import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+
+
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLEncoder
 import android.widget.Toast
@@ -61,7 +61,7 @@ fun SearchScreen(
     }
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -108,7 +108,7 @@ fun SearchScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        tint = EmeraldPrimary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 trailingIcon = {
@@ -125,7 +125,7 @@ fun SearchScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(18.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = EmeraldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                     focusedContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -137,8 +137,8 @@ fun SearchScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
-                    color = EmeraldPrimary,
-                    trackColor = EmeraldPrimary.copy(alpha = 0.2f)
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                 )
             }
 

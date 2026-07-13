@@ -45,9 +45,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import uk.sume.streamfolio.ui.theme.DarkGradient
-import uk.sume.streamfolio.ui.theme.LightGradient
-import uk.sume.streamfolio.ui.theme.EmeraldPrimary
+import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+
+
 import uk.sume.streamfolio.ui.components.TextSkeletonLoader
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import androidx.compose.foundation.BorderStroke
@@ -92,7 +92,7 @@ fun DetailScreen(
         }
     }
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     var currentTab by remember { mutableStateOf("Reader") } // "Reader" or "Web"
     
@@ -153,7 +153,7 @@ fun DetailScreen(
                     listOf("Reader", "Web View").forEach { tab ->
                         val isSelected = (tab == "Reader" && currentTab == "Reader") || (tab == "Web View" && currentTab == "Web")
                         val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                        val tabColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        val tabColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         
                         Box(
                             modifier = Modifier
@@ -386,10 +386,10 @@ fun DetailScreen(
                                             text = tag,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = EmeraldPrimary,
+                                            color = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(EmeraldPrimary.copy(alpha = 0.08f))
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                                                 .clickable {
                                                     viewModel.setDynamicTagFilter(tag)
                                                     viewModel.selectCategory(tag)
@@ -514,7 +514,7 @@ fun DetailScreen(
                                             Icon(
                                                 imageVector = Icons.Default.AutoAwesome,
                                                 contentDescription = "AI",
-                                                tint = EmeraldPrimary,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(modifier = Modifier.width(8.dp))
@@ -529,14 +529,14 @@ fun DetailScreen(
                                         // On-Device AI Badge
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
-                                            color = EmeraldPrimary.copy(alpha = 0.15f),
-                                            border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.3f))
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                                         ) {
                                             Text(
                                                 text = "On-Device",
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = EmeraldPrimary,
+                                                color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                             )
                                         }
@@ -610,7 +610,7 @@ fun DetailScreen(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     shape = RoundedCornerShape(16.dp),
                                                     colors = ButtonDefaults.buttonColors(
-                                                        containerColor = EmeraldPrimary
+                                                        containerColor = MaterialTheme.colorScheme.primary
                                                     )
                                                 ) {
                                                     Icon(
@@ -631,7 +631,7 @@ fun DetailScreen(
                                                     CircularProgressIndicator(
                                                         modifier = Modifier.size(20.dp),
                                                         strokeWidth = 2.dp,
-                                                        color = EmeraldPrimary
+                                                        color = MaterialTheme.colorScheme.primary
                                                     )
                                                     Spacer(modifier = Modifier.width(12.dp))
                                                     Text(
@@ -650,7 +650,7 @@ fun DetailScreen(
                                                     CircularProgressIndicator(
                                                         modifier = Modifier.size(20.dp),
                                                         strokeWidth = 2.dp,
-                                                        color = EmeraldPrimary
+                                                        color = MaterialTheme.colorScheme.primary
                                                     )
                                                     Spacer(modifier = Modifier.width(12.dp))
                                                     Text(
@@ -671,7 +671,7 @@ fun DetailScreen(
                                                             Row(modifier = Modifier.fillMaxWidth()) {
                                                                 Text(
                                                                     text = "•",
-                                                                    color = EmeraldPrimary,
+                                                                    color = MaterialTheme.colorScheme.primary,
                                                                     fontWeight = FontWeight.Bold,
                                                                     fontSize = 15.sp,
                                                                     modifier = Modifier.padding(end = 8.dp)
@@ -789,10 +789,10 @@ fun DetailScreen(
                                         Card(
                                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                                             colors = CardDefaults.cardColors(
-                                                containerColor = EmeraldPrimary.copy(alpha = 0.08f)
+                                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                                             ),
                                             shape = RoundedCornerShape(12.dp),
-                                            border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.2f))
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
                                         ) {
                                             Row(
                                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -801,14 +801,14 @@ fun DetailScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.Translate,
                                                     contentDescription = null,
-                                                    tint = EmeraldPrimary,
+                                                    tint = MaterialTheme.colorScheme.primary,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
                                                     text = "Automatically translated to your target language",
                                                     fontSize = 12.sp,
-                                                    color = EmeraldPrimary,
+                                                    color = MaterialTheme.colorScheme.primary,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
@@ -916,7 +916,7 @@ fun DetailScreen(
                                 .fillMaxWidth()
                                 .align(Alignment.TopCenter)
                                 .height(3.dp),
-                            color = EmeraldPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             trackColor = Color.Transparent
                         )
                     }
@@ -1014,13 +1014,13 @@ fun DetailScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = EmeraldPrimary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Translate,
                                     contentDescription = "Translate",
-                                    tint = if (isTranslated) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    tint = if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1028,7 +1028,7 @@ fun DetailScreen(
                                 text = if (isTranslated) "Original" else "Translate",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isTranslated) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                                color = if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }

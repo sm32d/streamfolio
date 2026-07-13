@@ -62,9 +62,9 @@ import coil.request.ImageRequest
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.ui.components.SkeletonLoader
 import uk.sume.streamfolio.ui.components.SwipeableCard
-import uk.sume.streamfolio.ui.theme.DarkGradient
-import uk.sume.streamfolio.ui.theme.LightGradient
-import uk.sume.streamfolio.ui.theme.EmeraldPrimary
+import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+
+
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.BorderStroke
@@ -169,7 +169,7 @@ fun HomeScreen(
     }
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     // Derive publisher domains from current articles for publisher filter carousel
     val publishers = remember(articles) {
@@ -272,8 +272,8 @@ fun HomeScreen(
             ) {
                 categories.forEach { category ->
                     val isSelected = category == selectedCategory
-                    val tabBg = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    val tabColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    val tabColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
 
                     Tab(
                         selected = isSelected,
@@ -514,7 +514,7 @@ fun HomeScreen(
                                         val isActive = pagerState.currentPage == i
                                         val indicatorWidth = if (isActive) 24.dp else 8.dp
                                         val indicatorAlpha = if (isActive) 1f else 0.4f
-                                        val indicatorColor = if (isActive) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                                        val indicatorColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
 
                                         Box(
                                             modifier = Modifier
@@ -571,7 +571,7 @@ fun HomeScreen(
                                         viewModel.filterCategoryOnSettings = selectedCategory
                                         navController.navigate("settings_providers")
                                     },
-                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                     shape = RoundedCornerShape(12.dp),
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                                     modifier = Modifier.fillMaxWidth(0.85f)
@@ -589,7 +589,7 @@ fun HomeScreen(
                                     onClick = {
                                         navController.navigate("settings_feeds")
                                     },
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                                     shape = RoundedCornerShape(12.dp),
                                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                                     modifier = Modifier.fillMaxWidth(0.85f)
@@ -598,10 +598,10 @@ fun HomeScreen(
                                         imageVector = Icons.Outlined.BookmarkAdd,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp),
-                                        tint = EmeraldPrimary
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Add Custom RSS Feed", fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                                    Text("Add Custom RSS Feed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
@@ -635,7 +635,7 @@ fun HomeScreen(
                                 ) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(28.dp),
-                                        color = EmeraldPrimary,
+                                        color = MaterialTheme.colorScheme.primary,
                                         strokeWidth = 3.dp
                                     )
                                 }
@@ -767,7 +767,7 @@ fun TrendingCard(
                         text = "Trending",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -837,7 +837,7 @@ fun TrendingCard(
                     Icon(
                         imageVector = Icons.Filled.PlayArrow,
                         contentDescription = "Play Now",
-                        tint = Color.White,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -1531,8 +1531,8 @@ fun TagFilterPillsRow(
         ) {
             items(tags) { tag ->
                 val isSelected = selectedTag == tag
-                val bg = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                val textCol = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                val bg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                val textCol = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
 
                 Row(
                     modifier = Modifier

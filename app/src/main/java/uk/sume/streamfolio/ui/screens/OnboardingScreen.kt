@@ -83,10 +83,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import uk.sume.streamfolio.ui.theme.DarkGradient
-import uk.sume.streamfolio.ui.theme.EmeraldPrimary
-import uk.sume.streamfolio.ui.theme.EmeraldSecondary
-import uk.sume.streamfolio.ui.theme.LightGradient
+import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+
+
+
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -167,7 +167,7 @@ fun OnboardingScreen(navController: NavController, viewModel: NewsViewModel) {
     )
 
     val isDark = isSystemInDarkTheme()
-    val bgBrush = if (isDark) DarkGradient else LightGradient
+    val bgBrush = getThemeBackgroundBrush()
 
     Box(
         modifier = Modifier
@@ -314,8 +314,8 @@ private fun StepIndicator(currentStep: Int, totalSteps: Int) {
                     .clip(CircleShape)
                     .background(
                         when {
-                            isActive -> EmeraldPrimary
-                            isPassed -> EmeraldPrimary.copy(alpha = 0.5f)
+                            isActive -> MaterialTheme.colorScheme.primary
+                            isPassed -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                             else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                         }
                     )
@@ -370,14 +370,14 @@ private fun BottomNavigation(
                 .scale(buttonScale),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = EmeraldPrimary
+                containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
             Text(
                 text = if (isFinalStep) "Start Reading →" else "Continue →",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onPrimary
             )
         }
     }
@@ -539,7 +539,7 @@ private fun ImportBackupStep(
                                                         selectedCategories.value = selectedCategories.value - originalCategory
                                                     }
                                                 },
-                                                colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
+                                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
@@ -553,7 +553,7 @@ private fun ImportBackupStep(
                                             text = "$feedCount feed${if (feedCount > 1) "s" else ""}",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium,
-                                            color = EmeraldPrimary
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                     
@@ -578,7 +578,7 @@ private fun ImportBackupStep(
                                                         modifier = Modifier
                                                             .size(5.dp)
                                                             .clip(CircleShape)
-                                                            .background(EmeraldPrimary)
+                                                            .background(MaterialTheme.colorScheme.primary)
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                     Text(
@@ -601,7 +601,7 @@ private fun ImportBackupStep(
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(10.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = EmeraldPrimary)
+                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                                         )
                                     }
                                 }
@@ -634,7 +634,7 @@ private fun ImportBackupStep(
                             },
                             enabled = selectedCategories.value.isNotEmpty(),
                             modifier = Modifier.weight(1.5f),
-                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary, contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text("Import Selected", fontWeight = FontWeight.Bold)
@@ -657,7 +657,7 @@ private fun ImportBackupStep(
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(EmeraldPrimary, EmeraldSecondary)
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -712,13 +712,13 @@ private fun ImportBackupStep(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.SettingsBackupRestore,
                         contentDescription = "Restore Full Backup",
-                        tint = EmeraldPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -763,13 +763,13 @@ private fun ImportBackupStep(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(EmeraldPrimary.copy(alpha = 0.1f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CloudUpload,
                         contentDescription = "Import OPML",
-                        tint = EmeraldPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -817,7 +817,7 @@ private fun WelcomeStep(systemLocale: Locale) {
                 .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.linearGradient(
-                        listOf(EmeraldPrimary, EmeraldSecondary)
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                     )
                 ),
             contentAlignment = Alignment.Center
@@ -970,13 +970,13 @@ private fun DefaultFeedsAndCacheStep(
                 .clip(RoundedCornerShape(18.dp))
                 .background(
                     if (isEnabled)
-                        EmeraldPrimary.copy(alpha = 0.08f)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                     else
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 )
                 .border(
                     1.dp,
-                    if (isEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+                    if (isEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent,
                     RoundedCornerShape(18.dp)
                 )
                 .clickable(
@@ -993,7 +993,7 @@ private fun DefaultFeedsAndCacheStep(
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            if (isEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            if (isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1024,7 +1024,7 @@ private fun DefaultFeedsAndCacheStep(
                 onCheckedChange = onToggle,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = EmeraldPrimary
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
                 )
             )
         }
@@ -1179,11 +1179,11 @@ private fun CategoryChip(label: String, isSelected: Boolean, onClick: () -> Unit
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(
-                if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             )
             .border(
                 1.dp,
-                if (isSelected) EmeraldPrimary else Color.Transparent,
+                if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                 RoundedCornerShape(12.dp)
             )
             .clickable(
@@ -1199,13 +1199,13 @@ private fun CategoryChip(label: String, isSelected: Boolean, onClick: () -> Unit
             text = label,
             fontSize = 13.sp,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
         )
         if (isSelected) {
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.85f),
+                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -1252,7 +1252,7 @@ fun SelectorField(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = EmeraldPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(12.dp))
@@ -1338,13 +1338,13 @@ private fun AiFeaturesStep(
                 .clip(RoundedCornerShape(18.dp))
                 .background(
                     if (isAiEnabled)
-                        EmeraldPrimary.copy(alpha = 0.08f)
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                     else
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 )
                 .border(
                     1.dp,
-                    if (isAiEnabled) EmeraldPrimary.copy(alpha = 0.3f) else Color.Transparent,
+                    if (isAiEnabled) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent,
                     RoundedCornerShape(18.dp)
                 )
                 .clickable { onAiToggle(!isAiEnabled) }
@@ -1358,7 +1358,7 @@ private fun AiFeaturesStep(
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            if (isAiEnabled) EmeraldPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+                            if (isAiEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1389,7 +1389,7 @@ private fun AiFeaturesStep(
                 onCheckedChange = onAiToggle,
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = Color.White,
-                    checkedTrackColor = EmeraldPrimary
+                    checkedTrackColor = MaterialTheme.colorScheme.primary
                 )
             )
         }
@@ -1529,7 +1529,7 @@ private fun SubToggleRow(
             modifier = Modifier.scale(0.85f),
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = EmeraldPrimary
+                checkedTrackColor = MaterialTheme.colorScheme.primary
             )
         )
     }

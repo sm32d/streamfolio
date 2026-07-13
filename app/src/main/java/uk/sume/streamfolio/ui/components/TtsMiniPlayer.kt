@@ -222,14 +222,14 @@ fun TtsLyricsVisualizer(
     }
 
     val isDark = isSystemInDarkTheme()
-    val visualizerBg = if (isDark) Color(0xFF070B13) else MaterialTheme.colorScheme.surface
+    val visualizerBg = if (isDark) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surface
     val activeTextColor = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
     val radialSpotColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.15f else 0.08f)
     val controlBtnBg = if (isDark) Color.White.copy(alpha = 0.08f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
     val iconTint = if (isDark) Color.White else MaterialTheme.colorScheme.onSurface
     val queueActiveBg = if (isDark) Color.White.copy(alpha = 0.08f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
     val queueInactiveBg = if (isDark) Color.White.copy(alpha = 0.03f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.03f)
-    val bottomDockBg = if (isDark) Color(0xFF161E2E).copy(alpha = 0.95f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
+    val bottomDockBg = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
     val dockIconTint = if (isDark) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
 
     Box(
@@ -555,8 +555,9 @@ fun TtsLyricsVisualizer(
                                 val size = if (isActive) 23.sp else 19.sp
                                 val weight = if (isActive) FontWeight.Bold else FontWeight.Medium
                                 val color = if (isActive) activeTextColor else activeTextColor.copy(alpha = alpha)
+                                val highlightColor = MaterialTheme.colorScheme.primary
 
-                                val annotatedText = remember(paragraph, isActive, currentWordRange) {
+                                val annotatedText = remember(paragraph, isActive, currentWordRange, highlightColor) {
                                     buildAnnotatedString {
                                         if (isActive && currentWordRange != null) {
                                             val (start, end) = currentWordRange!!
@@ -564,7 +565,7 @@ fun TtsLyricsVisualizer(
                                                 append(paragraph.substring(0, start))
                                                 withStyle(
                                                     SpanStyle(
-                                                        color = Color(0xFF10B981), // Premium emerald green spoken highlighting
+                                                        color = highlightColor,
                                                         fontWeight = FontWeight.Black
                                                     )
                                                 ) {

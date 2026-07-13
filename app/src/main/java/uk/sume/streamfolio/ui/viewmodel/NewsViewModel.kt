@@ -594,8 +594,16 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _swipeRightAction = MutableStateFlow(prefs.swipeRightAction)
     val swipeRightAction: StateFlow<String> = _swipeRightAction.asStateFlow()
 
+    private val _useDynamicColors = MutableStateFlow(prefs.useDynamicColors)
+    val useDynamicColors: StateFlow<Boolean> = _useDynamicColors.asStateFlow()
+
     fun setTtsSpeechRate(rate: Float) {
         playbackManager.setTtsSpeechRate(rate)
+    }
+
+    fun setUseDynamicColors(enabled: Boolean) {
+        prefs.useDynamicColors = enabled
+        _useDynamicColors.value = enabled
     }
 
     fun setSwipeLeftAction(action: String) {
