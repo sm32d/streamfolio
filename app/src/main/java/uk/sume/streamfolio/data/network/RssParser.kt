@@ -49,7 +49,7 @@ class RssParser {
     /**
      * Unified parser supporting standard RSS (<channel>/<item>) and Atom (<feed>/<entry>) formats.
      */
-    fun parse(xmlContent: String, category: String, customFeedId: Int? = null, feedUrl: String? = null): List<Article> {
+    fun parse(xmlContent: String, category: String, customFeedId: Int? = null, feedUrl: String? = null, customFeedTitle: String? = null): List<Article> {
         val articles = mutableListOf<Article>()
         var channelTitle = "Unknown Source"
         try {
@@ -138,7 +138,7 @@ class RssParser {
                     XmlPullParser.END_TAG -> {
                         if ((name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) && 
                             currentArticleBuilder != null) {
-                            val article = currentArticleBuilder.build(category, customFeedId, channelTitle)
+                            val article = currentArticleBuilder.build(category, customFeedId, channelTitle, customFeedTitle)
                             if (article != null) {
                                 articles.add(article)
                             }
@@ -188,12 +188,12 @@ class RssParser {
             return name
         }
 
-        fun build(category: String, customFeedId: Int? = null, channelFallback: String = "Unknown Source"): Article? {
+        fun build(category: String, customFeedId: Int? = null, channelFallback: String = "Unknown Source", customFeedTitle: String? = null): Article? {
             val articleLink = link ?: return null
             val rawTitle = title ?: "No Title"
             
             var cleanTitle = rawTitle
-            var cleanSource = sourceName ?: channelFallback
+            var cleanSource = customFeedTitle ?: sourceName ?: channelFallback
             if (cleanSource.isBlank()) {
                 cleanSource = channelFallback
             }
@@ -204,9 +204,9 @@ class RssParser {
             
             // Try resolving publisher from URL domains (robust for curated feeds)
             val resolvedName = DefaultFeedsConfig.getPublisherName(articleLink)
-            if (resolvedName != "Unknown Source") {
+            if (resolvedName != "Unknown Source" && customFeedTitle == null) {
                 cleanSource = resolvedName
-            } else {
+            } else if (customFeedTitle == null) {
                 cleanSource = cleanPublisherName(cleanSource)
             }
             

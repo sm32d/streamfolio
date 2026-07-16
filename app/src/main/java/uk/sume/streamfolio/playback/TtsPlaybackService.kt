@@ -236,6 +236,7 @@ class TtsPlaybackService : Service() {
     private fun createContentIntent(): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            setPackage(packageName)
         }
         return PendingIntent.getActivity(
             this,
@@ -248,6 +249,7 @@ class TtsPlaybackService : Service() {
     private fun createServicePendingIntent(action: String): PendingIntent {
         val intent = Intent(this, TtsPlaybackService::class.java).apply {
             this.action = action
+            setPackage(packageName)
         }
         return PendingIntent.getService(
             this,

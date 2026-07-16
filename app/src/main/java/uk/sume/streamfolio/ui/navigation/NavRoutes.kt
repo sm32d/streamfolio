@@ -415,7 +415,15 @@ fun AppNavigation(viewModel: NewsViewModel) {
             }
         }
 
-        val showMiniPlayer = currentRoute != null && !currentRoute.startsWith("settings") && currentRoute != "onboarding"
+        val ttsPlaylist by viewModel.ttsPlaylist.collectAsState()
+        val currentTtsArticleIndex by viewModel.currentTtsArticleIndex.collectAsState()
+        val showMiniPlayer = currentRoute != null && 
+                !currentRoute.startsWith("settings") && 
+                currentRoute != "onboarding" &&
+                ttsPlaylist.isNotEmpty() &&
+                currentTtsArticleIndex != -1 &&
+                currentTtsArticleIndex < ttsPlaylist.size
+
 
         val animatedBottomOffset by animateDpAsState(
             targetValue = if (showBottomBar) 108.dp else 20.dp,

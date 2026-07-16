@@ -1,4 +1,4 @@
-﻿package uk.sume.streamfolio.ui.screens
+package uk.sume.streamfolio.ui.screens
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -36,7 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
@@ -44,6 +46,7 @@ import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
 
 
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import kotlinx.coroutines.launch
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
@@ -110,7 +113,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 CardDivider()
                 SettingsRow(
                     icon = Icons.Default.Swipe,
-                    iconBg = Color(0xFFEC4899),
+                    iconBg = MaterialTheme.colorScheme.secondary,
                     title = "Swipe Gestures",
                     subtitle = "Customize left & right swipe actions",
                     onClick = { navController.navigate("settings_gestures") }
@@ -125,7 +128,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.List,
-                    iconBg = Color(0xFF6366F1),
+                    iconBg = MaterialTheme.colorScheme.tertiary,
                     title = "Manage Content & Sources",
                     subtitle = "Customise topics and curation channels",
                     onClick = { navController.navigate("settings_categories") }
@@ -133,7 +136,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 CardDivider()
                 SettingsRow(
                     icon = Icons.Default.RssFeed,
-                    iconBg = Color(0xFFF59E0B),
+                    iconBg = MaterialTheme.colorScheme.primary,
                     title = "Custom RSS Feeds",
                     subtitle = "Add and manage private RSS publishers",
                     onClick = { navController.navigate("settings_feeds") }
@@ -141,7 +144,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 CardDivider()
                 SettingsRow(
                     icon = Icons.Default.Backup,
-                    iconBg = Color(0xFF10B981),
+                    iconBg = MaterialTheme.colorScheme.secondary,
                     title = "Backup & Restore",
                     subtitle = "Import/export feeds and settings backup",
                     onClick = { navController.navigate("settings_backup") }
@@ -156,10 +159,11 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.AutoAwesome,
-                    iconBg = Color(0xFF8B5CF6),
+                    iconBg = MaterialTheme.colorScheme.tertiary,
                     title = "AI Services & Preferences",
                     subtitle = "Offline translation, key insights & smart tags",
                     onClick = { navController.navigate("settings_ai") }
+
                 )
             }
 
@@ -206,7 +210,27 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                         )
                     }
                 }
+                CardDivider()
+                val context = LocalContext.current
+                SettingsRow(
+                    icon = Icons.Default.Email,
+                    iconBg = MaterialTheme.colorScheme.primary,
+                    title = "Contact Us",
+                    subtitle = "sfolio@sume.uk",
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = Uri.parse("mailto:sfolio@sume.uk")
+                                putExtra(Intent.EXTRA_SUBJECT, "StreamFolio Feedback")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Could not open mail app", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
             }
+
 
             Spacer(modifier = Modifier.height(28.dp))
             SectionLabel("More from Dominik Studios")
@@ -415,7 +439,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF8B5CF6)),
+                                .background(MaterialTheme.colorScheme.primary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -425,6 +449,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
                             Text(
@@ -630,7 +655,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
             SettingsCard {
                 SettingsRow(
                     icon = Icons.Default.Sort,
-                    iconBg = Color(0xFF3B82F6),
+                    iconBg = MaterialTheme.colorScheme.secondary,
                     title = "Reorder Category Tabs",
                     subtitle = "Adjust the position and priority of your category tabs",
                     onClick = { navController.navigate("settings_reorder") }
@@ -638,11 +663,12 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                 CardDivider()
                 SettingsRow(
                     icon = Icons.Default.Widgets,
-                    iconBg = Color(0xFF10B981),
+                    iconBg = MaterialTheme.colorScheme.tertiary,
                     title = "Default Feed Providers",
                     subtitle = "Enable or disable curated news publishers",
                     onClick = { navController.navigate("settings_providers") }
                 )
+
             }
         }
     }
@@ -1309,16 +1335,244 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
 fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) {
     val customFeeds by viewModel.customFeeds.collectAsState()
 
-    var feedTitle by remember { mutableStateOf("") }
-    var feedUrl by remember { mutableStateOf("") }
-    var feedCategory by remember { mutableStateOf("") }
-
+    var showAddSheet by remember { mutableStateOf(false) }
+    var feedToEdit by remember { mutableStateOf<CustomFeed?>(null) }
     var feedToDelete by remember { mutableStateOf<CustomFeed?>(null) }
     var selectedListCategory by remember { mutableStateOf("All") }
+
+    // State for Adding Feed
+    var addTitle by remember { mutableStateOf("") }
+    var addUrl by remember { mutableStateOf("") }
+    var addCategory by remember { mutableStateOf("") }
+
+    // State for Editing Feed
+    var editTitle by remember { mutableStateOf("") }
+    var editUrl by remember { mutableStateOf("") }
+    var editCategory by remember { mutableStateOf("") }
+
+    LaunchedEffect(feedToEdit) {
+        feedToEdit?.let {
+            editTitle = it.title
+            editUrl = it.url
+            editCategory = it.category
+        }
+    }
 
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
+
+    // Add Custom Feed Sheet
+    if (showAddSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { 
+                showAddSheet = false
+                addTitle = ""; addUrl = ""; addCategory = ""
+            },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Add New Feed",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedTextField(
+                    value = addTitle,
+                    onValueChange = { addTitle = it },
+                    label = { Text("Feed Name  e.g. Wired Tech") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = addUrl,
+                    onValueChange = { addUrl = it },
+                    label = { Text("RSS Feed URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = addCategory,
+                    onValueChange = { addCategory = it },
+                    label = { Text("Tab Label  e.g. Tech, Finance") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                val canAdd = addTitle.isNotBlank() && addUrl.isNotBlank() && addCategory.isNotBlank()
+                Button(
+                    onClick = {
+                        if (canAdd) {
+                            var formattedUrl = addUrl.trim()
+                            if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                                formattedUrl = "https://$formattedUrl"
+                            }
+                            viewModel.addCustomRssFeed(
+                                title = addTitle.trim(),
+                                url = formattedUrl,
+                                category = addCategory.trim()
+                            )
+                            showAddSheet = false
+                            addTitle = ""; addUrl = ""; addCategory = ""
+                        }
+                    },
+                    enabled = canAdd,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Add Feed", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+
+    // Edit Custom Feed Sheet
+    if (feedToEdit != null) {
+        val originalFeed = feedToEdit!!
+        ModalBottomSheet(
+            onDismissRequest = { 
+                feedToEdit = null
+            },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Edit Feed",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedTextField(
+                    value = editTitle,
+                    onValueChange = { editTitle = it },
+                    label = { Text("Feed Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = editUrl,
+                    onValueChange = { editUrl = it },
+                    label = { Text("RSS Feed URL") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = editCategory,
+                    onValueChange = { editCategory = it },
+                    label = { Text("Tab Label") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                val canSave = editTitle.isNotBlank() && editUrl.isNotBlank() && editCategory.isNotBlank()
+                Button(
+                    onClick = {
+                        if (canSave) {
+                            var formattedUrl = editUrl.trim()
+                            if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+                                formattedUrl = "https://$formattedUrl"
+                            }
+                            val updatedFeed = originalFeed.copy(
+                                title = editTitle.trim(),
+                                url = formattedUrl,
+                                category = editCategory.trim()
+                            )
+                            viewModel.updateCustomRssFeed(updatedFeed)
+                            feedToEdit = null
+                        }
+                    },
+                    enabled = canSave,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Save Changes", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
 
     // Delete Confirmation Dialog
     if (feedToDelete != null) {
@@ -1342,13 +1596,13 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
+                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
                             contentDescription = null,
-                            tint = Color(0xFFEF5350),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -1394,10 +1648,10 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                             feedToDelete = null
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Delete", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Delete", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
                     }
                 }
             }
@@ -1413,12 +1667,26 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .imePadding()
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 120.dp)
         ) {
-            SubPageTopBar(title = "Custom RSS Feeds", onBack = { navController.popBackStack() })
+            SubPageTopBar(
+                title = "Custom RSS Feeds",
+                onBack = { navController.popBackStack() },
+                trailingContent = {
+                    IconButton(
+                        onClick = { showAddSheet = true },
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Feed",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            )
 
             SettingsSubHeader(
                 title = "Custom RSS Feeds",
@@ -1426,104 +1694,9 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                 icon = Icons.Default.RssFeed
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Add Custom Feed form card
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                    .border(
-                        1.dp,
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                        RoundedCornerShape(20.dp)
-                    )
-                    .padding(20.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFF59E0B)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Add New Feed",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                OutlinedTextField(
-                    value = feedTitle,
-                    onValueChange = { feedTitle = it },
-                    label = { Text("Feed Name  e.g. Wired Tech") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = feedUrl,
-                    onValueChange = { feedUrl = it },
-                    label = { Text("RSS Feed URL") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = feedCategory,
-                    onValueChange = { feedCategory = it },
-                    label = { Text("Tab Label  e.g. Tech, Finance") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                val canAdd = feedTitle.isNotBlank() && feedUrl.isNotBlank() && feedCategory.isNotBlank()
-                Button(
-                    onClick = {
-                        if (canAdd) {
-                            var formattedUrl = feedUrl.trim()
-                            if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                                formattedUrl = "https://$formattedUrl"
-                            }
-                            viewModel.addCustomRssFeed(
-                                title = feedTitle.trim(),
-                                url = formattedUrl,
-                                category = feedCategory.trim()
-                            )
-                            feedTitle = ""; feedUrl = ""; feedCategory = ""
-                        }
-                    },
-                    enabled = canAdd,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Add Feed", fontWeight = FontWeight.Bold)
-                }
-            }
-
-            // Custom feeds list
+            // Custom feeds list / empty state
             if (customFeeds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 SectionLabel("Active Feeds  ·  ${customFeeds.size}")
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -1566,92 +1739,169 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     else customFeeds.filter { it.category == selectedListCategory }
                 }
 
-                SettingsCard {
-                    filteredFeeds.forEachIndexed { index, feed ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 18.dp, vertical = 14.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.RssFeed, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(feed.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                                    Text(
-                                        feed.url,
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                                        maxLines = 1
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 120.dp)
+                ) {
+                    SettingsCard {
+                        filteredFeeds.forEachIndexed { index, feed ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                        contentAlignment = Alignment.Center
                                     ) {
+                                        Icon(Icons.Default.RssFeed, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(feed.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                                         Text(
-                                            text = feed.category,
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            feed.url,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                        ) {
+                                            Text(
+                                                text = feed.category,
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { feedToEdit = feed }) {
+                                        Icon(Icons.Default.Edit, "Edit Feed", tint = MaterialTheme.colorScheme.primary)
+                                    }
+                                    IconButton(onClick = { feedToDelete = feed }) {
+                                        Icon(Icons.Default.Delete, "Delete Feed", tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
-                            IconButton(onClick = { feedToDelete = feed }) {
-                                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
-                            }
+                            if (index < filteredFeeds.lastIndex) CardDivider()
                         }
-                        if (index < filteredFeeds.lastIndex) CardDivider()
                     }
                 }
             } else {
-                Spacer(modifier = Modifier.height(28.dp))
-                InfoNote("No custom feeds yet. Add one above to create custom category tabs on the home screen.")
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(bottom = 80.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RssFeed,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = "No custom feeds yet",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Add RSS publishers to build personalized news categories on your home dashboard screen.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+                        Spacer(modifier = Modifier.height(28.dp))
+                        Button(
+                            onClick = { showAddSheet = true },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.height(48.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Add Your First Feed", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 
+
 // ─── Shared Components ───────────────────────────────────────────────────────
 
 @Composable
-private fun SubPageTopBar(title: String, onBack: () -> Unit) {
+private fun SubPageTopBar(
+    title: String,
+    onBack: () -> Unit,
+    trailingContent: @Composable (RowScope.() -> Unit)? = null
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, bottom = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                tint = MaterialTheme.colorScheme.onSurface
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                text = title,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(start = 4.dp)
             )
         }
-        Text(
-            text = title,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(start = 4.dp)
-        )
+        if (trailingContent != null) {
+            Row(content = trailingContent)
+        }
     }
 }
+
 
 @Composable
 private fun SectionLabel(text: String) {
@@ -2025,13 +2275,13 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFF3B82F6).copy(alpha = 0.15f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Translate,
                                         contentDescription = null,
-                                        tint = Color(0xFF3B82F6),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -2051,13 +2301,13 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 }
                             }
                             Switch(
-                                checked = isTranslationEnabled,
-                                onCheckedChange = { viewModel.setTranslationEnabled(it) },
-                                modifier = Modifier.scale(0.85f),
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary
-                                )
+                                  checked = isTranslationEnabled,
+                                  onCheckedChange = { viewModel.setTranslationEnabled(it) },
+                                  modifier = Modifier.scale(0.85f),
+                                  colors = SwitchDefaults.colors(
+                                      checkedThumbColor = Color.White,
+                                      checkedTrackColor = MaterialTheme.colorScheme.primary
+                                  )
                             )
                         }
 
@@ -2097,7 +2347,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF3B82F6).copy(alpha = 0.08f)
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -2106,11 +2356,12 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     Icon(
                                         imageVector = Icons.Default.Info,
                                         contentDescription = null,
-                                        tint = Color(0xFF3B82F6),
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier
                                             .size(16.dp)
                                             .padding(top = 1.dp)
                                     )
+
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "First-time translation downloads a language pack of about 30MB and needs an internet connection. After download, translations run offline on-device.",
@@ -2156,7 +2407,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isGeminiAvail) Color(0xFF10B981).copy(alpha = 0.15f)
+                                        if (isGeminiAvail) MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -2164,7 +2415,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.AutoAwesome,
                                     contentDescription = null,
-                                    tint = if (isGeminiAvail) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    tint = if (isGeminiAvail) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -2215,7 +2466,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isGeminiAvail) Color(0xFF8B5CF6).copy(alpha = 0.15f)
+                                        if (isGeminiAvail) MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
                                         else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -2223,7 +2474,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 Icon(
                                     imageVector = Icons.Default.Category,
                                     contentDescription = null,
-                                    tint = if (isGeminiAvail) Color(0xFF8B5CF6) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    tint = if (isGeminiAvail) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -2239,14 +2490,14 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     if (isGeminiAvail) {
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                            color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f),
                                             modifier = Modifier.padding(start = 6.dp)
                                         ) {
                                             Text(
                                                 text = "BETA",
                                                 fontSize = 8.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFFD97706),
+                                                color = MaterialTheme.colorScheme.tertiary,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
@@ -2270,7 +2521,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     },
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFD97706)
+                                    color = MaterialTheme.colorScheme.tertiary
                                 )
                             }
                         }
@@ -2363,6 +2614,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
+    val scope = rememberCoroutineScope()
 
     var parsedFeedsToImport by remember { mutableStateOf<List<OpmlFeed>?>(null) }
     var fullBackupJsonToRestore by remember { mutableStateOf<String?>(null) }
@@ -2429,9 +2681,8 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
         }
     }
 
-    fun exportFullBackup(feeds: List<CustomFeed>) {
+    fun exportFullBackup(backupJson: String) {
         try {
-            val backupJson = uk.sume.streamfolio.util.BackupHelper.generateBackupJson(context, feeds)
             val tempFile = File(context.cacheDir, "streamfolio_backup.json")
             tempFile.writeText(backupJson)
             
@@ -2675,13 +2926,13 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
+                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Warning,
                             contentDescription = null,
-                            tint = Color(0xFFEF5350),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -2735,11 +2986,12 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             fullBackupJsonToRestore = null
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Restore", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Restore", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
                     }
+
                 }
             }
         }
@@ -2828,7 +3080,16 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                 Card(
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { exportFullBackup(customFeeds) },
+                        .clickable {
+                            scope.launch {
+                                try {
+                                    val backupJson = viewModel.generateBackupJson()
+                                    exportFullBackup(backupJson)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Failed to create backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)

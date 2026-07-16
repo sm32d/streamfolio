@@ -4,14 +4,15 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.sume.streamfolio.data.local.PreferencesHelper
+import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 
 object BackupHelper {
 
-    fun generateBackupJson(context: Context, customFeeds: List<CustomFeed>): String {
+    fun generateBackupJson(context: Context, customFeeds: List<CustomFeed>, articles: List<Article>): String {
         val prefs = PreferencesHelper(context)
         val backupObj = JSONObject()
-        backupObj.put("version", 1)
+        backupObj.put("version", 2)
 
         val prefsObj = JSONObject().apply {
             put("language", prefs.language)
@@ -32,6 +33,8 @@ object BackupHelper {
             put("has_seen_ai_spotlight", prefs.hasSeenAiSpotlight)
             put("swipe_left_action", prefs.swipeLeftAction)
             put("swipe_right_action", prefs.swipeRightAction)
+            put("tts_speech_rate", prefs.ttsSpeechRate.toDouble())
+            put("use_dynamic_colors", prefs.useDynamicColors)
         }
         backupObj.put("preferences", prefsObj)
 
@@ -46,11 +49,38 @@ object BackupHelper {
         }
         backupObj.put("custom_feeds", feedsArr)
 
+        val articlesArr = JSONArray()
+        for (article in articles) {
+            val articleObj = JSONObject().apply {
+                put("link", article.link)
+                put("title", article.title)
+                put("description", article.description)
+                put("pubDate", article.pubDate)
+                put("sourceName", article.sourceName)
+                put("sourceUrl", article.sourceUrl)
+                put("category", article.category)
+                put("thumbnailUrl", article.thumbnailUrl ?: JSONObject.NULL)
+                put("isBookmarked", article.isBookmarked)
+                put("customFeedId", article.customFeedId ?: JSONObject.NULL)
+                put("fullText", article.fullText ?: JSONObject.NULL)
+                put("tags", article.tags ?: JSONObject.NULL)
+                put("aiSummary", article.aiSummary ?: JSONObject.NULL)
+                put("translatedTitle", article.translatedTitle ?: JSONObject.NULL)
+                put("translatedBody", article.translatedBody ?: JSONObject.NULL)
+                put("translatedLanguage", article.translatedLanguage ?: JSONObject.NULL)
+                put("detectedLanguage", article.detectedLanguage ?: JSONObject.NULL)
+                put("isRead", article.isRead)
+            }
+            articlesArr.put(articleObj)
+        }
+        backupObj.put("articles", articlesArr)
+
         return backupObj.toString(4)
     }
 
     data class ParsedBackup(
         val customFeeds: List<CustomFeed>,
+        val articles: List<Article>,
         val applyPreferences: (PreferencesHelper) -> Unit
     )
 
@@ -66,6 +96,36 @@ object BackupHelper {
                         title = feedObj.getString("title"),
                         url = feedObj.getString("url"),
                         category = feedObj.getString("category")
+                    )
+                )
+            }
+        }
+
+        val restoredArticles = mutableListOf<Article>()
+        if (backupObj.has("articles")) {
+            val articlesArr = backupObj.getJSONArray("articles")
+            for (i in 0 until articlesArr.length()) {
+                val articleObj = articlesArr.getJSONObject(i)
+                restoredArticles.add(
+                    Article(
+                        link = articleObj.getString("link"),
+                        title = articleObj.getString("title"),
+                        description = articleObj.getString("description"),
+                        pubDate = articleObj.getString("pubDate"),
+                        sourceName = articleObj.getString("sourceName"),
+                        sourceUrl = articleObj.getString("sourceUrl"),
+                        category = articleObj.getString("category"),
+                        thumbnailUrl = if (articleObj.isNull("thumbnailUrl")) null else articleObj.getString("thumbnailUrl"),
+                        isBookmarked = articleObj.getBoolean("isBookmarked"),
+                        customFeedId = if (articleObj.isNull("customFeedId")) null else articleObj.getInt("customFeedId"),
+                        fullText = if (articleObj.isNull("fullText")) null else articleObj.getString("fullText"),
+                        tags = if (articleObj.isNull("tags")) null else articleObj.getString("tags"),
+                        aiSummary = if (articleObj.isNull("aiSummary")) null else articleObj.getString("aiSummary"),
+                        translatedTitle = if (articleObj.isNull("translatedTitle")) null else articleObj.getString("translatedTitle"),
+                        translatedBody = if (articleObj.isNull("translatedBody")) null else articleObj.getString("translatedBody"),
+                        translatedLanguage = if (articleObj.isNull("translatedLanguage")) null else articleObj.getString("translatedLanguage"),
+                        detectedLanguage = if (articleObj.isNull("detectedLanguage")) null else articleObj.getString("detectedLanguage"),
+                        isRead = if (articleObj.has("isRead")) articleObj.getBoolean("isRead") else false
                     )
                 )
             }
@@ -166,6 +226,6 @@ object BackupHelper {
             }
         }
 
-        return ParsedBackup(customFeeds, applyPrefs)
+        return ParsedBackup(customFeeds, restoredArticles, applyPrefs)
     }
 }

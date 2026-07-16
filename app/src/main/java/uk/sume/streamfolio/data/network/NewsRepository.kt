@@ -122,7 +122,7 @@ class NewsRepository(private val context: Context) {
                                         client.newCall(childRequest).execute().use { childResponse ->
                                             if (childResponse.isSuccessful) {
                                                 val childXml = childResponse.body?.string() ?: ""
-                                                val childArticles = parser.parse(childXml, feed.category, feed.id, feedUrl = formattedChildUrl)
+                                                val childArticles = parser.parse(childXml, feed.category, feed.id, feedUrl = formattedChildUrl, customFeedTitle = feed.title)
                                                 aggregated.addAll(childArticles)
                                             }
                                         }
@@ -132,7 +132,7 @@ class NewsRepository(private val context: Context) {
                                 }
                                 aggregated
                             } else {
-                                parser.parse(xml, feed.category, feed.id, feedUrl = url)
+                                parser.parse(xml, feed.category, feed.id, feedUrl = url, customFeedTitle = feed.title)
                             }
                             feedArticles.addAll(parsed)
                         }
@@ -752,6 +752,14 @@ class NewsRepository(private val context: Context) {
     suspend fun addCustomFeeds(feeds: List<CustomFeed>) = customFeedDao.insertFeeds(feeds)
     suspend fun deleteCustomFeed(feed: CustomFeed) = customFeedDao.deleteFeed(feed)
     suspend fun deleteAllCustomFeeds() = customFeedDao.deleteAllFeeds()
+
+    suspend fun getBookmarkedAndReadArticles(): List<Article> = withContext(Dispatchers.IO) {
+        articleDao.getBookmarkedAndReadArticlesSync()
+    }
+
+    suspend fun restoreArticles(articles: List<Article>) = withContext(Dispatchers.IO) {
+        articleDao.insertArticles(articles)
+    }
 
     suspend fun deleteArticlesForFeed(sourceUrl: String) = withContext(Dispatchers.IO) {
         articleDao.deleteArticlesBySourceUrl(sourceUrl)

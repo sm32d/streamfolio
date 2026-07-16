@@ -484,6 +484,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateCustomRssFeed(feed: CustomFeed) {
+        viewModelScope.launch {
+            repository.addCustomFeed(feed)
+            refreshCurrentFeed()
+        }
+    }
+
+
     fun importCustomRssFeeds(feeds: List<OpmlFeed>, categoryMapping: Map<String, String>, selectedCategories: Set<String>) {
         viewModelScope.launch {
             val existingFeeds = repository.getAllCustomFeedsSync()
@@ -526,6 +534,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         playbackManager.setTtsSpeechRate(prefs.ttsSpeechRate)
     }
 
+    suspend fun generateBackupJson(): String {
+        val feeds = repository.getAllCustomFeedsSync()
+        val articles = repository.getBookmarkedAndReadArticles()
+        return uk.sume.streamfolio.util.BackupHelper.generateBackupJson(getApplication(), feeds, articles)
+    }
+
     fun restoreSettingsBackup(backupJson: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
         android.util.Log.d("StreamFolioBackup", "Restoring backup JSON: $backupJson")
         viewModelScope.launch {
@@ -533,6 +547,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 repository.deleteAllCustomFeeds()
                 val parsed = uk.sume.streamfolio.util.BackupHelper.parseBackupJson(backupJson)
                 repository.addCustomFeeds(parsed.customFeeds)
+                if (parsed.articles.isNotEmpty()) {
+                    repository.restoreArticles(parsed.articles)
+                }
                 parsed.applyPreferences(prefs)
                 reloadPreferencesToStateFlows()
                 refreshCurrentFeed()

@@ -122,6 +122,12 @@ interface ArticleDao {
 
     @Query("SELECT * FROM articles WHERE category = :category ORDER BY pubDate DESC LIMIT 50")
     suspend fun getArticlesByCategorySync(category: String): List<Article>
+
+    @Query("SELECT * FROM articles WHERE isBookmarked = 1 OR isRead = 1")
+    suspend fun getBookmarkedAndReadArticlesSync(): List<Article>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertArticles(articles: List<Article>)
 }
 
 @Dao
