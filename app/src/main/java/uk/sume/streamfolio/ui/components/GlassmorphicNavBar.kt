@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 
 enum class BottomTab(val route: String, val icon: ImageVector, val label: String) {
     HOME("home_screen", Icons.Default.Home, "Home"),
+    PODCASTS("podcasts_screen", Icons.Default.Radio, "Podcasts"),
     SEARCH("search_screen", Icons.Default.Search, "Search"),
     BOOKMARKS("bookmarks_screen", Icons.Default.Bookmark, "Saved"),
     SETTINGS("settings_screen", Icons.Default.Settings, "Settings")
@@ -34,7 +36,8 @@ enum class BottomTab(val route: String, val icon: ImageVector, val label: String
 fun GlassmorphicNavBar(
     selectedTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tabs: List<BottomTab> = listOf(BottomTab.HOME, BottomTab.PODCASTS, BottomTab.BOOKMARKS, BottomTab.SETTINGS)
 ) {
     Box(
         modifier = modifier
@@ -51,7 +54,7 @@ fun GlassmorphicNavBar(
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BottomTab.values().forEach { tab ->
+            tabs.forEach { tab ->
                 val isSelected = tab == selectedTab
                 val tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 

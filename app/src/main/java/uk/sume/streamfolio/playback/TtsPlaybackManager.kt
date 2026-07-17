@@ -1,7 +1,12 @@
 package uk.sume.streamfolio.playback
 
 import android.content.Context
+import android.net.Uri
 import android.os.SystemClock
+import android.util.Log
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,19 +21,36 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.data.model.PodcastEpisode
 import uk.sume.streamfolio.data.network.NewsRepository
+import uk.sume.streamfolio.data.network.PodcastRepository
+import uk.sume.streamfolio.data.network.PodcastIndexApi
 import uk.sume.streamfolio.ui.components.TtsHelper
+import uk.sume.streamfolio.util.TranscriptParser
+import uk.sume.streamfolio.util.TranscriptSegment
+import java.io.File
+
+enum class MediaType {
+    NONE, TTS, PODCAST
+}
 
 class TtsPlaybackManager private constructor(
     private val appContext: Context
 ) {
 
     private val repository = NewsRepository(appContext)
+    private val podcastRepository = PodcastRepository(appContext)
     private val prefs = PreferencesHelper(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     val ttsHelper = TtsHelper(appContext)
+    private var exoPlayer: ExoPlayer? = null
 
+    // --- Media Type State ---
+    private val _currentMediaType = MutableStateFlow(MediaType.NONE)
+    val currentMediaType: StateFlow<MediaType> = _currentMediaType.asStateFlow()
+
+    // --- TTS Flows ---
     private val _ttsPlaylist = MutableStateFlow<List<Article>>(emptyList())
     val ttsPlaylist: StateFlow<List<Article>> = _ttsPlaylist.asStateFlow()
 
@@ -48,11 +70,39 @@ class TtsPlaybackManager private constructor(
     private val _ttsSpeechRate = MutableStateFlow(prefs.ttsSpeechRate)
     val ttsSpeechRate: StateFlow<Float> = _ttsSpeechRate.asStateFlow()
 
+    // --- Podcast Flows ---
+    private val _currentEpisode = MutableStateFlow<PodcastEpisode?>(null)
+    val currentEpisode: StateFlow<PodcastEpisode?> = _currentEpisode.asStateFlow()
+
+    private val _isPlayingPodcast = MutableStateFlow(false)
+    val isPlayingPodcast: StateFlow<Boolean> = _isPlayingPodcast.asStateFlow()
+
+    private val _podcastPlaybackPosition = MutableStateFlow(0L)
+    val podcastPlaybackPosition: StateFlow<Long> = _podcastPlaybackPosition.asStateFlow()
+
+    private val _podcastDuration = MutableStateFlow(0L)
+    val podcastDuration: StateFlow<Long> = _podcastDuration.asStateFlow()
+
+    private val _podcastBufferedPosition = MutableStateFlow(0L)
+    val podcastBufferedPosition: StateFlow<Long> = _podcastBufferedPosition.asStateFlow()
+
+    private val _podcastPlaybackSpeed = MutableStateFlow(prefs.podcastPlaybackSpeed)
+    val podcastPlaybackSpeed: StateFlow<Float> = _podcastPlaybackSpeed.asStateFlow()
+
+    private val _podcastTranscriptSegments = MutableStateFlow<List<TranscriptSegment>>(emptyList())
+    val podcastTranscriptSegments: StateFlow<List<TranscriptSegment>> = _podcastTranscriptSegments.asStateFlow()
+
+    private val _isLoadingTranscript = MutableStateFlow(false)
+    val isLoadingTranscript: StateFlow<Boolean> = _isLoadingTranscript.asStateFlow()
+
+    // --- Shared sleep timer ---
     private val _sleepTimerRemainingMillis = MutableStateFlow<Long?>(null)
     val sleepTimerRemainingMillis: StateFlow<Long?> = _sleepTimerRemainingMillis.asStateFlow()
 
     private var playbackJob: Job? = null
     private var sleepTimerJob: Job? = null
+    private var progressPollingJob: Job? = null
+    private var transcriptJob: Job? = null
 
     init {
         ttsHelper.setSpeechRate(prefs.ttsSpeechRate)
@@ -61,6 +111,33 @@ class TtsPlaybackManager private constructor(
         }
     }
 
+    private fun initExoPlayerIfNeeded() {
+        if (exoPlayer == null) {
+            exoPlayer = ExoPlayer.Builder(appContext).build().apply {
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        _isPlayingPodcast.value = isPlaying
+                        if (isPlaying) {
+                            startProgressPolling()
+                        } else {
+                            stopProgressPolling()
+                        }
+                    }
+
+                    override fun onPlaybackStateChanged(state: Int) {
+                        if (state == Player.STATE_READY) {
+                            _podcastDuration.value = duration
+                        } else if (state == Player.STATE_ENDED) {
+                            handleEpisodeCompleted()
+                        }
+                    }
+                })
+                setPlaybackSpeed(prefs.podcastPlaybackSpeed)
+            }
+        }
+    }
+
+    // --- TTS Operations ---
     fun addToTtsPlaylist(article: Article) {
         val current = _ttsPlaylist.value.toMutableList()
         if (!current.any { it.link == article.link }) {
@@ -122,6 +199,10 @@ class TtsPlaybackManager private constructor(
         val playlist = _ttsPlaylist.value
         if (startIndex !in playlist.indices) return
 
+        // Pause podcast first
+        pauseEpisodeInternal()
+        _currentMediaType.value = MediaType.TTS
+
         ensureServiceRunning()
         _currentTtsArticleIndex.value = startIndex
         val article = playlist[startIndex]
@@ -157,24 +238,58 @@ class TtsPlaybackManager private constructor(
     }
 
     fun togglePlayback() {
-        if (ttsHelper.isPlaying.value) {
-            pausePlayback()
-        } else {
-            resumePlayback()
+        when (_currentMediaType.value) {
+            MediaType.TTS -> {
+                if (ttsHelper.isPlaying.value) {
+                    ttsHelper.pause()
+                } else {
+                    ensureServiceRunning()
+                    ttsHelper.resume()
+                }
+            }
+            MediaType.PODCAST -> {
+                exoPlayer?.let { player ->
+                    if (player.isPlaying) {
+                        pauseEpisode()
+                    } else {
+                        resumeEpisode()
+                    }
+                }
+            }
+            MediaType.NONE -> {
+                resumePlayback()
+            }
         }
     }
 
     fun pausePlayback() {
-        ttsHelper.pause()
+        when (_currentMediaType.value) {
+            MediaType.TTS -> ttsHelper.pause()
+            MediaType.PODCAST -> pauseEpisode()
+            else -> {}
+        }
     }
 
     fun resumePlayback() {
         ensureServiceRunning()
-        val activeIndex = _currentTtsArticleIndex.value
-        when {
-            activeIndex != -1 && _articleBody.value.isEmpty() -> playTtsPlaylist(activeIndex)
-            activeIndex != -1 -> ttsHelper.resume()
-            _ttsPlaylist.value.isNotEmpty() -> playTtsPlaylist(0)
+        when (_currentMediaType.value) {
+            MediaType.TTS -> {
+                val activeIndex = _currentTtsArticleIndex.value
+                when {
+                    activeIndex != -1 && _articleBody.value.isEmpty() -> playTtsPlaylist(activeIndex)
+                    activeIndex != -1 -> ttsHelper.resume()
+                    _ttsPlaylist.value.isNotEmpty() -> playTtsPlaylist(0)
+                }
+            }
+            MediaType.PODCAST -> {
+                resumeEpisode()
+            }
+            MediaType.NONE -> {
+                // Default fallback
+                if (_ttsPlaylist.value.isNotEmpty()) {
+                    playTtsPlaylist(0)
+                }
+            }
         }
     }
 
@@ -196,7 +311,7 @@ class TtsPlaybackManager private constructor(
 
     fun speakArticle(article: Article) {
         val activeArticle = currentArticle.value
-        if (activeArticle?.link == article.link) {
+        if (_currentMediaType.value == MediaType.TTS && activeArticle?.link == article.link) {
             togglePlayback()
         } else {
             _ttsPlaylist.value = listOf(article)
@@ -210,11 +325,16 @@ class TtsPlaybackManager private constructor(
         _currentTtsArticleIndex.value = -1
         _articleBody.value = ""
         _isLoadingBody.value = false
+        if (_currentMediaType.value == MediaType.TTS) {
+            _currentMediaType.value = MediaType.NONE
+        }
         cancelSleepTimer()
     }
 
     fun seekToParagraph(index: Int) {
-        ttsHelper.seekToParagraph(index)
+        if (_currentMediaType.value == MediaType.TTS) {
+            ttsHelper.seekToParagraph(index)
+        }
     }
 
     fun setTtsSpeechRate(rate: Float) {
@@ -223,6 +343,181 @@ class TtsPlaybackManager private constructor(
         ttsHelper.setSpeechRate(rate)
     }
 
+    // --- Podcast Operations ---
+    fun playEpisode(episode: PodcastEpisode) {
+        // Stop TTS first
+        stopSpeakingPlaylist()
+        _currentMediaType.value = MediaType.PODCAST
+
+        ensureServiceRunning()
+        initExoPlayerIfNeeded()
+
+        _currentEpisode.value = episode
+        _podcastPlaybackPosition.value = episode.playbackPositionMs
+        _podcastDuration.value = episode.durationSeconds * 1000L
+
+        loadTranscriptFor(episode)
+
+        val uri = if (episode.isDownloaded && episode.localFilePath != null) {
+            val file = File(episode.localFilePath)
+            if (file.exists()) Uri.fromFile(file) else Uri.parse(episode.audioUrl)
+        } else {
+            Uri.parse(episode.audioUrl)
+        }
+
+        exoPlayer?.apply {
+            stop()
+            clearMediaItems()
+            setMediaItem(MediaItem.fromUri(uri))
+            prepare()
+            seekTo(episode.playbackPositionMs)
+            play()
+        }
+    }
+
+    fun pauseEpisode() {
+        pauseEpisodeInternal()
+    }
+
+    private fun pauseEpisodeInternal() {
+        exoPlayer?.let { player ->
+            if (player.isPlaying) {
+                player.pause()
+            }
+            stopProgressPolling()
+        }
+    }
+
+    fun resumeEpisode() {
+        val episode = _currentEpisode.value ?: return
+        _currentMediaType.value = MediaType.PODCAST
+        ensureServiceRunning()
+        initExoPlayerIfNeeded()
+
+        exoPlayer?.let { player ->
+            if (!player.isPlaying) {
+                player.play()
+            }
+        }
+    }
+
+    fun seekEpisodeTo(positionMs: Long) {
+        exoPlayer?.seekTo(positionMs)
+        _podcastPlaybackPosition.value = positionMs
+        _currentEpisode.value?.let { ep ->
+            scope.launch {
+                podcastRepository.updatePlaybackPosition(ep.episodeId, positionMs)
+            }
+        }
+    }
+
+    fun setPodcastSpeed(speed: Float) {
+        prefs.podcastPlaybackSpeed = speed
+        _podcastPlaybackSpeed.value = speed
+        exoPlayer?.setPlaybackSpeed(speed)
+    }
+
+    fun skipForward() {
+        exoPlayer?.let { player ->
+            val skipMs = prefs.podcastSkipForwardSec * 1000L
+            val target = (player.currentPosition + skipMs).coerceAtMost(player.duration)
+            seekEpisodeTo(target)
+        }
+    }
+
+    fun skipBackward() {
+        exoPlayer?.let { player ->
+            val skipMs = prefs.podcastSkipBackwardSec * 1000L
+            val target = (player.currentPosition - skipMs).coerceAtLeast(0L)
+            seekEpisodeTo(target)
+        }
+    }
+
+    fun toggleEpisodePlayback(episode: PodcastEpisode) {
+        val active = _currentEpisode.value
+        if (_currentMediaType.value == MediaType.PODCAST && active?.episodeId == episode.episodeId) {
+            togglePlayback()
+        } else {
+            playEpisode(episode)
+        }
+    }
+
+    private fun handleEpisodeCompleted() {
+        stopProgressPolling()
+        _isPlayingPodcast.value = false
+        _podcastPlaybackPosition.value = 0
+        val ep = _currentEpisode.value
+        if (ep != null) {
+            scope.launch {
+                podcastRepository.updatePlaybackPosition(ep.episodeId, 0L)
+                podcastRepository.updateReadStatus(ep.episodeId, true)
+            }
+        }
+    }
+
+    private fun startProgressPolling() {
+        progressPollingJob?.cancel()
+        progressPollingJob = scope.launch {
+            while (true) {
+                exoPlayer?.let { player ->
+                    _podcastPlaybackPosition.value = player.currentPosition
+                    _podcastBufferedPosition.value = player.bufferedPosition
+                    _currentEpisode.value?.let { ep ->
+                        podcastRepository.updatePlaybackPosition(ep.episodeId, player.currentPosition)
+                    }
+                }
+                delay(500)
+            }
+        }
+    }
+
+    private fun stopProgressPolling() {
+        progressPollingJob?.cancel()
+        progressPollingJob = null
+    }
+
+    private fun loadTranscriptFor(episode: PodcastEpisode) {
+        transcriptJob?.cancel()
+        _podcastTranscriptSegments.value = emptyList()
+        val url = episode.transcriptUrl ?: return
+
+        _isLoadingTranscript.value = true
+        transcriptJob = scope.launch(Dispatchers.IO) {
+            try {
+                val api = PodcastIndexApi()
+                val text = api.fetchTranscriptText(url)
+                val parsed = TranscriptParser.parse(text)
+                _podcastTranscriptSegments.value = parsed
+            } catch (e: Exception) {
+                Log.e("PlaybackManager", "Error downloading/parsing transcript", e)
+            } finally {
+                _isLoadingTranscript.value = false
+            }
+        }
+    }
+
+    fun stopPodcastPlayback() {
+        pauseEpisodeInternal()
+        exoPlayer?.stop()
+        _currentEpisode.value = null
+        _isPlayingPodcast.value = false
+        _podcastPlaybackPosition.value = 0L
+        _podcastDuration.value = 0L
+        _podcastBufferedPosition.value = 0L
+        _podcastTranscriptSegments.value = emptyList()
+        if (_currentMediaType.value == MediaType.PODCAST) {
+            _currentMediaType.value = MediaType.NONE
+        }
+        cancelSleepTimer()
+    }
+
+    fun releaseExoPlayer() {
+        stopProgressPolling()
+        exoPlayer?.release()
+        exoPlayer = null
+    }
+
+    // --- Sleep Timer Operations ---
     fun setSleepTimer(durationMinutes: Int?) {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
@@ -244,7 +539,7 @@ class TtsPlaybackManager private constructor(
                 _sleepTimerRemainingMillis.value = remaining
                 delay(1_000L)
             }
-            stopSpeakingPlaylist()
+            stopAllPlayback()
         }
     }
 
@@ -252,6 +547,11 @@ class TtsPlaybackManager private constructor(
         sleepTimerJob?.cancel()
         sleepTimerJob = null
         _sleepTimerRemainingMillis.value = null
+    }
+
+    fun stopAllPlayback() {
+        stopSpeakingPlaylist()
+        stopPodcastPlayback()
     }
 
     private fun ensureServiceRunning() {

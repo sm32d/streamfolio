@@ -478,6 +478,164 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 }
             }
 
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "PODCAST SETTINGS",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val context = LocalContext.current
+            val coroutineScope = rememberCoroutineScope()
+            var podcastsEnabled by remember { mutableStateOf(viewModel.prefs.isPodcastsEnabled) }
+            var apiOverrideKey by remember { mutableStateOf(viewModel.prefs.podcastApiOverrideKey) }
+            var apiOverrideSecret by remember { mutableStateOf(viewModel.prefs.podcastApiOverrideSecret) }
+
+            SettingsCard {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.secondary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Radio,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    text = "Enable Podcasts",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Show podcasts tab at the bottom",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = podcastsEnabled,
+                            onCheckedChange = { checked ->
+                                podcastsEnabled = checked
+                                viewModel.prefs.isPodcastsEnabled = checked
+                                Toast.makeText(context, "Restart app or reopen preferences to update bottom tabs", Toast.LENGTH_SHORT).show()
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    if (podcastsEnabled) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 18.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 16.dp)
+                        ) {
+                            Text(
+                                text = "Custom Podcast Index API Credentials (Optional)",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedTextField(
+                                value = apiOverrideKey,
+                                onValueChange = {
+                                    apiOverrideKey = it
+                                    viewModel.prefs.podcastApiOverrideKey = it
+                                },
+                                label = { Text("API Key") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            OutlinedTextField(
+                                value = apiOverrideSecret,
+                                onValueChange = {
+                                    apiOverrideSecret = it
+                                    viewModel.prefs.podcastApiOverrideSecret = it
+                                },
+                                label = { Text("API Secret") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 18.dp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    coroutineScope.launch {
+                                        val repo = uk.sume.streamfolio.data.network.PodcastRepository(context)
+                                        val downloads = repo.getDownloadedEpisodesList()
+                                        for (d in downloads) {
+                                            d.localFilePath?.let { File(it).delete() }
+                                        }
+                                        repo.clearAllDownloads()
+                                        Toast.makeText(context, "All downloaded episodes deleted", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    text = "Delete All Podcast Downloads",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    text = "Free up storage space used by downloaded episodes",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(28.dp))
             InfoNote("Changing language or region will refresh your news feed immediately.")
         }

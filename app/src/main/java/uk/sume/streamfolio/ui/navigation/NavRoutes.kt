@@ -28,6 +28,7 @@ import uk.sume.streamfolio.ui.components.BottomTab
 import uk.sume.streamfolio.ui.components.GlassmorphicNavBar
 import uk.sume.streamfolio.ui.components.TtsMiniPlayer
 import uk.sume.streamfolio.ui.components.TtsLyricsVisualizer
+import uk.sume.streamfolio.playback.MediaType
 import uk.sume.streamfolio.ui.screens.*
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLDecoder
@@ -49,12 +50,14 @@ fun AppNavigation(viewModel: NewsViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val bottomBarRoutes = listOf(
-        BottomTab.HOME.route,
-        BottomTab.SEARCH.route,
-        BottomTab.BOOKMARKS.route,
-        BottomTab.SETTINGS.route
-    )
+    val isPodcastsEnabled = viewModel.prefs.isPodcastsEnabled
+    val bottomTabs = if (isPodcastsEnabled) {
+        listOf(BottomTab.HOME, BottomTab.PODCASTS, BottomTab.BOOKMARKS, BottomTab.SETTINGS)
+    } else {
+        listOf(BottomTab.HOME, BottomTab.SEARCH, BottomTab.BOOKMARKS, BottomTab.SETTINGS)
+    }
+
+    val bottomBarRoutes = bottomTabs.map { it.route }
 
     val showBottomBar = currentRoute in bottomBarRoutes
 
@@ -97,6 +100,23 @@ fun AppNavigation(viewModel: NewsViewModel) {
                         viewModel = viewModel,
                         sharedTransitionScope = this@SharedTransitionLayout,
                         animatedVisibilityScope = this
+                    )
+                }
+                composable(BottomTab.PODCASTS.route) {
+                    PodcastScreen(
+                        navController = navController,
+                        viewModel = viewModel
+                    )
+                }
+                composable(
+                    route = "podcast_detail/{feedId}",
+                    arguments = listOf(navArgument("feedId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val feedId = backStackEntry.arguments?.getInt("feedId") ?: 0
+                    PodcastDetailScreen(
+                        navController = navController,
+                        viewModel = viewModel,
+                        feedId = feedId
                     )
                 }
                 composable(BottomTab.BOOKMARKS.route) {
@@ -386,6 +406,7 @@ fun AppNavigation(viewModel: NewsViewModel) {
         if (showBottomBar) {
             val selectedTab = when (currentRoute) {
                 BottomTab.SEARCH.route -> BottomTab.SEARCH
+                BottomTab.PODCASTS.route -> BottomTab.PODCASTS
                 BottomTab.BOOKMARKS.route -> BottomTab.BOOKMARKS
                 BottomTab.SETTINGS.route -> BottomTab.SETTINGS
                 else -> BottomTab.HOME
@@ -398,6 +419,7 @@ fun AppNavigation(viewModel: NewsViewModel) {
             ) {
                 GlassmorphicNavBar(
                     selectedTab = selectedTab,
+                    tabs = bottomTabs,
                     onTabSelected = { tab ->
                         if (currentRoute != tab.route) {
                             navController.navigate(tab.route) {
@@ -415,14 +437,11 @@ fun AppNavigation(viewModel: NewsViewModel) {
             }
         }
 
-        val ttsPlaylist by viewModel.ttsPlaylist.collectAsState()
-        val currentTtsArticleIndex by viewModel.currentTtsArticleIndex.collectAsState()
+        val mediaType by viewModel.currentMediaType.collectAsState()
         val showMiniPlayer = currentRoute != null && 
                 !currentRoute.startsWith("settings") && 
                 currentRoute != "onboarding" &&
-                ttsPlaylist.isNotEmpty() &&
-                currentTtsArticleIndex != -1 &&
-                currentTtsArticleIndex < ttsPlaylist.size
+                mediaType != MediaType.NONE
 
 
         val animatedBottomOffset by animateDpAsState(

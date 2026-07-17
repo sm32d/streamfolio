@@ -100,4 +100,28 @@ class PreferencesHelper(context: Context) {
     var useDynamicColors: Boolean
         get() = prefs.getBoolean("use_dynamic_colors", false)
         set(value) = prefs.edit().putBoolean("use_dynamic_colors", value).apply()
+
+    var isPodcastsEnabled: Boolean
+        get() = prefs.getBoolean("podcasts_enabled", true)
+        set(value) = prefs.edit().putBoolean("podcasts_enabled", value).apply()
+
+    var podcastApiOverrideKey: String
+        get() = prefs.getString("podcast_api_key_override", "") ?: ""
+        set(value) = prefs.edit().putString("podcast_api_key_override", value).apply()
+
+    var podcastApiOverrideSecret: String
+        get() = prefs.getString("podcast_api_secret_override", "") ?: ""
+        set(value) = prefs.edit().putString("podcast_api_secret_override", value).apply()
+
+    var podcastSkipForwardSec: Int
+        get() = prefs.getInt("podcast_skip_forward_sec", 15)
+        set(value) = prefs.edit().putInt("podcast_skip_forward_sec", value).apply()
+
+    var podcastSkipBackwardSec: Int
+        get() = prefs.getInt("podcast_skip_backward_sec", 15)
+        set(value) = prefs.edit().putInt("podcast_skip_backward_sec", value).apply()
+
+    var podcastPlaybackSpeed: Float
+        get() = prefs.getFloat("podcast_playback_speed", 1.0f)
+        set(value) = prefs.edit().putFloat("podcast_playback_speed", value).apply()
 }

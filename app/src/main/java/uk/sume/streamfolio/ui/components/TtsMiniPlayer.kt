@@ -49,6 +49,7 @@ import coil.compose.AsyncImage
 import uk.sume.streamfolio.data.model.Article
 import androidx.navigation.NavController
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.playback.MediaType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,16 +57,41 @@ fun TtsMiniPlayer(
     viewModel: NewsViewModel,
     modifier: Modifier = Modifier
 ) {
+    val mediaType by viewModel.currentMediaType.collectAsState()
     val playlist by viewModel.ttsPlaylist.collectAsState()
     val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
-    val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+    val currentEpisode by viewModel.currentEpisode.collectAsState()
+    val isTtsPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+    val isPodcastPlaying by viewModel.isPlayingPodcast.collectAsState()
     val sleepTimerRemainingMillis by viewModel.sleepTimerRemainingMillis.collectAsState()
 
-    if (playlist.isEmpty() || currentIndex == -1 || currentIndex >= playlist.size) {
+    if (mediaType == MediaType.NONE) {
         return
     }
 
-    val article = playlist[currentIndex]
+    val title = when (mediaType) {
+        MediaType.TTS -> playlist.getOrNull(currentIndex)?.title ?: "TTS Reading"
+        MediaType.PODCAST -> currentEpisode?.title ?: "Podcast Episode"
+        else -> ""
+    }
+
+    val subtitle = when (mediaType) {
+        MediaType.TTS -> playlist.getOrNull(currentIndex)?.sourceName ?: "StreamFolio"
+        MediaType.PODCAST -> "Podcast Playback"
+        else -> ""
+    }
+
+    val artworkUrl = when (mediaType) {
+        MediaType.TTS -> playlist.getOrNull(currentIndex)?.thumbnailUrl
+        MediaType.PODCAST -> null
+        else -> null
+    }
+
+    val isPlaying = when (mediaType) {
+        MediaType.TTS -> isTtsPlaying
+        MediaType.PODCAST -> isPodcastPlaying
+        else -> false
+    }
 
     val coroutineScope = rememberCoroutineScope()
     val offsetY = remember { Animatable(0f) }
@@ -88,7 +114,11 @@ fun TtsMiniPlayer(
                         coroutineScope.launch {
                             if (offsetY.value > threshold) {
                                 offsetY.animateTo(300f, animationSpec = tween(200))
-                                viewModel.clearTtsPlaylist()
+                                if (mediaType == MediaType.TTS) {
+                                    viewModel.clearTtsPlaylist()
+                                } else {
+                                    viewModel.stopPodcastPlayback()
+                                }
                             } else {
                                 offsetY.animateTo(0f, animationSpec = tween(150))
                             }
@@ -117,7 +147,7 @@ fun TtsMiniPlayer(
                     color = Color.White.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(32.dp)
                 )
-                .clickable { viewModel.setShowLyricsVisualizer(true) }, // Primary CTA opens visualizer/full-player
+                .clickable { viewModel.setShowLyricsVisualizer(true) },
             shape = RoundedCornerShape(32.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
@@ -129,16 +159,15 @@ fun TtsMiniPlayer(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Article Thumbnail / Watermark
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                 ) {
-                    if (article.thumbnailUrl != null && article.thumbnailUrl != "failed" && !article.thumbnailUrl.contains("google")) {
+                    if (artworkUrl != null && artworkUrl != "failed" && !artworkUrl.contains("google")) {
                         AsyncImage(
-                            model = article.thumbnailUrl,
+                            model = artworkUrl,
                             contentDescription = null,
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -157,10 +186,9 @@ fun TtsMiniPlayer(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // Title & Source Info
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = article.title,
+                        text = title,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -169,7 +197,7 @@ fun TtsMiniPlayer(
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = article.sourceName,
+                            text = subtitle,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             maxLines = 1,
@@ -195,7 +223,33 @@ fun TtsMiniPlayer(
                     }
                 }
 
-                // Play / Pause Button
+                if (mediaType == MediaType.TTS) {
+                    IconButton(
+                        onClick = { viewModel.playPreviousTtsArticle() },
+                        enabled = currentIndex > 0,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipPrevious,
+                            contentDescription = "Previous",
+                            tint = if (currentIndex > 0) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = { viewModel.skipPodcastBackward() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FastRewind,
+                            contentDescription = "Rewind",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
                 IconButton(
                     onClick = { viewModel.playOrPausePlaylist() },
                     modifier = Modifier.size(36.dp)
@@ -208,18 +262,31 @@ fun TtsMiniPlayer(
                     )
                 }
 
-                // Skip Next Button
-                IconButton(
-                    onClick = { viewModel.advanceTtsPlaylist() },
-                    enabled = currentIndex < playlist.size - 1,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SkipNext,
-                        contentDescription = "Next",
-                        tint = if (currentIndex < playlist.size - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        modifier = Modifier.size(24.dp)
-                    )
+                if (mediaType == MediaType.TTS) {
+                    IconButton(
+                        onClick = { viewModel.advanceTtsPlaylist() },
+                        enabled = currentIndex < playlist.size - 1,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Next",
+                            tint = if (currentIndex < playlist.size - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                } else {
+                    IconButton(
+                        onClick = { viewModel.skipPodcastForward() },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FastForward,
+                            contentDescription = "Forward",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -234,21 +301,60 @@ fun TtsLyricsVisualizer(
     navController: NavController,
     onDismiss: () -> Unit
 ) {
+    val mediaType by viewModel.currentMediaType.collectAsState()
     val playlist by viewModel.ttsPlaylist.collectAsState()
     val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
-    val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+    val isTtsPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+    val currentEpisode by viewModel.currentEpisode.collectAsState()
+    val isPodcastPlaying by viewModel.isPlayingPodcast.collectAsState()
     val articleBody by viewModel.ttsArticleBody.collectAsState()
     val ttsParagraphIndex by viewModel.ttsHelper.currentParagraphIndex.collectAsState()
     val currentWordRange by viewModel.currentWordRange.collectAsState()
-    val currentSpeed by viewModel.ttsSpeechRate.collectAsState()
+    
+    val podcastPosition by viewModel.podcastPlaybackPosition.collectAsState()
+    val podcastDuration by viewModel.podcastDuration.collectAsState()
+    val podcastSegments by viewModel.podcastTranscriptSegments.collectAsState()
+    val isLoadingTranscript by viewModel.isLoadingTranscript.collectAsState()
+
+    val ttsSpeed by viewModel.ttsSpeechRate.collectAsState()
+    val podcastSpeed by viewModel.podcastPlaybackSpeed.collectAsState()
     val sleepTimerRemainingMillis by viewModel.sleepTimerRemainingMillis.collectAsState()
 
-    if (playlist.isEmpty() || currentIndex == -1 || currentIndex >= playlist.size) {
+    if (mediaType == MediaType.NONE) {
         onDismiss()
         return
     }
 
-    val article = playlist[currentIndex]
+    val title = when (mediaType) {
+        MediaType.TTS -> playlist.getOrNull(currentIndex)?.title ?: "TTS Playback"
+        MediaType.PODCAST -> currentEpisode?.title ?: "Podcast Playback"
+        else -> ""
+    }
+
+    val subtitle = when (mediaType) {
+        MediaType.TTS -> playlist.getOrNull(currentIndex)?.sourceName ?: "StreamFolio"
+        MediaType.PODCAST -> "Podcast Episode"
+        else -> ""
+    }
+
+    val artworkUrl = when (mediaType) {
+        MediaType.TTS -> playlist.getOrNull(currentIndex)?.thumbnailUrl
+        MediaType.PODCAST -> null
+        else -> null
+    }
+
+    val isPlaying = when (mediaType) {
+        MediaType.TTS -> isTtsPlaying
+        MediaType.PODCAST -> isPodcastPlaying
+        else -> false
+    }
+
+    val currentSpeed = when (mediaType) {
+        MediaType.TTS -> ttsSpeed
+        MediaType.PODCAST -> podcastSpeed
+        else -> 1.0f
+    }
+
     val paragraphs = remember(articleBody) { articleBody.split("\n\n").filter { it.isNotBlank() } }
     val lazyListState = rememberLazyListState()
 
@@ -257,10 +363,18 @@ fun TtsLyricsVisualizer(
     var isSpeedMenuExpanded by remember { mutableStateOf(false) }
     var isSleepMenuExpanded by remember { mutableStateOf(false) }
 
+    val activeSegmentIndex = remember(podcastSegments, podcastPosition) {
+        podcastSegments.indexOfFirst { podcastPosition in it.startTimeMs..it.endTimeMs }
+    }
+
     // Auto-scroll centering
-    LaunchedEffect(ttsParagraphIndex, showQueueInsideVisualizer) {
-        if (!showQueueInsideVisualizer && ttsParagraphIndex >= 0 && ttsParagraphIndex < paragraphs.size) {
-            lazyListState.animateScrollToItem(ttsParagraphIndex, scrollOffset = -250)
+    LaunchedEffect(ttsParagraphIndex, activeSegmentIndex, showQueueInsideVisualizer, mediaType) {
+        if (!showQueueInsideVisualizer) {
+            if (mediaType == MediaType.TTS && ttsParagraphIndex >= 0 && ttsParagraphIndex < paragraphs.size) {
+                lazyListState.animateScrollToItem(ttsParagraphIndex, scrollOffset = -250)
+            } else if (mediaType == MediaType.PODCAST && activeSegmentIndex >= 0 && activeSegmentIndex < podcastSegments.size) {
+                lazyListState.animateScrollToItem(activeSegmentIndex, scrollOffset = -250)
+            }
         }
     }
 
@@ -334,10 +448,12 @@ fun TtsLyricsVisualizer(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .weight(1f)
-                        .clickable {
-                            onDismiss()
-                            val encodedUrl = java.net.URLEncoder.encode(article.link, "UTF-8")
-                            navController.navigate("detail_screen/$encodedUrl")
+                        .clickable(enabled = mediaType == MediaType.TTS) {
+                            playlist.getOrNull(currentIndex)?.let { article ->
+                                onDismiss()
+                                val encodedUrl = java.net.URLEncoder.encode(article.link, "UTF-8")
+                                navController.navigate("detail_screen/$encodedUrl")
+                            }
                         }
                         .padding(horizontal = 12.dp)
                 ) {
@@ -347,7 +463,7 @@ fun TtsLyricsVisualizer(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = article.title,
+                            text = title,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -355,17 +471,19 @@ fun TtsLyricsVisualizer(
                             color = activeTextColor,
                             modifier = Modifier.weight(1f, fill = false)
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.OpenInNew,
-                            contentDescription = "Open Reader",
-                            tint = activeTextColor.copy(alpha = 0.6f),
-                            modifier = Modifier.size(12.dp)
-                        )
+                        if (mediaType == MediaType.TTS) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.OpenInNew,
+                                contentDescription = "Open Reader",
+                                tint = activeTextColor.copy(alpha = 0.6f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = article.sourceName + " • Tap to Read",
+                        text = if (mediaType == MediaType.TTS) "$subtitle • Tap to Read" else subtitle,
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
@@ -575,71 +693,122 @@ fun TtsLyricsVisualizer(
                         }
                     }
                 } else if (showTranscript) {
-                    // Scrolling Lyrics List
-                    if (paragraphs.isEmpty() || paragraphs[0].startsWith("Failed to load") || paragraphs[0].startsWith("Unable to parse")) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (paragraphs.isEmpty()) "Parsing article body..." else "This publisher restricts word-by-word viewing.",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center,
-                                color = activeTextColor.copy(alpha = 0.5f)
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            state = lazyListState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 100.dp, bottom = 220.dp),
-                            verticalArrangement = Arrangement.spacedBy(28.dp)
-                        ) {
-                            itemsIndexed(paragraphs) { index, paragraph ->
-                                val isActive = index == ttsParagraphIndex
-                                val alpha = if (isActive) 1f else 0.35f
-                                val size = if (isActive) 23.sp else 19.sp
-                                val weight = if (isActive) FontWeight.Bold else FontWeight.Medium
-                                val color = if (isActive) activeTextColor else activeTextColor.copy(alpha = alpha)
-                                val highlightColor = MaterialTheme.colorScheme.primary
+                    if (mediaType == MediaType.TTS) {
+                        if (paragraphs.isEmpty() || paragraphs[0].startsWith("Failed to load") || paragraphs[0].startsWith("Unable to parse")) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (paragraphs.isEmpty()) "Parsing article body..." else "This publisher restricts word-by-word viewing.",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    color = activeTextColor.copy(alpha = 0.5f)
+                                )
+                            }
+                        } else {
+                            LazyColumn(
+                                state = lazyListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 100.dp, bottom = 220.dp),
+                                verticalArrangement = Arrangement.spacedBy(28.dp)
+                            ) {
+                                itemsIndexed(paragraphs) { index, paragraph ->
+                                    val isActive = index == ttsParagraphIndex
+                                    val alpha = if (isActive) 1f else 0.35f
+                                    val size = if (isActive) 23.sp else 19.sp
+                                    val weight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                                    val color = if (isActive) activeTextColor else activeTextColor.copy(alpha = alpha)
+                                    val highlightColor = MaterialTheme.colorScheme.primary
 
-                                val annotatedText = remember(paragraph, isActive, currentWordRange, highlightColor) {
-                                    buildAnnotatedString {
-                                        if (isActive && currentWordRange != null) {
-                                            val (start, end) = currentWordRange!!
-                                            if (start >= 0 && end <= paragraph.length && start <= end) {
-                                                append(paragraph.substring(0, start))
-                                                withStyle(
-                                                    SpanStyle(
-                                                        color = highlightColor,
-                                                        fontWeight = FontWeight.Black
-                                                    )
-                                                ) {
-                                                    append(paragraph.substring(start, end))
+                                    val annotatedText = remember(paragraph, isActive, currentWordRange, highlightColor) {
+                                        buildAnnotatedString {
+                                            if (isActive && currentWordRange != null) {
+                                                val (start, end) = currentWordRange!!
+                                                if (start >= 0 && end <= paragraph.length && start <= end) {
+                                                    append(paragraph.substring(0, start))
+                                                    withStyle(
+                                                        SpanStyle(
+                                                            color = highlightColor,
+                                                            fontWeight = FontWeight.Black
+                                                        )
+                                                    ) {
+                                                        append(paragraph.substring(start, end))
+                                                    }
+                                                    append(paragraph.substring(end))
+                                                } else {
+                                                    append(paragraph)
                                                 }
-                                                append(paragraph.substring(end))
                                             } else {
                                                 append(paragraph)
                                             }
-                                        } else {
-                                            append(paragraph)
                                         }
                                     }
-                                }
 
+                                    Text(
+                                        text = annotatedText,
+                                        fontSize = size,
+                                        lineHeight = (size.value * 1.5).sp,
+                                        fontWeight = weight,
+                                        color = color,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.seekTtsToParagraph(index) }
+                                            .padding(vertical = 4.dp),
+                                        textAlign = TextAlign.Start
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        if (isLoadingTranscript) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            }
+                        } else if (podcastSegments.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = annotatedText,
-                                    fontSize = size,
-                                    lineHeight = (size.value * 1.5).sp,
-                                    fontWeight = weight,
-                                    color = color,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.seekTtsToParagraph(index) }
-                                        .padding(vertical = 4.dp),
-                                    textAlign = TextAlign.Start
+                                    text = "No transcript available for this episode.",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = TextAlign.Center,
+                                    color = activeTextColor.copy(alpha = 0.5f)
                                 )
+                            }
+                        } else {
+                            LazyColumn(
+                                state = lazyListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 100.dp, bottom = 220.dp),
+                                verticalArrangement = Arrangement.spacedBy(28.dp)
+                            ) {
+                                itemsIndexed(podcastSegments) { index, segment ->
+                                    val isActive = index == activeSegmentIndex
+                                    val alpha = if (isActive) 1f else 0.35f
+                                    val size = if (isActive) 23.sp else 19.sp
+                                    val weight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                                    val color = if (isActive) activeTextColor else activeTextColor.copy(alpha = alpha)
+
+                                    Text(
+                                        text = segment.text,
+                                        fontSize = size,
+                                        lineHeight = (size.value * 1.5).sp,
+                                        fontWeight = weight,
+                                        color = color,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.seekEpisodeTo(segment.startTimeMs) }
+                                            .padding(vertical = 4.dp),
+                                        textAlign = TextAlign.Start
+                                    )
+                                }
                             }
                         }
                     }
@@ -661,9 +830,9 @@ fun TtsLyricsVisualizer(
                                     .clip(RoundedCornerShape(28.dp))
                                     .background(controlBtnBg)
                             ) {
-                                if (article.thumbnailUrl != null && article.thumbnailUrl != "failed" && !article.thumbnailUrl.contains("google")) {
+                                if (artworkUrl != null && artworkUrl != "failed" && !artworkUrl.contains("google")) {
                                     AsyncImage(
-                                        model = article.thumbnailUrl,
+                                        model = artworkUrl,
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop
@@ -683,7 +852,7 @@ fun TtsLyricsVisualizer(
                             Spacer(modifier = Modifier.height(24.dp))
 
                             Text(
-                                text = article.title,
+                                text = title,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 2,
@@ -693,7 +862,7 @@ fun TtsLyricsVisualizer(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = article.sourceName,
+                                text = subtitle,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = activeTextColor.copy(alpha = 0.55f),
@@ -712,38 +881,81 @@ fun TtsLyricsVisualizer(
                     .padding(start = 24.dp, end = 24.dp, bottom = 24.dp)
             ) {
                 // Progress timeline
-                if (paragraphs.isNotEmpty()) {
-                    val progressValue = (ttsParagraphIndex.toFloat() + 1) / paragraphs.size.coerceAtLeast(1)
+                if (mediaType == MediaType.TTS) {
+                    if (paragraphs.isNotEmpty()) {
+                        val progressValue = (ttsParagraphIndex.toFloat() + 1) / paragraphs.size.coerceAtLeast(1)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            LinearProgressIndicator(
+                                progress = { progressValue },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp)
+                                    .clip(RoundedCornerShape(2.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = activeTextColor.copy(alpha = 0.1f)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Article ${currentIndex + 1} of ${playlist.size}",
+                                    fontSize = 11.sp,
+                                    color = activeTextColor.copy(alpha = 0.5f),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
+                                    fontSize = 11.sp,
+                                    color = activeTextColor.copy(alpha = 0.5f),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    val pos = podcastPosition.toFloat()
+                    val dur = podcastDuration.coerceAtLeast(1L).toFloat()
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp, vertical = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        LinearProgressIndicator(
-                            progress = { progressValue },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = activeTextColor.copy(alpha = 0.1f)
+                        Slider(
+                            value = (pos / dur).coerceIn(0f, 1f),
+                            onValueChange = { percent ->
+                                viewModel.seekEpisodeTo((percent * dur).toLong())
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = activeTextColor.copy(alpha = 0.1f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Article ${currentIndex + 1} of ${playlist.size}",
+                                text = formatTimeLabel(podcastPosition),
                                 fontSize = 11.sp,
                                 color = activeTextColor.copy(alpha = 0.5f),
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "Paragraph ${ttsParagraphIndex + 1} of ${paragraphs.size}",
+                                text = formatTimeLabel(podcastDuration),
                                 fontSize = 11.sp,
                                 color = activeTextColor.copy(alpha = 0.5f),
                                 fontWeight = FontWeight.Medium
@@ -779,23 +991,38 @@ fun TtsLyricsVisualizer(
                             horizontalArrangement = Arrangement.SpaceEvenly,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Previous Button
-                            IconButton(
-                                onClick = { viewModel.playPreviousTtsArticle() },
-                                enabled = currentIndex > 0,
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(
-                                        if (currentIndex > 0) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
-                                        CircleShape
+                            if (mediaType == MediaType.TTS) {
+                                IconButton(
+                                    onClick = { viewModel.playPreviousTtsArticle() },
+                                    enabled = currentIndex > 0,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(
+                                            if (currentIndex > 0) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
+                                            CircleShape
+                                        )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipPrevious,
+                                        contentDescription = "Previous Article",
+                                        tint = if (currentIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                        modifier = Modifier.size(24.dp)
                                     )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipPrevious,
-                                    contentDescription = "Previous Article",
-                                    tint = if (currentIndex > 0) dockIconTint else dockIconTint.copy(alpha = 0.2f),
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = { viewModel.skipPodcastBackward() },
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(dockIconTint.copy(alpha = 0.04f), CircleShape)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FastRewind,
+                                        contentDescription = "Rewind 15s",
+                                        tint = dockIconTint,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
 
                             // Play / Pause Button
@@ -822,23 +1049,38 @@ fun TtsLyricsVisualizer(
                                 )
                             }
 
-                            // Next Button
-                            IconButton(
-                                onClick = { viewModel.advanceTtsPlaylist() },
-                                enabled = currentIndex < playlist.size - 1,
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .background(
-                                        if (currentIndex < playlist.size - 1) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
-                                        CircleShape
+                            if (mediaType == MediaType.TTS) {
+                                IconButton(
+                                    onClick = { viewModel.advanceTtsPlaylist() },
+                                    enabled = currentIndex < playlist.size - 1,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(
+                                            if (currentIndex < playlist.size - 1) dockIconTint.copy(alpha = 0.04f) else Color.Transparent,
+                                            CircleShape
+                                        )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.SkipNext,
+                                        contentDescription = "Next Article",
+                                        tint = if (currentIndex < playlist.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
+                                        modifier = Modifier.size(24.dp)
                                     )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SkipNext,
-                                    contentDescription = "Next Article",
-                                    tint = if (currentIndex < playlist.size - 1) dockIconTint else dockIconTint.copy(alpha = 0.2f),
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                }
+                            } else {
+                                IconButton(
+                                    onClick = { viewModel.skipPodcastForward() },
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(dockIconTint.copy(alpha = 0.04f), CircleShape)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FastForward,
+                                        contentDescription = "Forward 15s",
+                                        tint = dockIconTint,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1119,4 +1361,16 @@ private fun formatSleepTimerLabel(remainingMillis: Long): String {
 
 private fun formatSpeedOptionLabel(rate: Float): String {
     return if (rate == 1.0f) "1.0x (Normal)" else "${rate}x"
+}
+
+private fun formatTimeLabel(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
+    }
 }

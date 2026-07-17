@@ -17,6 +17,10 @@ import kotlinx.coroutines.Dispatchers
 import java.net.URLEncoder
 import uk.sume.streamfolio.util.OpmlFeed
 import uk.sume.streamfolio.playback.TtsPlaybackManager
+import uk.sume.streamfolio.playback.MediaType
+import uk.sume.streamfolio.data.model.PodcastSubscription
+import uk.sume.streamfolio.data.model.PodcastEpisode
+import uk.sume.streamfolio.util.TranscriptSegment
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
@@ -143,6 +147,103 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val sleepTimerRemainingMillis: StateFlow<Long?> = playbackManager.sleepTimerRemainingMillis
     val ttsArticleBody: StateFlow<String> = playbackManager.articleBody
     val isTtsLoadingBody: StateFlow<Boolean> = playbackManager.isLoadingBody
+
+    // Podcast Delegation Flows
+    val podcastRepository = uk.sume.streamfolio.data.network.PodcastRepository(getApplication())
+
+    val currentMediaType: StateFlow<MediaType> = playbackManager.currentMediaType
+    val currentEpisode: StateFlow<PodcastEpisode?> = playbackManager.currentEpisode
+    val isPlayingPodcast: StateFlow<Boolean> = playbackManager.isPlayingPodcast
+    val podcastPlaybackPosition: StateFlow<Long> = playbackManager.podcastPlaybackPosition
+    val podcastDuration: StateFlow<Long> = playbackManager.podcastDuration
+    val podcastBufferedPosition: StateFlow<Long> = playbackManager.podcastBufferedPosition
+    val podcastPlaybackSpeed: StateFlow<Float> = playbackManager.podcastPlaybackSpeed
+    val podcastTranscriptSegments: StateFlow<List<TranscriptSegment>> = playbackManager.podcastTranscriptSegments
+    val isLoadingTranscript: StateFlow<Boolean> = playbackManager.isLoadingTranscript
+
+    fun playEpisode(episode: PodcastEpisode) = playbackManager.playEpisode(episode)
+    fun pauseEpisode() = playbackManager.pauseEpisode()
+    fun resumeEpisode() = playbackManager.resumeEpisode()
+    fun seekEpisodeTo(positionMs: Long) = playbackManager.seekEpisodeTo(positionMs)
+    fun setPodcastSpeed(speed: Float) = playbackManager.setPodcastSpeed(speed)
+    fun skipPodcastForward() = playbackManager.skipForward()
+    fun skipPodcastBackward() = playbackManager.skipBackward()
+    fun toggleEpisodePlayback(episode: PodcastEpisode) = playbackManager.toggleEpisodePlayback(episode)
+    fun stopPodcastPlayback() = playbackManager.stopPodcastPlayback()
+    fun stopAllAudioPlayback() = playbackManager.stopAllPlayback()
+
+    // Podcast DB Flows
+    val podcastSubscriptions: StateFlow<List<PodcastSubscription>> = podcastRepository.getAllSubscriptions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val bookmarkedEpisodes: StateFlow<List<PodcastEpisode>> = podcastRepository.getBookmarkedEpisodes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val downloadedEpisodes: StateFlow<List<PodcastEpisode>> = podcastRepository.getDownloadedEpisodes()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun toggleEpisodeBookmark(episode: PodcastEpisode) {
+        viewModelScope.launch {
+            podcastRepository.updateBookmarkStatus(episode.episodeId, !episode.isBookmarked)
+        }
+    }
+
+    fun downloadEpisode(episode: PodcastEpisode) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val dir = java.io.File(getApplication<Application>().filesDir, "podcasts")
+                if (!dir.exists()) dir.mkdirs()
+                
+                val localFile = java.io.File(dir, "ep_${episode.episodeId}.mp3")
+                
+                podcastRepository.updateDownloadStatus(episode.episodeId, false, "downloading")
+                
+                val request = okhttp3.Request.Builder().url(episode.audioUrl).build()
+                val okHttpClient = okhttp3.OkHttpClient()
+                okHttpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        response.body?.byteStream()?.use { input ->
+                            localFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        podcastRepository.updateDownloadStatus(episode.episodeId, true, localFile.absolutePath)
+                        viewModelScope.launch(Dispatchers.Main) {
+                            android.widget.Toast.makeText(getApplication(), "Download complete: ${episode.title}", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        podcastRepository.updateDownloadStatus(episode.episodeId, false, null)
+                        viewModelScope.launch(Dispatchers.Main) {
+                            android.widget.Toast.makeText(getApplication(), "Download failed: ${episode.title}", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NewsViewModel", "Error downloading episode", e)
+                podcastRepository.updateDownloadStatus(episode.episodeId, false, null)
+                viewModelScope.launch(Dispatchers.Main) {
+                    android.widget.Toast.makeText(getApplication(), "Download failed: ${episode.title}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    fun deleteDownloadedEpisode(episode: PodcastEpisode) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                episode.localFilePath?.let { path ->
+                    val file = java.io.File(path)
+                    if (file.exists()) file.delete()
+                }
+                podcastRepository.updateDownloadStatus(episode.episodeId, false, null)
+                viewModelScope.launch(Dispatchers.Main) {
+                    android.widget.Toast.makeText(getApplication(), "Deleted download: ${episode.title}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("NewsViewModel", "Error deleting download", e)
+            }
+        }
+    }
 
     fun addToTtsPlaylist(article: Article) = playbackManager.addToTtsPlaylist(article)
 
