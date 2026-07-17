@@ -3,7 +3,9 @@ package uk.sume.streamfolio.ui.components
 import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import android.util.Log
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
@@ -93,12 +95,45 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
                 tts?.setLanguage(Locale.US)
             }
+            selectBestVoice()
             tts?.setSpeechRate(_speechRate.value)
+            tts?.setPitch(0.98f) // Slightly lower pitch for more natural resonance
             isInitialized = true
         } else {
             Log.e("TtsHelper", "Initialization failed")
         }
     }
+
+    private fun selectBestVoice() {
+        val ttsEngine = tts ?: return
+        try {
+            val currentLocale = ttsEngine.language ?: Locale.getDefault()
+            val availableVoices = ttsEngine.voices ?: return
+            
+            // Filter voices for current language
+            val localeVoices = availableVoices.filter { 
+                it.locale.language == currentLocale.language 
+            }
+            
+            if (localeVoices.isEmpty()) return
+
+            // Sort voices by quality and network dependency:
+            // 1. Prefer higher quality voices
+            // 2. Prefer embedded (offline) high-quality voices to avoid latency/network dependence
+            val bestVoice = localeVoices.sortedWith(
+                compareByDescending<Voice> { it.quality }
+                    .thenBy { it.isNetworkConnectionRequired }
+            ).firstOrNull()
+
+            bestVoice?.let {
+                ttsEngine.voice = it
+                Log.d("TtsHelper", "Selected best voice: ${it.name} (Quality: ${it.quality}, Network: ${it.isNetworkConnectionRequired})")
+            }
+        } catch (e: Exception) {
+            Log.e("TtsHelper", "Error selecting best voice", e)
+        }
+    }
+
 
     fun playOrPause(text: String) {
         if (!isInitialized) return
