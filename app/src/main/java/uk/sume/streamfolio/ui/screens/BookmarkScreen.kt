@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -109,21 +110,33 @@ fun BookmarkScreen(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
-                    items(bookmarkedArticles) { article ->
+                    items(
+                        items = bookmarkedArticles,
+                        key = { it.link }
+                    ) { article ->
+                        val onTap = remember(article.link) {
+                            {
+                                val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                navController.navigate("detail_screen/$encodedUrl")
+                            }
+                        }
+                        val onBookmarkToggle = remember(article.link) { { viewModel.toggleBookmark(article) } }
+                        val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
+                        val onQueueClick = remember(article.link, context) {
+                            {
+                                viewModel.addToTtsPlaylist(article)
+                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
                         ArticleListItem(
                             article = article,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            onTap = {
-                                val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                navController.navigate("detail_screen/$encodedUrl")
-                            },
-                            onBookmarkToggle = { viewModel.toggleBookmark(article) },
-                            onPlayClick = { viewModel.speakArticle(article) },
-                            onQueueClick = {
-                                viewModel.addToTtsPlaylist(article)
-                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
-                            }
+                            onTap = onTap,
+                            onBookmarkToggle = onBookmarkToggle,
+                            onPlayClick = onPlayClick,
+                            onQueueClick = onQueueClick
                         )
                     }
                 }

@@ -5,8 +5,6 @@ import androidx.compose.animation.*
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -121,9 +119,29 @@ fun HomeScreen(
     val scrollStates = remember { mutableStateMapOf<String, LazyListState>() }
     val visibleListCounts = remember { mutableStateMapOf<String, Int>() }
 
-    LaunchedEffect(selectedCategory, articles) {
-        if (articles.isNotEmpty() || !isRefreshing) {
-            articlesMap[selectedCategory] = articles
+    // Keep the previous category's content visible while the newly selected category is loading
+    // so the screen doesn't blank out / flash between category switches.
+    var displayedCategory by remember { mutableStateOf(selectedCategory) }
+    var displayedArticles by remember { mutableStateOf(articles) }
+
+    LaunchedEffect(articles, isRefreshing) {
+        val targetCategory = selectedCategory
+        if (targetCategory == displayedCategory) {
+            // Same category: update the list when data arrives or loading finishes
+            displayedArticles = articles
+            if (articles.isNotEmpty() || !isRefreshing) {
+                articlesMap[targetCategory] = articles
+            }
+        } else if (articles.isNotEmpty()) {
+            // New category now has data; switch to it
+            displayedCategory = targetCategory
+            displayedArticles = articles
+            articlesMap[targetCategory] = articles
+        } else if (!isRefreshing) {
+            // New category finished loading but is empty
+            displayedCategory = targetCategory
+            displayedArticles = articles
+            articlesMap[targetCategory] = articles
         }
     }
 
@@ -179,6 +197,9 @@ fun HomeScreen(
     val isOffline = !isOnline
     val hasSeenSwipeHint by viewModel.hasSeenSwipeHint.collectAsState()
 
+    val dateFormatter = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
+    val formattedDate = remember(dateFormatter) { dateFormatter.format(Date()) }
+
     val pageSize = 12
 
     Box(
@@ -204,7 +225,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = SimpleDateFormat("EEEE, MMM d", Locale.getDefault()).format(Date()),
+                    text = formattedDate,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
@@ -254,29 +275,9 @@ fun HomeScreen(
             }
 
             // Refresh indicator or Shimmer Loader or content
-            AnimatedContent(
-                targetState = selectedCategory,
-                transitionSpec = {
-                    val initialIndex = categories.indexOf(initialState)
-                    val targetIndex = categories.indexOf(targetState)
-                    val direction = if (targetIndex > initialIndex) {
-                        AnimatedContentTransitionScope.SlideDirection.Left
-                    } else {
-                        AnimatedContentTransitionScope.SlideDirection.Right
-                    }
-                    slideIntoContainer(
-                        direction,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(300)) togetherWith
-                    slideOutOfContainer(
-                        direction,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(300))
-                },
-                modifier = Modifier.weight(1f),
-                label = "categoryTransition"
-            ) { targetCategory ->
-                val currentCategoryArticles = articlesMap[targetCategory] ?: emptyList()
+            Box(modifier = Modifier.weight(1f)) {
+                val targetCategory = displayedCategory
+                val currentCategoryArticles = displayedArticles
                 val currentScrollState = scrollStates.getOrPut(targetCategory) { LazyListState() }
 
                 val currentFilteredArticles = remember(currentCategoryArticles, selectedPublisher) {
@@ -450,7 +451,10 @@ fun HomeScreen(
                                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
-                                        items(currentPublishers) { (name, domain) ->
+                                        items(
+                                            items = currentPublishers,
+                                            key = { it.first }
+                                        ) { (name, domain) ->
                                             val isPubSelected = selectedPublisher == name
                                             val borderAlpha = if (isPubSelected) 1f else 0.1f
                                             val borderColor = if (isPubSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -521,7 +525,9 @@ fun HomeScreen(
                                             state = pagerState,
                                             contentPadding = PaddingValues(horizontal = 24.dp),
                                             pageSpacing = 16.dp,
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(280.dp)
                                         ) { page ->
                                             val article = currentTrendingArticles[page]
                                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -621,22 +627,34 @@ fun HomeScreen(
                                     )
                                 }
                             } else {
-                                items(currentPagedListArticles) { article ->
+                                items(
+                                    items = currentPagedListArticles,
+                                    key = { it.link }
+                                ) { article ->
+                                    val onTap = remember(article.link) {
+                                        {
+                                            val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                            navController.navigate("detail_screen/$encodedUrl")
+                                        }
+                                    }
+                                    val onBookmarkToggle = remember(article.link) { { viewModel.toggleBookmark(article) } }
+                                    val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
+                                    val onQueueClick = remember(article.link, context) {
+                                        {
+                                            viewModel.addToTtsPlaylist(article)
+                                            Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+
                                     ArticleListItem(
                                         article = article,
                                         viewModel = viewModel,
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
-                                        onTap = {
-                                            val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                            navController.navigate("detail_screen/$encodedUrl")
-                                        },
-                                        onBookmarkToggle = { viewModel.toggleBookmark(article) },
-                                        onPlayClick = { viewModel.speakArticle(article) },
-                                        onQueueClick = {
-                                            viewModel.addToTtsPlaylist(article)
-                                            Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
-                                        }
+                                        onTap = onTap,
+                                        onBookmarkToggle = onBookmarkToggle,
+                                        onPlayClick = onPlayClick,
+                                        onQueueClick = onQueueClick
                                     )
                                 }
 
@@ -710,6 +728,7 @@ fun TrendingCard(
                                 )
                                 .build()
                         )
+                        .size(600, 400)
                         .build()
                 }
                 AsyncImage(
@@ -1101,6 +1120,7 @@ fun ArticleListItem(
                                                 )
                                                 .build()
                                         )
+                                        .size(256, 256)
                                         .build()
                                 }
                                 AsyncImage(

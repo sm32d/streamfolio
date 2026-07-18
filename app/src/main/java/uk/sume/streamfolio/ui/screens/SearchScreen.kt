@@ -401,21 +401,33 @@ fun SearchScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 96.dp)
                         ) {
-                            items(searchResults) { article ->
+                            items(
+                                items = searchResults,
+                                key = { it.link }
+                            ) { article ->
+                                val onTap = remember(article.link) {
+                                    {
+                                        val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                        navController.navigate("detail_screen/$encodedUrl")
+                                    }
+                                }
+                                val onBookmarkToggle = remember(article.link) { { viewModel.toggleBookmark(article) } }
+                                val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
+                                val onQueueClick = remember(article.link, context) {
+                                    {
+                                        viewModel.addToTtsPlaylist(article)
+                                        Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+
                                 ArticleListItem(
                                     article = article,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
-                                    onTap = {
-                                        val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                        navController.navigate("detail_screen/$encodedUrl")
-                                    },
-                                    onBookmarkToggle = { viewModel.toggleBookmark(article) },
-                                    onPlayClick = { viewModel.speakArticle(article) },
-                                    onQueueClick = {
-                                        viewModel.addToTtsPlaylist(article)
-                                        Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
-                                    }
+                                    onTap = onTap,
+                                    onBookmarkToggle = onBookmarkToggle,
+                                    onPlayClick = onPlayClick,
+                                    onQueueClick = onQueueClick
                                 )
                             }
                         }
