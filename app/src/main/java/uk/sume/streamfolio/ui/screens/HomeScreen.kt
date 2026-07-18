@@ -92,10 +92,17 @@ fun HomeScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
     val selectedPublisher by viewModel.selectedPublisher.collectAsState()
+    val haptic = LocalHapticFeedback.current
     
     val isAiEnabled by viewModel.isAiEnabled.collectAsState()
     val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
     val hasSeenAiSpotlight by viewModel.hasSeenAiSpotlight.collectAsState()
+
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
 
     val articlesMap = remember { mutableStateMapOf<String, List<Article>>() }
     val scrollStates = remember { mutableStateMapOf<String, LazyListState>() }
@@ -971,6 +978,12 @@ fun ArticleListItem(
         },
         positionalThreshold = { distance -> distance * 0.75f }
     )
+
+    LaunchedEffect(dismissState.targetValue) {
+        if (dismissState.targetValue != SwipeToDismissBoxValue.Settled) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
 
     SwipeToDismissBox(
         state = dismissState,

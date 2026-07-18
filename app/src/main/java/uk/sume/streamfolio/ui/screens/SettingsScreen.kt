@@ -679,6 +679,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
 
 @Composable
 fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel) {
+    val haptic = LocalHapticFeedback.current
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
 
@@ -770,6 +771,7 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
                                     .pointerInput(index) {
                                         detectDragGesturesAfterLongPress(
                                             onDragStart = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 draggedIndex = index
                                                 dragOffset = 0f
                                             },
@@ -797,6 +799,7 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
                                                     categoryList = newList
                                                     draggedIndex = nextIdx
                                                     dragOffset -= itemHeightPx
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 } else if (dragOffset < -itemHeightPx && draggedIndex > 0) {
                                                     val newList = categoryList.toMutableList()
                                                     val prevIdx = draggedIndex - 1
@@ -806,6 +809,7 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
                                                     categoryList = newList
                                                     draggedIndex = prevIdx
                                                     dragOffset += itemHeightPx
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 }
                                             }
                                         )
@@ -2622,6 +2626,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     var parsedFeedsToImport by remember { mutableStateOf<List<OpmlFeed>?>(null) }
     var fullBackupJsonToRestore by remember { mutableStateOf<String?>(null) }
@@ -2655,10 +2660,20 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                     if (jsonText.contains("custom_feeds") && jsonText.contains("preferences")) {
                         fullBackupJsonToRestore = jsonText
                     } else {
+                        scope.launch {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            kotlinx.coroutines.delay(200)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
                         Toast.makeText(context, "Invalid backup file.", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
+                scope.launch {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    kotlinx.coroutines.delay(200)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
                 Toast.makeText(context, "Failed to read backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         }
@@ -2666,6 +2681,11 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
 
     fun exportSubscriptions(feeds: List<CustomFeed>) {
         if (feeds.isEmpty()) {
+            scope.launch {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                kotlinx.coroutines.delay(200)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
             Toast.makeText(context, "You have no custom feeds to export.", Toast.LENGTH_SHORT).show()
             return
         }
@@ -2682,8 +2702,14 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             context.startActivity(Intent.createChooser(shareIntent, "Export OPML Subscriptions"))
         } catch (e: Exception) {
+            scope.launch {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                kotlinx.coroutines.delay(200)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
             Toast.makeText(context, "Failed to export OPML: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
@@ -2701,8 +2727,14 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                 putExtra(Intent.EXTRA_STREAM, uri)
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             context.startActivity(Intent.createChooser(shareIntent, "Export StreamFolio Backup"))
         } catch (e: Exception) {
+            scope.launch {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                kotlinx.coroutines.delay(200)
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
             Toast.makeText(context, "Failed to export backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
@@ -2984,9 +3016,19 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             viewModel.restoreSettingsBackup(
                                 backupJson = backupJson,
                                 onSuccess = {
+                                    scope.launch {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        kotlinx.coroutines.delay(100)
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
                                     Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_SHORT).show()
                                 },
                                 onError = { e ->
+                                    scope.launch {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        kotlinx.coroutines.delay(200)
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    }
                                     Toast.makeText(context, "Restore failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                                 }
                             )
