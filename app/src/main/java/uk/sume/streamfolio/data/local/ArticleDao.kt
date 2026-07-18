@@ -4,6 +4,7 @@ import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
+import uk.sume.streamfolio.data.model.TtsPlaylistState
 
 @Dao
 interface ArticleDao {
@@ -128,6 +129,18 @@ interface ArticleDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticles(articles: List<Article>)
+}
+
+@Dao
+interface TtsPlaylistStateDao {
+    @Query("SELECT * FROM tts_playlist_state WHERE id = 1")
+    suspend fun getState(): TtsPlaylistState?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveState(state: TtsPlaylistState)
+
+    @Query("DELETE FROM tts_playlist_state")
+    suspend fun clearState()
 }
 
 @Dao

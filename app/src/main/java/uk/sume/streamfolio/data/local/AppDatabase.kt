@@ -6,11 +6,17 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
+import uk.sume.streamfolio.data.model.TtsPlaylistState
 
-@Database(entities = [Article::class, CustomFeed::class], version = 5, exportSchema = true)
+@Database(
+    entities = [Article::class, CustomFeed::class, TtsPlaylistState::class],
+    version = 6,
+    exportSchema = true
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun customFeedDao(): CustomFeedDao
+    abstract fun ttsPlaylistStateDao(): TtsPlaylistStateDao
 
     companion object {
         @Volatile

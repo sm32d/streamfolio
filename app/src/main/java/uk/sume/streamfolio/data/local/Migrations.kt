@@ -16,14 +16,21 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * destructively migrated because their schemas are not available.
  */
 
-val ALL_MIGRATIONS = arrayOf<Migration>()
+/**
+ * Adds the tts_playlist_state table used to persist the audio queue across
+ * process death.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `tts_playlist_state` (" +
+                "`id` INTEGER NOT NULL, " +
+                "`currentIndex` INTEGER NOT NULL, " +
+                "`linksJson` TEXT NOT NULL, " +
+                "PRIMARY KEY(`id`)" +
+                ")"
+        )
+    }
+}
 
-// Template for the next migration:
-//
-// val MIGRATION_5_6 = object : Migration(5, 6) {
-//     override fun migrate(db: SupportSQLiteDatabase) {
-//         db.execSQL("ALTER TABLE articles ADD COLUMN some_new_field TEXT")
-//     }
-// }
-//
-// Then update: val ALL_MIGRATIONS = arrayOf(MIGRATION_5_6)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_5_6)

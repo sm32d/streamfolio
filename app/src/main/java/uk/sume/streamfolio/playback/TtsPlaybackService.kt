@@ -60,6 +60,7 @@ class TtsPlaybackService : Service() {
     }
 
     override fun onDestroy() {
+        playbackManager.forceSavePlaylist()
         serviceScope.cancel()
         mediaSession.release()
         super.onDestroy()

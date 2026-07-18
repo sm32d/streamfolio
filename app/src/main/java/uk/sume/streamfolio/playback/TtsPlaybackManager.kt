@@ -14,8 +14,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import uk.sume.streamfolio.data.local.AppDatabase
 import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.data.model.TtsPlaylistState
 import uk.sume.streamfolio.data.network.NewsRepository
 import uk.sume.streamfolio.ui.components.TtsHelper
 
@@ -24,6 +27,8 @@ class TtsPlaybackManager private constructor(
 ) {
 
     private val repository = NewsRepository(appContext)
+    private val db = AppDatabase.getDatabase(appContext)
+    private val ttsStateDao = db.ttsPlaylistStateDao()
     private val prefs = PreferencesHelper(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -58,6 +63,82 @@ class TtsPlaybackManager private constructor(
         ttsHelper.setSpeechRate(prefs.ttsSpeechRate)
         ttsHelper.onArticleCompleted = {
             advanceTtsPlaylist()
+        }
+        restorePlaylist()
+
+        // Persist the audio queue whenever the playlist or current index changes.
+        scope.launch {
+            combine(_ttsPlaylist, _currentTtsArticleIndex) { _, _ -> }
+                .collect { persistPlaylist() }
+        }
+    }
+
+    private fun restorePlaylist() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val state = ttsStateDao.getState() ?: return@launch
+                val links = parseLinksJson(state.linksJson)
+                if (links.isEmpty()) return@launch
+
+                val restored = mutableListOf<Article>()
+                for (link in links) {
+                    val article = repository.getArticleByLink(link)
+                    if (article != null) {
+                        restored.add(article)
+                    }
+                }
+
+                if (restored.isNotEmpty()) {
+                    _ttsPlaylist.value = restored
+                    _currentTtsArticleIndex.value = state.currentIndex.coerceIn(-1, restored.lastIndex)
+                }
+            } catch (e: Exception) {
+                // Ignore restore failures; the queue will simply be empty.
+            }
+        }
+    }
+
+    private fun persistPlaylist() {
+        scope.launch(Dispatchers.IO) {
+            try {
+                val playlist = _ttsPlaylist.value
+                val index = _currentTtsArticleIndex.value
+                if (playlist.isEmpty()) {
+                    ttsStateDao.clearState()
+                } else {
+                    val linksJson = JSONArray(playlist.map { it.link }).toString()
+                    ttsStateDao.saveState(TtsPlaylistState(id = 1, currentIndex = index, linksJson = linksJson))
+                }
+            } catch (e: Exception) {
+                // Ignore persistence failures to avoid crashing playback actions.
+            }
+        }
+    }
+
+    /**
+     * Synchronous save for process-death scenarios (e.g. service onDestroy).
+     * Prefer the automatic flow-based persistence for normal state changes.
+     */
+    fun forceSavePlaylist() {
+        runCatching {
+            val playlist = _ttsPlaylist.value
+            val index = _currentTtsArticleIndex.value
+            if (playlist.isEmpty()) {
+                kotlinx.coroutines.runBlocking(Dispatchers.IO) { ttsStateDao.clearState() }
+            } else {
+                val linksJson = JSONArray(playlist.map { it.link }).toString()
+                val state = TtsPlaylistState(id = 1, currentIndex = index, linksJson = linksJson)
+                kotlinx.coroutines.runBlocking(Dispatchers.IO) { ttsStateDao.saveState(state) }
+            }
+        }
+    }
+
+    private fun parseLinksJson(json: String): List<String> {
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).map { array.getString(it) }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 
