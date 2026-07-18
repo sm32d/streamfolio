@@ -27,6 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +70,7 @@ import uk.sume.streamfolio.data.model.CustomFeed
 
 @Composable
 fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
+    val haptic = LocalHapticFeedback.current
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
 
@@ -465,7 +468,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                             )
                         }
                     }
-                    Switch(
+                    HapticSwitch(
                         checked = useDynamicColors,
                         onCheckedChange = { checked ->
                             viewModel.setUseDynamicColors(checked)
@@ -586,7 +589,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                         )
                     }
                 }
-                Switch(
+                HapticSwitch(
                     checked = isDefaultFeedsEnabled,
                     onCheckedChange = { checked ->
                         isDefaultFeedsEnabled = checked
@@ -1130,7 +1133,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                             )
                                         }
-                                        Switch(
+                                        HapticSwitch(
                                             checked = isEnabled,
                                             onCheckedChange = { checked ->
                                                 if (isActiveRegion) {
@@ -1279,7 +1282,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                         )
                                     }
-                                    Switch(
+                                    HapticSwitch(
                                         checked = isEnabled,
                                         onCheckedChange = { checked ->
                                             if (isProviderActiveRegion) {
@@ -1943,13 +1946,17 @@ private fun SettingsRow(
     subtitle: String,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick()
+                }
             )
             .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -2247,7 +2254,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                             )
                         }
                     }
-                    Switch(
+                    HapticSwitch(
                         checked = isAiEnabled,
                         onCheckedChange = { viewModel.setAiEnabled(it) },
                         colors = SwitchDefaults.colors(
@@ -2300,7 +2307,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                     )
                                 }
                             }
-                            Switch(
+                            HapticSwitch(
                                   checked = isTranslationEnabled,
                                   onCheckedChange = { viewModel.setTranslationEnabled(it) },
                                   modifier = Modifier.scale(0.85f),
@@ -2439,7 +2446,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 )
                             }
                         }
-                        Switch(
+                        HapticSwitch(
                             checked = isSummaryEnabled && isGeminiAvail,
                             onCheckedChange = { if (isGeminiAvail) viewModel.setSummaryEnabled(it) },
                             enabled = isGeminiAvail,
@@ -2525,7 +2532,7 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
                                 )
                             }
                         }
-                        Switch(
+                        HapticSwitch(
                             checked = isSmartTagsEnabled,
                             onCheckedChange = { viewModel.setSmartTagsEnabled(it) },
                             enabled = true,
@@ -3250,4 +3257,29 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
         }
     }
 }
+
+@Composable
+private fun HapticSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    colors: SwitchColors = SwitchDefaults.colors(
+        checkedThumbColor = Color.White,
+        checkedTrackColor = MaterialTheme.colorScheme.primary
+    )
+) {
+    val haptic = LocalHapticFeedback.current
+    Switch(
+        checked = checked,
+        onCheckedChange = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onCheckedChange(it)
+        },
+        modifier = modifier,
+        enabled = enabled,
+        colors = colors
+    )
+}
+
 

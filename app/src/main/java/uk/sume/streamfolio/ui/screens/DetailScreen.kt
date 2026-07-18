@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -79,6 +81,7 @@ fun DetailScreen(
     val targetLang by viewModel.translationTargetLanguage.collectAsState()
 
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     DisposableEffect(Unit) {
         onDispose {
@@ -133,7 +136,10 @@ fun DetailScreen(
             ) {
                 // Back Button (Start aligned)
                 IconButton(
-                    onClick = { navController.popBackStack() },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        navController.popBackStack()
+                    },
                     modifier = Modifier.align(Alignment.CenterStart)
                 ) {
                     Icon(
@@ -179,7 +185,10 @@ fun DetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (currentTab == "Reader") {
-                        IconButton(onClick = { showTypographyPanel = !showTypographyPanel }) {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showTypographyPanel = !showTypographyPanel
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.TextFields,
                                 contentDescription = "Text Settings",
@@ -188,6 +197,7 @@ fun DetailScreen(
                         }
                         article?.let { art ->
                             IconButton(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 viewModel.addToTtsPlaylist(art)
                                 Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
                             }) {
@@ -225,7 +235,10 @@ fun DetailScreen(
                                     val isSel = (opt == "Sans-Serif" && fontFamily == "sans_serif") || (opt == "Serif" && fontFamily == "serif")
                                     FilterChip(
                                         selected = isSel,
-                                        onClick = { viewModel.updateReaderFontFamily(if (opt == "Serif") "serif" else "sans_serif") },
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            viewModel.updateReaderFontFamily(if (opt == "Serif") "serif" else "sans_serif")
+                                        },
                                         label = { Text(opt, fontSize = 12.sp) },
                                         modifier = Modifier.padding(start = 4.dp)
                                     )
@@ -243,13 +256,19 @@ fun DetailScreen(
                             Text("Text Size (${fontSize.toInt()}sp)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(
-                                    onClick = { if (fontSize > 12f) viewModel.updateReaderFontSize(fontSize - 2f) },
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (fontSize > 12f) viewModel.updateReaderFontSize(fontSize - 2f)
+                                    },
                                     enabled = fontSize > 12f
                                 ) {
                                     Text("A-", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 IconButton(
-                                    onClick = { if (fontSize < 30f) viewModel.updateReaderFontSize(fontSize + 2f) },
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (fontSize < 30f) viewModel.updateReaderFontSize(fontSize + 2f)
+                                    },
                                     enabled = fontSize < 30f
                                 ) {
                                     Text("A+", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
@@ -270,7 +289,10 @@ fun DetailScreen(
                                     val isSel = lineSpacing == value
                                     FilterChip(
                                         selected = isSel,
-                                        onClick = { viewModel.updateReaderLineSpacing(value) },
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            viewModel.updateReaderLineSpacing(value)
+                                        },
                                         label = { Text(label, fontSize = 12.sp) },
                                         modifier = Modifier.padding(start = 4.dp)
                                     )
@@ -606,7 +628,10 @@ fun DetailScreen(
                                         when (val state = aiSummaryState) {
                                             is AiSummaryState.Idle -> {
                                                 Button(
-                                                    onClick = { viewModel.generateAiSummary(articleBody) },
+                                                    onClick = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        viewModel.generateAiSummary(articleBody)
+                                                    },
                                                     modifier = Modifier.fillMaxWidth(),
                                                     shape = RoundedCornerShape(16.dp),
                                                     colors = ButtonDefaults.buttonColors(
@@ -950,6 +975,7 @@ fun DetailScreen(
                     // Save Bookmark Action
                     Row(
                         modifier = Modifier.clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             if (article != null) {
                                 viewModel.toggleBookmark(article)
                             }
@@ -973,6 +999,7 @@ fun DetailScreen(
                     // Share Action
                     Row(
                         modifier = Modifier.clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, article.title)
@@ -1001,6 +1028,7 @@ fun DetailScreen(
                         val isTranslated = translatedTitle.isNotEmpty()
                         Row(
                             modifier = Modifier.clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (isTranslated) {
                                     viewModel.clearTranslation()
                                 } else {

@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import uk.sume.streamfolio.data.model.Article
 import androidx.navigation.NavController
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +68,7 @@ fun TtsMiniPlayer(
     }
 
     val article = playlist[currentIndex]
+    val haptic = LocalHapticFeedback.current
 
     val coroutineScope = rememberCoroutineScope()
     val offsetY = remember { Animatable(0f) }
@@ -87,6 +90,7 @@ fun TtsMiniPlayer(
                     onDragEnd = {
                         coroutineScope.launch {
                             if (offsetY.value > threshold) {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 offsetY.animateTo(300f, animationSpec = tween(200))
                                 viewModel.clearTtsPlaylist()
                             } else {
@@ -197,7 +201,10 @@ fun TtsMiniPlayer(
 
                 // Play / Pause Button
                 IconButton(
-                    onClick = { viewModel.playOrPausePlaylist() },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.playOrPausePlaylist()
+                    },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
@@ -210,7 +217,10 @@ fun TtsMiniPlayer(
 
                 // Skip Next Button
                 IconButton(
-                    onClick = { viewModel.advanceTtsPlaylist() },
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        viewModel.advanceTtsPlaylist()
+                    },
                     enabled = currentIndex < playlist.size - 1,
                     modifier = Modifier.size(36.dp)
                 ) {
@@ -234,6 +244,7 @@ fun TtsLyricsVisualizer(
     navController: NavController,
     onDismiss: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val playlist by viewModel.ttsPlaylist.collectAsState()
     val currentIndex by viewModel.currentTtsArticleIndex.collectAsState()
     val isPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
@@ -316,7 +327,10 @@ fun TtsLyricsVisualizer(
             ) {
                 // Left close button (chevron down matches up/down transition)
                 IconButton(
-                    onClick = onDismiss,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDismiss()
+                    },
                     modifier = Modifier
                         .size(40.dp)
                         .background(controlBtnBg, CircleShape)
@@ -781,7 +795,10 @@ fun TtsLyricsVisualizer(
                         ) {
                             // Previous Button
                             IconButton(
-                                onClick = { viewModel.playPreviousTtsArticle() },
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    viewModel.playPreviousTtsArticle()
+                                },
                                 enabled = currentIndex > 0,
                                 modifier = Modifier
                                     .size(44.dp)
@@ -800,7 +817,10 @@ fun TtsLyricsVisualizer(
 
                             // Play / Pause Button
                             IconButton(
-                                onClick = { viewModel.playOrPausePlaylist() },
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    viewModel.playOrPausePlaylist()
+                                },
                                 modifier = Modifier
                                     .size(54.dp)
                                     .shadow(4.dp, CircleShape)
@@ -824,7 +844,10 @@ fun TtsLyricsVisualizer(
 
                             // Next Button
                             IconButton(
-                                onClick = { viewModel.advanceTtsPlaylist() },
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    viewModel.advanceTtsPlaylist()
+                                },
                                 enabled = currentIndex < playlist.size - 1,
                                 modifier = Modifier
                                     .size(44.dp)
@@ -1005,10 +1028,14 @@ private fun BottomUtilityIconButton(
     isActive: Boolean = false,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .clickable(onClick = onClick)
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            }
             .padding(vertical = 6.dp, horizontal = 18.dp)
             .background(
                 color = if (isActive) tint.copy(alpha = 0.14f) else Color.Transparent,
@@ -1057,6 +1084,7 @@ private fun UtilityMenuItem(
     selectedColor: Color,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     DropdownMenuItem(
         modifier = Modifier
             .padding(horizontal = 8.dp, vertical = 3.dp)
@@ -1096,7 +1124,10 @@ private fun UtilityMenuItem(
                 )
             }
         },
-        onClick = onClick
+        onClick = {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            onClick()
+        }
     )
 }
 

@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 enum class BottomTab(val route: String, val icon: ImageVector, val label: String) {
     HOME("home_screen", Icons.Default.Home, "Home"),
@@ -36,6 +38,8 @@ fun GlassmorphicNavBar(
     onTabSelected: (BottomTab) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -59,7 +63,10 @@ fun GlassmorphicNavBar(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .clickable { onTabSelected(tab) }
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onTabSelected(tab)
+                        }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Icon(

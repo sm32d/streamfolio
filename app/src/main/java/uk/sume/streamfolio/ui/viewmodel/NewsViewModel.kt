@@ -226,10 +226,106 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             if (query.isBlank()) {
                 flowOf(emptyList())
             } else {
-                repository.searchArticlesLocal(query)
+                repository.searchArticlesLocal(query).map { list ->
+                    val clean = query.trim()
+                    if (clean.length <= 3) {
+                        val pattern = Regex("\\b" + Regex.escape(clean) + "\\b", RegexOption.IGNORE_CASE)
+                        list.filter { article ->
+                            pattern.containsMatchIn(article.title) || 
+                            pattern.containsMatchIn(article.description)
+                        }
+                    } else {
+                        list
+                    }
+                }
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val trendingTopics: StateFlow<List<String>> = combine(
+        repository.getAllArticles(),
+        customFeeds,
+        _prefsChangedSignal
+    ) { allArticles, feeds, _ ->
+        val activeCategories = if (prefs.isDefaultFeedsEnabled) prefs.selectedCategories else emptySet()
+        val activeUrls = mutableSetOf<String>()
+        
+        for (cat in activeCategories) {
+            val defaultFeeds = DefaultFeedsConfig.getFeedsFor(
+                region = prefs.region,
+                category = cat,
+                disabledFeedUrls = prefs.disabledFeedUrls,
+                enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
+            )
+            activeUrls.addAll(defaultFeeds)
+        }
+        
+        val enabledCustomFeeds = feeds.filter { 
+            !prefs.disabledFeedUrls.contains(it.url) 
+        }.map { it.url }
+        activeUrls.addAll(enabledCustomFeeds)
+
+        val filteredArticles = allArticles.filter { activeUrls.contains(it.sourceUrl) }
+
+        if (filteredArticles.isEmpty()) {
+            listOf("AI", "Climate", "Markets", "Tech", "Science", "Sports", "Health", "Space")
+        } else {
+            val stopwords = setOf(
+                "the", "and", "for", "with", "this", "that", "from", "your", "about", "would", 
+                "their", "will", "more", "news", "says", "said", "after", "over", "first", "years", 
+                "year", "could", "three", "were", "what", "when", "who", "which", "have", "been", 
+                "also", "into", "some", "other", "them", "then", "their", "they", "than", "then",
+                "should", "these", "those", "about", "against", "after", "before", "between",
+                "under", "through", "during", "without", "around", "about", "against", "among"
+            )
+            
+            val counts = mutableMapOf<String, Int>()
+            
+            for (article in filteredArticles) {
+                if (article.category.isNotBlank() && article.category != "SEARCH" && article.category != "All") {
+                    val cat = article.category.trim()
+                    counts[cat] = (counts[cat] ?: 0) + 5
+                }
+                
+                if (!article.tags.isNullOrBlank()) {
+                    article.tags.split(",").forEach { tag ->
+                        val cleanTag = tag.trim()
+                        if (cleanTag.isNotBlank() && cleanTag.lowercase() != "news") {
+                            counts[cleanTag] = (counts[cleanTag] ?: 0) + 10
+                        }
+                    }
+                }
+                
+                val words = article.title
+                    .split(Regex("[^a-zA-Z0-9#]"))
+                    .map { it.trim() }
+                    .filter { word ->
+                        word.length > 2 && 
+                        !stopwords.contains(word.lowercase()) &&
+                        word.lowercase() != "news" &&
+                        word.any { it.isLetter() }
+                    }
+                for (word in words) {
+                    val displayWord = if (word == word.uppercase()) {
+                        word
+                    } else {
+                        word.replaceFirstChar { it.uppercase() }
+                    }
+                    counts[displayWord] = (counts[displayWord] ?: 0) + 1
+                }
+            }
+            
+            counts.entries
+                .sortedByDescending { it.value }
+                .map { it.key }
+                .filter { it.lowercase() != "search" && it.lowercase() != "all" }
+                .take(8)
+                .ifEmpty {
+                    listOf("AI", "Climate", "Markets", "Tech", "Science", "Sports", "Health", "Space")
+                }
+        }
+    }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), listOf("AI", "Climate", "Markets", "Tech", "Science", "Sports", "Health", "Space"))
 
     // Reader Mode State
     private val _articleBody = MutableStateFlow("")
@@ -318,6 +414,33 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             _isLoadingSearch.value = false
         }
     }
+
+    private val _recentSearches = MutableStateFlow(prefs.recentSearches)
+    val recentSearches: StateFlow<List<String>> = _recentSearches
+
+    fun addRecentSearch(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return
+        val currentList = prefs.recentSearches.toMutableList()
+        currentList.remove(trimmed)
+        currentList.add(0, trimmed)
+        val updatedList = currentList.take(8) // Keep top 8 recent searches
+        prefs.recentSearches = updatedList
+        _recentSearches.value = updatedList
+    }
+
+    fun clearRecentSearches() {
+        prefs.recentSearches = emptyList()
+        _recentSearches.value = emptyList()
+    }
+
+    fun removeRecentSearch(query: String) {
+        val currentList = prefs.recentSearches.toMutableList()
+        currentList.remove(query)
+        prefs.recentSearches = currentList
+        _recentSearches.value = currentList
+    }
+
 
     fun toggleBookmark(article: Article) {
         viewModelScope.launch {

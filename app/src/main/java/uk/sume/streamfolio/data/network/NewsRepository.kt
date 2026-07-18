@@ -232,11 +232,19 @@ class NewsRepository(private val context: Context) {
                                 parser.parse(xml, cat, feedUrl = formattedUrl)
                             }
                             
-                            val cleanQuery = query.replace("\"", "").lowercase()
+                            val cleanQuery = query.replace("\"", "").trim()
                             val filtered = parsed.filter {
-                                it.title.lowercase().contains(cleanQuery) || 
-                                it.description.lowercase().contains(cleanQuery) ||
-                                it.sourceName.lowercase().contains(cleanQuery)
+                                if (cleanQuery.length <= 3) {
+                                    val pattern = Regex("\\b" + Regex.escape(cleanQuery) + "\\b", RegexOption.IGNORE_CASE)
+                                    pattern.containsMatchIn(it.title) || 
+                                    pattern.containsMatchIn(it.description) ||
+                                    pattern.containsMatchIn(it.sourceName)
+                                } else {
+                                    val lq = cleanQuery.lowercase()
+                                    it.title.lowercase().contains(lq) || 
+                                    it.description.lowercase().contains(lq) ||
+                                    it.sourceName.lowercase().contains(lq)
+                                }
                             }
                             matchingArticles.addAll(filtered)
                         }

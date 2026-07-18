@@ -100,4 +100,13 @@ class PreferencesHelper(context: Context) {
     var useDynamicColors: Boolean
         get() = prefs.getBoolean("use_dynamic_colors", false)
         set(value) = prefs.edit().putBoolean("use_dynamic_colors", value).apply()
+
+    var recentSearches: List<String>
+        get() {
+            val listStr = prefs.getString("recent_searches", "") ?: ""
+            return if (listStr.isEmpty()) emptyList() else listStr.split("|||")
+        }
+        set(value) {
+            prefs.edit().putString("recent_searches", value.take(10).joinToString("|||")).apply()
+        }
 }
