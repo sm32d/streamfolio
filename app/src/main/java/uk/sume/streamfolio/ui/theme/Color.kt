@@ -8,6 +8,8 @@ val EmeraldPrimary = Color(0xFF1E88E5)    // Vibrant middle-blue from the icon
 val EmeraldSecondary = Color(0xFF1565C0)  // Deep royal blue from outer icon gradient
 val MintAccent = Color(0xFF00B0FF)        // Light cyan-blue accent for highlights
 
+val ErrorRed = Color(0xFFD32F2F)          // Conventional red for destructive actions
+
 val DarkBackground = Color(0xFF060D1E)
 val DarkSurface = Color(0xFF0E1A33)
 val DarkSurfaceVariant = Color(0xFF1A2B4C)

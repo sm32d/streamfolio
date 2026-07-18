@@ -384,7 +384,7 @@ fun HomeScreen(
                             .padding(bottom = emptyStateBottomPadding),
                         icon = Icons.Outlined.Newspaper,
                         title = "No feeds active",
-                        description = "Please enable Google News or add a custom RSS feed in Settings to start reading."
+                        description = "Please enable default feeds or add a custom RSS feed in Settings to start reading."
                     )
                 } else if (isRefreshing && currentCategoryArticles.isEmpty()) {
                     SkeletonLoader(modifier = Modifier.fillMaxSize())
