@@ -65,6 +65,7 @@ import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.ui.components.SkeletonLoader
 import uk.sume.streamfolio.ui.components.SwipeableCard
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+import uk.sume.streamfolio.util.UrlSecurityValidator
 
 
 import androidx.compose.ui.draw.shadow
@@ -945,10 +946,11 @@ fun ArticleListItem(
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             }
             "share" -> {
+                val shareUrl = UrlSecurityValidator.normalizeToHttps(currentArticle.link) ?: currentArticle.link
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
-                    putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: ${currentArticle.link}")
+                    putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: $shareUrl")
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)

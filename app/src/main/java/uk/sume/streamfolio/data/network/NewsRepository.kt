@@ -5,17 +5,19 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import org.jsoup.Connection
 import org.jsoup.Jsoup
 import uk.sume.streamfolio.data.local.AppDatabase
 import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
+import uk.sume.streamfolio.util.UrlSecurityValidator
 import java.util.concurrent.TimeUnit
 
 class NewsRepository(private val context: Context) {
@@ -36,6 +38,7 @@ class NewsRepository(private val context: Context) {
         .readTimeout(10, TimeUnit.SECONDS)
         .followRedirects(true)
         .followSslRedirects(true)
+        .addInterceptor(SsrfProtectionInterceptor())
         .build()
 
     private val userAgent = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
@@ -49,6 +52,14 @@ class NewsRepository(private val context: Context) {
             .header("Connection", "keep-alive")
             .header("Cache-Control", "max-age=0")
             .build()
+    }
+
+    /**
+     * Redacts a URL to scheme+host for safer logging. Avoids leaking tokens,
+     * query parameters or full paths in logcat.
+     */
+    private fun safeHost(url: String): String {
+        return UrlSecurityValidator.normalizeUrl(url)?.toHttpUrlOrNull()?.host ?: "[invalid]"
     }
 
     // Fetch Default Curated RSS Feeds
@@ -75,7 +86,7 @@ class NewsRepository(private val context: Context) {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("NewsRepository", "Error fetching default feed: $url", e)
+                    Log.e("NewsRepository", "Error fetching default feed: ${safeHost(url)}", e)
                 }
                 feedArticles
             }
@@ -100,9 +111,10 @@ class NewsRepository(private val context: Context) {
             async {
                 val feedArticles = mutableListOf<Article>()
                 try {
-                    var url = feed.url.trim()
-                    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                        url = "https://$url"
+                    val url = UrlSecurityValidator.sanitizeUrl(feed.url, requireHttps = true)
+                    if (url == null) {
+                        Log.w("NewsRepository", "Rejected unsafe custom feed URL: ${safeHost(feed.url)}")
+                        return@async feedArticles
                     }
                     val request = buildBrowserRequest(url)
 
@@ -114,9 +126,10 @@ class NewsRepository(private val context: Context) {
                                 val aggregated = mutableListOf<Article>()
                                 for (childUrl in urls) {
                                     try {
-                                        var formattedChildUrl = childUrl.trim()
-                                        if (!formattedChildUrl.startsWith("http://") && !formattedChildUrl.startsWith("https://")) {
-                                            formattedChildUrl = "https://$formattedChildUrl"
+                                        val formattedChildUrl = UrlSecurityValidator.sanitizeUrl(childUrl, requireHttps = true)
+                                        if (formattedChildUrl == null) {
+                                            Log.w("NewsRepository", "Rejected unsafe OPML child feed URL: ${safeHost(childUrl)}")
+                                            continue
                                         }
                                         val childRequest = buildBrowserRequest(formattedChildUrl)
                                         client.newCall(childRequest).execute().use { childResponse ->
@@ -127,7 +140,7 @@ class NewsRepository(private val context: Context) {
                                             }
                                         }
                                     } catch (childEx: Exception) {
-                                        Log.e("NewsRepository", "Error fetching OPML child feed $childUrl", childEx)
+                                        Log.e("NewsRepository", "Error fetching OPML child feed: ${safeHost(childUrl)}", childEx)
                                     }
                                 }
                                 aggregated
@@ -138,7 +151,7 @@ class NewsRepository(private val context: Context) {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("NewsRepository", "Error fetching custom feed ${feed.url}", e)
+                    Log.e("NewsRepository", "Error fetching custom feed: ${safeHost(feed.url)}", e)
                 }
                 feedArticles
             }
@@ -192,17 +205,20 @@ class NewsRepository(private val context: Context) {
         }
         
         for (feed in customFeeds) {
-            urlsToSearch.add(Pair(feed.url, feed.category))
+            UrlSecurityValidator.sanitizeUrl(feed.url, requireHttps = true)?.let { safeUrl ->
+                urlsToSearch.add(Pair(safeUrl, feed.category))
+            } ?: Log.w("NewsRepository", "Rejected unsafe custom feed URL in search: ${safeHost(feed.url)}")
         }
-        
+
         val distinctUrls = urlsToSearch.distinctBy { it.first }
         val jobs = distinctUrls.map { (url, cat) ->
             async {
                 val matchingArticles = mutableListOf<Article>()
                 try {
-                    var formattedUrl = url.trim()
-                    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                        formattedUrl = "https://$formattedUrl"
+                    val formattedUrl = UrlSecurityValidator.sanitizeUrl(url, requireHttps = true)
+                    if (formattedUrl == null) {
+                        Log.w("NewsRepository", "Rejected unsafe search URL: ${safeHost(url)}")
+                        return@async matchingArticles
                     }
                     val request = buildBrowserRequest(formattedUrl)
                     client.newCall(request).execute().use { response ->
@@ -213,8 +229,11 @@ class NewsRepository(private val context: Context) {
                                 val aggregated = mutableListOf<Article>()
                                 for (childUrl in childUrls) {
                                     try {
-                                        var fc = childUrl.trim()
-                                        if (!fc.startsWith("http://") && !fc.startsWith("https://")) fc = "https://$fc"
+                                        val fc = UrlSecurityValidator.sanitizeUrl(childUrl, requireHttps = true)
+                                        if (fc == null) {
+                                            Log.w("NewsRepository", "Rejected unsafe OPML child URL in search: ${safeHost(childUrl)}")
+                                            continue
+                                        }
                                         val childReq = buildBrowserRequest(fc)
                                         client.newCall(childReq).execute().use { childResp ->
                                             if (childResp.isSuccessful) {
@@ -231,7 +250,7 @@ class NewsRepository(private val context: Context) {
                             } else {
                                 parser.parse(xml, cat, feedUrl = formattedUrl)
                             }
-                            
+
                             val cleanQuery = query.replace("\"", "").trim()
                             val filtered = parsed.filter {
                                 if (cleanQuery.length <= 3) {
@@ -250,7 +269,7 @@ class NewsRepository(private val context: Context) {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("NewsRepository", "Error searching feed: $url", e)
+                    Log.e("NewsRepository", "Error searching feed: ${safeHost(url)}", e)
                 }
                 matchingArticles
             }
@@ -358,7 +377,7 @@ class NewsRepository(private val context: Context) {
                                 articleDao.updateFullText(article.link, body)
                             }
                         } catch (e: Exception) {
-                            Log.e("NewsRepository", "Failed pre-scraping for ${article.link}", e)
+                            Log.e("NewsRepository", "Failed pre-scraping for article: ${safeHost(article.link)}", e)
                         }
                     }
                 }
@@ -395,7 +414,7 @@ class NewsRepository(private val context: Context) {
                             articleDao.updateTags(article.link, "")
                         }
                     } catch (e: Exception) {
-                        Log.e("NewsRepository", "Failed tagging for ${article.link}", e)
+                        Log.e("NewsRepository", "Failed tagging for article: ${safeHost(article.link)}", e)
                     }
                 }
             }
@@ -582,43 +601,51 @@ class NewsRepository(private val context: Context) {
             if (!googleUrl.startsWith("https://news.google.com/")) {
                 return googleUrl
             }
-            
+            if (!UrlSecurityValidator.isUrlSafe(googleUrl, requireHttps = true)) {
+                return googleUrl
+            }
+
             // Extract the base64 identifier from path
             val uri = java.net.URI(googleUrl)
             val pathParts = uri.path.split("/").filter { it.isNotEmpty() }
             if (pathParts.size < 2) return googleUrl
             val base64Str = pathParts.last()
-            
+
             // Connect to article redirect page to get parameters
-            val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            val redirectDoc = Jsoup.connect(googleUrl)
-                .userAgent(userAgent)
-                .referrer("https://www.google.com")
-                .timeout(6000)
-                .get()
-            
-            val element = redirectDoc.select("[data-n-a-sg]").firstOrNull() ?: return googleUrl
-            val signature = element.attr("data-n-a-sg")
-            val timestamp = element.attr("data-n-a-ts")
-            
-            // Construct payload for batchexecute
-            val payload = """[[["Fbv4je","[\"garturlreq\",[[\"X\",\"X\",[\"X\",\"X\"],null,null,1,1,\"US:en\",null,1,null,null,null,null,null,0,1],\"X\",\"X\",1,[1,1,1],1,1,null,0,0,null,0],\"$base64Str\",$timestamp,\"$signature\"]",null,"generic"]]]"""
-            
-            // Send batchexecute POST request
-            val postResponse = Jsoup.connect("https://news.google.com/_/DotsSplashUi/data/batchexecute")
-                .method(Connection.Method.POST)
-                .header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
-                .userAgent(userAgent)
-                .data("f.req", payload)
-                .ignoreContentType(true)
-                .timeout(6000)
-                .execute()
-            
-            val responseBody = postResponse.body()
-            val match = Regex("""https://[^"\\ ]+""").find(responseBody)
-            return match?.value ?: googleUrl
+            val redirectRequest = buildBrowserRequest(googleUrl)
+            client.newCall(redirectRequest).execute().use { redirectResponse ->
+                if (!redirectResponse.isSuccessful) return googleUrl
+                val html = redirectResponse.body?.string() ?: return googleUrl
+                val redirectDoc = Jsoup.parse(html, googleUrl)
+
+                val element = redirectDoc.select("[data-n-a-sg]").firstOrNull() ?: return googleUrl
+                val signature = element.attr("data-n-a-sg")
+                val timestamp = element.attr("data-n-a-ts")
+
+                // Construct payload for batchexecute
+                val payload = """[[["Fbv4je","[\"garturlreq\",[[\"X\",\"X\",[\"X\",\"X\"],null,null,1,1,\"US:en\",null,1,null,null,null,null,null,0,1],\"X\",\"X\",1,[1,1,1],1,1,null,0,0,null,0],\"$base64Str\",$timestamp,\"$signature\"]",null,"generic"]]]"""
+
+                // Send batchexecute POST request
+                val postBody = FormBody.Builder()
+                    .add("f.req", payload)
+                    .build()
+                val postRequest = Request.Builder()
+                    .url("https://news.google.com/_/DotsSplashUi/data/batchexecute")
+                    .post(postBody)
+                    .header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+                    .header("User-Agent", userAgent)
+                    .build()
+
+                client.newCall(postRequest).execute().use { postResponse ->
+                    if (!postResponse.isSuccessful) return googleUrl
+                    val responseBody = postResponse.body?.string() ?: return googleUrl
+                    val match = Regex("""https://[^"\\ ]+""").find(responseBody)
+                    val resolved = match?.value ?: return googleUrl
+                    return UrlSecurityValidator.normalizeToHttps(resolved) ?: googleUrl
+                }
+            }
         } catch (e: Exception) {
-            Log.e("NewsRepository", "Failed to resolve Google News URL: $googleUrl", e)
+            Log.e("NewsRepository", "Failed to resolve Google News URL: ${safeHost(googleUrl)}", e)
             return googleUrl
         }
     }
@@ -627,60 +654,69 @@ class NewsRepository(private val context: Context) {
     suspend fun resolveThumbnail(articleLink: String) = withContext(Dispatchers.IO) {
         try {
             val realUrl = resolveGoogleNewsUrl(articleLink)
-            
+
             if (realUrl == articleLink && articleLink.startsWith("https://news.google.com/")) {
                 // If resolving failed, store "failed" to prevent infinite loops
                 articleDao.updateThumbnailUrl(articleLink, "failed")
                 return@withContext
             }
 
-            // Second step: Connect to actual article source page with browser-like headers
-            val doc = Jsoup.connect(realUrl)
-                .userAgent(userAgent)
-                .referrer("https://www.google.com")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .header("Cache-Control", "max-age=0")
-                .header("Connection", "keep-alive")
-                .ignoreHttpErrors(true)
-                .timeout(6000)
-                .get()
-
-            var imageUrl = doc.select("meta[property=og:image]").attr("content")
-            if (imageUrl.isBlank()) {
-                imageUrl = doc.select("meta[name=twitter:image]").attr("content")
-            }
-            if (imageUrl.isBlank()) {
-                imageUrl = extractImageFromStructuredData(doc.html())
-            }
-            if (imageUrl.isBlank()) {
-                // Fallback to first large image in article if meta tags are missing
-                imageUrl = doc.select("article img, main img").firstOrNull()?.attr("abs:src") ?: ""
-            }
-
-            // Exclude Google News logo/branding placeholders
-            if (imageUrl.contains("googleusercontent.com") || 
-                imageUrl.contains("gstatic.com") || 
-                imageUrl.contains("google.com")) {
-                imageUrl = ""
-            }
-
-            if (imageUrl.isNotBlank()) {
-                articleDao.updateThumbnailUrl(articleLink, imageUrl)
-            } else {
-                // Store empty string to indicate resolution failed, preventing infinite scraper retries
+            val safeUrl = UrlSecurityValidator.normalizeToHttps(realUrl)
+            if (safeUrl == null) {
                 articleDao.updateThumbnailUrl(articleLink, "failed")
+                return@withContext
+            }
+
+            // Second step: Connect to actual article source page with browser-like headers
+            val request = buildBrowserRequest(safeUrl)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    articleDao.updateThumbnailUrl(articleLink, "failed")
+                    return@withContext
+                }
+                val html = response.body?.string() ?: ""
+                val doc = Jsoup.parse(html, safeUrl)
+
+                var imageUrl = doc.select("meta[property=og:image]").attr("content")
+                if (imageUrl.isBlank()) {
+                    imageUrl = doc.select("meta[name=twitter:image]").attr("content")
+                }
+                if (imageUrl.isBlank()) {
+                    imageUrl = extractImageFromStructuredData(doc.html())
+                }
+                if (imageUrl.isBlank()) {
+                    // Fallback to first large image in article if meta tags are missing
+                    imageUrl = doc.select("article img, main img").firstOrNull()?.attr("abs:src") ?: ""
+                }
+
+                // Exclude Google News logo/branding placeholders
+                if (imageUrl.contains("googleusercontent.com") ||
+                    imageUrl.contains("gstatic.com") ||
+                    imageUrl.contains("google.com")) {
+                    imageUrl = ""
+                }
+
+                // Upgrade to HTTPS and validate before storing
+                val safeImageUrl = imageUrl.takeIf { it.isNotBlank() }
+                    ?.let { UrlSecurityValidator.normalizeToHttps(it) }
+
+                if (!safeImageUrl.isNullOrBlank()) {
+                    articleDao.updateThumbnailUrl(articleLink, safeImageUrl)
+                } else {
+                    // Store empty string to indicate resolution failed, preventing infinite scraper retries
+                    articleDao.updateThumbnailUrl(articleLink, "failed")
+                }
             }
         } catch (e: Exception) {
-            Log.e("NewsRepository", "Failed resolving thumbnail for $articleLink", e)
+            Log.e("NewsRepository", "Failed resolving thumbnail for article: ${safeHost(articleLink)}", e)
             articleDao.updateThumbnailUrl(articleLink, "failed")
         }
     }
 
     private fun extractImageFromStructuredData(html: String): String {
         val patterns = listOf(
-            Regex(""""image"\s*:\s*\{[\s\S]*?"url"\s*:\s*"([^"]+)""""),
-            Regex("""\\"image\\"\s*:\s*\{[\s\S]*?\\"url\\"\s*:\s*\\"([^\\]+)\\""""),
+            Regex(""""image"\s*:\s*\{[\s\S]*?"url"\s*:\s*"([^"]+)"""),
+            Regex("""\\"image\\"\s*:\s*\{[\s\S]*?\\"url\\"\s*:\s*\\"([^\\]+)\\"""),
             Regex("""https://cassette\.sphdigital\.com\.sg/image/[^"\\\s<]+""")
         )
 
@@ -691,8 +727,9 @@ class NewsRepository(private val context: Context) {
                 .replace("\\/", "/")
                 .trim()
                 .removeSuffix("\\")
-            if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
-                return normalized
+            val safeUrl = UrlSecurityValidator.normalizeToHttps(normalized)
+            if (safeUrl != null) {
+                return safeUrl
             }
         }
         return ""
@@ -702,43 +739,86 @@ class NewsRepository(private val context: Context) {
     suspend fun fetchArticleBody(url: String): String = withContext(Dispatchers.IO) {
         try {
             val realUrl = resolveGoogleNewsUrl(url)
+            val safeUrl = UrlSecurityValidator.normalizeToHttps(realUrl)
+                ?: return@withContext "Failed to load article content due to an unsafe URL."
 
-            val doc = Jsoup.connect(realUrl)
-                .userAgent(userAgent)
-                .referrer("https://www.google.com")
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.9")
-                .header("Cache-Control", "max-age=0")
-                .header("Connection", "keep-alive")
-                .ignoreHttpErrors(true)
-                .timeout(8000)
-                .get()
+            val request = buildBrowserRequest(safeUrl)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext "Unable to parse article text. Please open in WebView to read the full story."
+                }
+                val html = response.body?.string() ?: ""
+                val doc = Jsoup.parse(html, safeUrl)
 
-            // Try to extract readable article content by selecting paragraphs inside article/main or standard div blocks
-            val paragraphs = doc.select("article p, main p, .post-content p, .article-content p, .story-body p")
-            val rawText = if (paragraphs.isNotEmpty()) {
-                paragraphs.map { it.text().trim() }
-                    .filter { it.isNotBlank() && !isGibberishOrPromo(it) }
+                // Try to extract readable article content by selecting paragraphs inside article/main or standard div blocks
+                val paragraphs = doc.select("article p, main p, .post-content p, .article-content p, .story-body p")
+                val rawText = if (paragraphs.isNotEmpty()) {
+                    paragraphs.map { it.text().trim() }
+                        .filter { it.isNotBlank() && !isGibberishOrPromo(it) }
+                        .joinToString("\n\n")
+                } else {
+                    doc.select("p").map { it.text().trim() }
+                        .filter { it.isNotBlank() && !isGibberishOrPromo(it) }
+                        .joinToString("\n\n")
+                }
+
+                // Cleanup text (remove extremely short paragraphs or cookie prompts)
+                val cleanText = rawText.lines()
+                    .filter { it.length > 30 } // Filter out UI elements / share button lines
                     .joinToString("\n\n")
-            } else {
-                doc.select("p").map { it.text().trim() }
-                    .filter { it.isNotBlank() && !isGibberishOrPromo(it) }
-                    .joinToString("\n\n")
-            }
 
-            // Cleanup text (remove extremely short paragraphs or cookie prompts)
-            val cleanText = rawText.lines()
-                .filter { it.length > 30 } // Filter out UI elements / share button lines
-                .joinToString("\n\n")
-
-            if (cleanText.isNotBlank()) {
-                cleanText
-            } else {
-                "Unable to parse article text. Please open in WebView to read the full story."
+                if (cleanText.isNotBlank()) {
+                    cleanText
+                } else {
+                    "Unable to parse article text. Please open in WebView to read the full story."
+                }
             }
         } catch (e: Exception) {
             Log.e("NewsRepository", "Failed to fetch article body", e)
             "Failed to load article content due to a connection or formatting issue. Please use In-App WebView."
+        }
+    }
+
+    /**
+     * Scrapes a transient Article from an arbitrary article URL using the secure
+     * OkHttp client. Used when the user opens a shared/deep-link URL that is not
+     * in the database. Returns null if the URL is unsafe or scraping fails.
+     */
+    suspend fun scrapeTransientArticle(url: String): Article? = withContext(Dispatchers.IO) {
+        try {
+            val realUrl = resolveGoogleNewsUrl(url)
+            val safeUrl = UrlSecurityValidator.normalizeToHttps(realUrl) ?: return@withContext null
+
+            val request = buildBrowserRequest(safeUrl)
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val html = response.body?.string() ?: return@withContext null
+                val doc = Jsoup.parse(html, safeUrl)
+
+                val title = doc.select("h1").firstOrNull()?.text()?.trim()
+                    ?: doc.title()
+                    ?: "Article Details"
+                val source = doc.select("meta[property=og:site_name]").attr("content").trim().ifBlank {
+                    safeUrl.toHttpUrlOrNull()?.host?.replace("www.", "") ?: "Web Article"
+                }
+                val thumb = doc.select("meta[property=og:image]").attr("content").trim()
+                val safeThumb = thumb.takeIf { it.isNotBlank() }?.let { UrlSecurityValidator.normalizeToHttps(it) }
+
+                Article(
+                    link = url,
+                    title = title,
+                    description = title,
+                    pubDate = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", java.util.Locale.US).format(java.util.Date()),
+                    sourceName = source,
+                    sourceUrl = realUrl,
+                    category = "TOP STORIES",
+                    thumbnailUrl = safeThumb,
+                    isRead = true
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("NewsRepository", "Failed to scrape transient article: ${safeHost(url)}", e)
+            null
         }
     }
 
@@ -776,16 +856,21 @@ class NewsRepository(private val context: Context) {
     suspend fun fetchSingleFeed(url: String, category: String) = withContext(Dispatchers.IO) {
         val allArticles = mutableListOf<Article>()
         try {
-            val request = buildBrowserRequest(url)
+            val safeUrl = UrlSecurityValidator.sanitizeUrl(url, requireHttps = true)
+            if (safeUrl == null) {
+                Log.w("NewsRepository", "Rejected unsafe single feed URL: ${safeHost(url)}")
+                return@withContext
+            }
+            val request = buildBrowserRequest(safeUrl)
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val xml = response.body?.string() ?: ""
-                    val parsed = parser.parse(xml, category, feedUrl = url)
+                    val parsed = parser.parse(xml, category, feedUrl = safeUrl)
                     allArticles.addAll(parsed)
                 }
             }
         } catch (e: Exception) {
-            Log.e("NewsRepository", "Error fetching single feed: $url", e)
+            Log.e("NewsRepository", "Error fetching single feed: ${safeHost(url)}", e)
         }
         if (allArticles.isNotEmpty()) {
             insertAndPruneArticles(allArticles, category)

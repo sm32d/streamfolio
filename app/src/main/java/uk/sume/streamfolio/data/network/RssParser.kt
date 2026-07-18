@@ -1,14 +1,33 @@
 package uk.sume.streamfolio.data.network
 
+import org.jsoup.Jsoup
+import org.jsoup.safety.Safelist
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.util.UrlSecurityValidator
 import java.io.StringReader
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
+private fun sanitizeHtml(input: String?): String {
+    if (input.isNullOrBlank()) return ""
+    return Jsoup.clean(input, Safelist.none()).trim()
+}
+
 class RssParser {
+
+    private fun createParser(): XmlPullParser {
+        val factory = XmlPullParserFactory.newInstance()
+        factory.isNamespaceAware = false
+        try {
+            factory.setFeature(XmlPullParser.FEATURE_PROCESS_DOCDECL, false)
+        } catch (_: Exception) {
+            // Feature may not be supported on all parsers; continue without it.
+        }
+        return factory.newPullParser()
+    }
 
     /**
      * Checks if the XML document is an OPML list
@@ -26,9 +45,7 @@ class RssParser {
     fun parseOpmlUrls(xmlContent: String): List<String> {
         val urls = mutableListOf<String>()
         try {
-            val factory = XmlPullParserFactory.newInstance()
-            factory.isNamespaceAware = false
-            val parser = factory.newPullParser()
+            val parser = createParser()
             parser.setInput(StringReader(xmlContent))
             var eventType = parser.eventType
             while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -53,9 +70,7 @@ class RssParser {
         val articles = mutableListOf<Article>()
         var channelTitle = "Unknown Source"
         try {
-            val factory = XmlPullParserFactory.newInstance()
-            factory.isNamespaceAware = false
-            val parser = factory.newPullParser()
+            val parser = createParser()
             parser.setInput(StringReader(xmlContent))
             var eventType = parser.eventType
             var currentArticleBuilder: ArticleBuilder? = null
@@ -238,11 +253,12 @@ class RssParser {
             }
 
 
-            val cleanDesc = description?.replace(Regex("<[^>]*>"), "")?.trim() ?: ""
+            val cleanDesc = sanitizeHtml(description)
+            val safeTitle = sanitizeHtml(cleanTitle)
 
             return Article(
                 link = articleLink,
-                title = cleanTitle,
+                title = safeTitle,
                 description = cleanDesc,
                 pubDate = normalizePubDate(pubDate),
                 sourceName = cleanSource,
@@ -258,14 +274,17 @@ class RssParser {
             val match = Regex("(?i)<img[^>]+src=[\"']([^\"']+)[\"']").find(html) ?: return null
             val src = match.groupValues.getOrNull(1)?.trim().orEmpty()
             if (src.isBlank()) return null
-            if (src.startsWith("http://") || src.startsWith("https://")) return src
-            if (src.startsWith("//")) return "https:$src"
+            if (src.startsWith("http://") || src.startsWith("https://")) {
+                return UrlSecurityValidator.normalizeToHttps(src)
+            }
+            if (src.startsWith("//")) {
+                return UrlSecurityValidator.normalizeToHttps("https:$src")
+            }
             if (src.startsWith("/")) {
                 return try {
                     val uri = java.net.URI(articleLink)
-                    val scheme = uri.scheme ?: "https"
                     val host = uri.host ?: return null
-                    "$scheme://$host$src"
+                    UrlSecurityValidator.normalizeToHttps("https://$host$src")
                 } catch (_: Exception) {
                     null
                 }

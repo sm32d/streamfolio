@@ -98,6 +98,7 @@ import androidx.compose.material.icons.filled.SettingsBackupRestore
 import androidx.compose.material.icons.filled.Backup
 import uk.sume.streamfolio.util.OpmlHelper
 import uk.sume.streamfolio.util.OpmlFeed
+import uk.sume.streamfolio.util.UrlSecurityValidator
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -445,12 +446,10 @@ private fun ImportBackupStep(
         val customFeeds by viewModel.customFeeds.collectAsState()
         val feeds = remember(parsedFeedsToImport, customFeeds) {
             val existingUrls = customFeeds.map { it.url.trim().lowercase() }.toSet()
-            parsedFeedsToImport!!.filter { opmlFeed ->
-                var formattedUrl = opmlFeed.xmlUrl.trim()
-                if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                    formattedUrl = "https://$formattedUrl"
+            parsedFeedsToImport!!.mapNotNull { opmlFeed ->
+                UrlSecurityValidator.sanitizeUrl(opmlFeed.xmlUrl, requireHttps = true)?.let { safeUrl ->
+                    if (existingUrls.contains(safeUrl.lowercase())) null else opmlFeed.copy(xmlUrl = safeUrl)
                 }
-                !existingUrls.contains(formattedUrl.lowercase())
             }
         }
 

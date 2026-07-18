@@ -1,6 +1,8 @@
 package uk.sume.streamfolio.util
 
 import android.content.Context
+import android.util.Log
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import org.json.JSONArray
 import org.json.JSONObject
 import uk.sume.streamfolio.data.local.PreferencesHelper
@@ -86,16 +88,27 @@ object BackupHelper {
 
     fun parseBackupJson(jsonString: String): ParsedBackup {
         val backupObj = JSONObject(jsonString)
+        val version = backupObj.optInt("version", 0)
+        if (version < 2) {
+            throw IllegalArgumentException("Backup version $version is not supported. Only version 2 and above are supported.")
+        }
+
         val customFeeds = mutableListOf<CustomFeed>()
         if (backupObj.has("custom_feeds")) {
             val feedsArr = backupObj.getJSONArray("custom_feeds")
             for (i in 0 until feedsArr.length()) {
                 val feedObj = feedsArr.getJSONObject(i)
+                val rawUrl = feedObj.getString("url")
+                val safeUrl = UrlSecurityValidator.sanitizeUrl(rawUrl, requireHttps = true)
+                if (safeUrl == null) {
+                    Log.w("StreamFolioBackup", "Skipping unsafe custom feed URL from backup: ${UrlSecurityValidator.normalizeUrl(rawUrl)?.toHttpUrlOrNull()?.host ?: "[invalid]"}")
+                    continue
+                }
                 customFeeds.add(
                     CustomFeed(
-                        title = feedObj.getString("title"),
-                        url = feedObj.getString("url"),
-                        category = feedObj.getString("category")
+                        title = feedObj.getString("title").take(200),
+                        url = safeUrl,
+                        category = feedObj.getString("category").take(100)
                     )
                 )
             }
@@ -106,25 +119,31 @@ object BackupHelper {
             val articlesArr = backupObj.getJSONArray("articles")
             for (i in 0 until articlesArr.length()) {
                 val articleObj = articlesArr.getJSONObject(i)
+                val rawLink = articleObj.getString("link")
+                val safeLink = UrlSecurityValidator.sanitizeUrl(rawLink, requireHttps = false)
+                if (safeLink == null) {
+                    Log.w("StreamFolioBackup", "Skipping unsafe article URL from backup: ${UrlSecurityValidator.normalizeUrl(rawLink)?.toHttpUrlOrNull()?.host ?: "[invalid]"}")
+                    continue
+                }
                 restoredArticles.add(
                     Article(
-                        link = articleObj.getString("link"),
-                        title = articleObj.getString("title"),
-                        description = articleObj.getString("description"),
-                        pubDate = articleObj.getString("pubDate"),
-                        sourceName = articleObj.getString("sourceName"),
-                        sourceUrl = articleObj.getString("sourceUrl"),
-                        category = articleObj.getString("category"),
-                        thumbnailUrl = if (articleObj.isNull("thumbnailUrl")) null else articleObj.getString("thumbnailUrl"),
+                        link = safeLink,
+                        title = articleObj.getString("title").take(500),
+                        description = articleObj.getString("description").take(2000),
+                        pubDate = articleObj.getString("pubDate").take(100),
+                        sourceName = articleObj.getString("sourceName").take(200),
+                        sourceUrl = articleObj.getString("sourceUrl").take(500),
+                        category = articleObj.getString("category").take(100),
+                        thumbnailUrl = if (articleObj.isNull("thumbnailUrl")) null else articleObj.getString("thumbnailUrl")?.take(500)?.let { UrlSecurityValidator.normalizeToHttps(it) },
                         isBookmarked = articleObj.getBoolean("isBookmarked"),
                         customFeedId = if (articleObj.isNull("customFeedId")) null else articleObj.getInt("customFeedId"),
-                        fullText = if (articleObj.isNull("fullText")) null else articleObj.getString("fullText"),
-                        tags = if (articleObj.isNull("tags")) null else articleObj.getString("tags"),
-                        aiSummary = if (articleObj.isNull("aiSummary")) null else articleObj.getString("aiSummary"),
-                        translatedTitle = if (articleObj.isNull("translatedTitle")) null else articleObj.getString("translatedTitle"),
-                        translatedBody = if (articleObj.isNull("translatedBody")) null else articleObj.getString("translatedBody"),
-                        translatedLanguage = if (articleObj.isNull("translatedLanguage")) null else articleObj.getString("translatedLanguage"),
-                        detectedLanguage = if (articleObj.isNull("detectedLanguage")) null else articleObj.getString("detectedLanguage"),
+                        fullText = if (articleObj.isNull("fullText")) null else articleObj.getString("fullText")?.take(50_000),
+                        tags = if (articleObj.isNull("tags")) null else articleObj.getString("tags")?.take(500),
+                        aiSummary = if (articleObj.isNull("aiSummary")) null else articleObj.getString("aiSummary")?.take(10_000),
+                        translatedTitle = if (articleObj.isNull("translatedTitle")) null else articleObj.getString("translatedTitle")?.take(500),
+                        translatedBody = if (articleObj.isNull("translatedBody")) null else articleObj.getString("translatedBody")?.take(50_000),
+                        translatedLanguage = if (articleObj.isNull("translatedLanguage")) null else articleObj.getString("translatedLanguage")?.take(50),
+                        detectedLanguage = if (articleObj.isNull("detectedLanguage")) null else articleObj.getString("detectedLanguage")?.take(50),
                         isRead = if (articleObj.has("isRead")) articleObj.getBoolean("isRead") else false
                     )
                 )
@@ -178,24 +197,27 @@ object BackupHelper {
                 }
 
                 if (prefsObj.has("cache_history_days")) {
-                    prefs.cacheHistoryDays = prefsObj.getInt("cache_history_days")
+                    val days = prefsObj.getInt("cache_history_days")
+                    if (days in 1..36500) prefs.cacheHistoryDays = days
                 }
-                
+
                 if (prefsObj.has("reader_font_family")) {
-                    prefs.readerFontFamily = prefsObj.getString("reader_font_family")
+                    val font = prefsObj.getString("reader_font_family")
+                    if (font in setOf("sans_serif", "serif")) prefs.readerFontFamily = font
                 }
-                
+
                 if (prefsObj.has("reader_font_size")) {
-                    prefs.readerFontSize = prefsObj.getDouble("reader_font_size").toFloat()
+                    val size = prefsObj.getDouble("reader_font_size").toFloat()
+                    if (size in 12f..30f) prefs.readerFontSize = size
                 }
-                
+
                 if (prefsObj.has("reader_line_spacing")) {
-                    prefs.readerLineSpacing = prefsObj.getDouble("reader_line_spacing").toFloat()
+                    val spacing = prefsObj.getDouble("reader_line_spacing").toFloat()
+                    if (spacing in 1.0f..3.0f) prefs.readerLineSpacing = spacing
                 }
 
                 if (prefsObj.has("is_ai_enabled")) {
                     prefs.isAiEnabled = prefsObj.getBoolean("is_ai_enabled")
-                    android.util.Log.d("StreamFolioBackup", "AI Enabled Restored: ${prefs.isAiEnabled}")
                 }
 
                 if (prefsObj.has("is_translation_enabled")) {
@@ -215,17 +237,21 @@ object BackupHelper {
                 }
 
                 if (prefsObj.has("swipe_left_action")) {
-                    prefs.swipeLeftAction = prefsObj.getString("swipe_left_action")
-                    android.util.Log.d("StreamFolioBackup", "Swipe Left Restored: ${prefs.swipeLeftAction}")
+                    val action = prefsObj.getString("swipe_left_action")
+                    if (isValidSwipeAction(action)) prefs.swipeLeftAction = action
                 }
 
                 if (prefsObj.has("swipe_right_action")) {
-                    prefs.swipeRightAction = prefsObj.getString("swipe_right_action")
-                    android.util.Log.d("StreamFolioBackup", "Swipe Right Restored: ${prefs.swipeRightAction}")
+                    val action = prefsObj.getString("swipe_right_action")
+                    if (isValidSwipeAction(action)) prefs.swipeRightAction = action
                 }
             }
         }
 
         return ParsedBackup(customFeeds, restoredArticles, applyPrefs)
+    }
+
+    private fun isValidSwipeAction(action: String?): Boolean {
+        return action in setOf("bookmark", "share", "read", "none")
     }
 }

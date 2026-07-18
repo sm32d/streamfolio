@@ -54,6 +54,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.net.Uri
 import uk.sume.streamfolio.util.OpmlHelper
 import uk.sume.streamfolio.util.OpmlFeed
+import uk.sume.streamfolio.util.UrlSecurityValidator
 import java.io.File
 import androidx.core.content.FileProvider
 import android.content.Intent
@@ -1446,13 +1447,14 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                 Button(
                     onClick = {
                         if (canAdd) {
-                            var formattedUrl = addUrl.trim()
-                            if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                                formattedUrl = "https://$formattedUrl"
+                            val safeUrl = UrlSecurityValidator.sanitizeUrl(addUrl, requireHttps = true)
+                            if (safeUrl == null) {
+                                Toast.makeText(context, "Please enter a valid HTTPS URL", Toast.LENGTH_SHORT).show()
+                                return@Button
                             }
                             viewModel.addCustomRssFeed(
                                 title = addTitle.trim(),
-                                url = formattedUrl,
+                                url = safeUrl,
                                 category = addCategory.trim()
                             )
                             showAddSheet = false
@@ -1552,13 +1554,14 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                 Button(
                     onClick = {
                         if (canSave) {
-                            var formattedUrl = editUrl.trim()
-                            if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                                formattedUrl = "https://$formattedUrl"
+                            val safeUrl = UrlSecurityValidator.sanitizeUrl(editUrl, requireHttps = true)
+                            if (safeUrl == null) {
+                                Toast.makeText(context, "Please enter a valid HTTPS URL", Toast.LENGTH_SHORT).show()
+                                return@Button
                             }
                             val updatedFeed = originalFeed.copy(
                                 title = editTitle.trim(),
-                                url = formattedUrl,
+                                url = safeUrl,
                                 category = editCategory.trim()
                             )
                             viewModel.updateCustomRssFeed(updatedFeed)
@@ -2743,12 +2746,10 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
     if (parsedFeedsToImport != null) {
         val feeds = remember(parsedFeedsToImport, customFeeds) {
             val existingUrls = customFeeds.map { it.url.trim().lowercase() }.toSet()
-            parsedFeedsToImport!!.filter { opmlFeed ->
-                var formattedUrl = opmlFeed.xmlUrl.trim()
-                if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                    formattedUrl = "https://$formattedUrl"
+            parsedFeedsToImport!!.mapNotNull { opmlFeed ->
+                UrlSecurityValidator.sanitizeUrl(opmlFeed.xmlUrl, requireHttps = true)?.let { safeUrl ->
+                    if (existingUrls.contains(safeUrl.lowercase())) null else opmlFeed.copy(xmlUrl = safeUrl)
                 }
-                !existingUrls.contains(formattedUrl.lowercase())
             }
         }
 

@@ -2,9 +2,10 @@ package uk.sume.streamfolio.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -54,6 +55,7 @@ import uk.sume.streamfolio.ui.components.TextSkeletonLoader
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import androidx.compose.foundation.BorderStroke
 import uk.sume.streamfolio.ui.viewmodel.AiSummaryState
+import uk.sume.streamfolio.util.UrlSecurityValidator
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -904,36 +906,71 @@ fun DetailScreen(
             } else {
                 // In-App WebView Layout
                 var isWebViewLoading by remember { mutableStateOf(true) }
+                var webViewError by remember { mutableStateOf<String?>(null) }
+                val secureUrl = remember(url) {
+                    UrlSecurityValidator.normalizeToHttps(url) ?: url
+                }
                 Box(modifier = Modifier.fillMaxSize()) {
-                    AndroidView(
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                                        super.onPageStarted(view, url, favicon)
-                                        isWebViewLoading = true
+                    if (webViewError != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = webViewError ?: "",
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontSize = 14.sp
+                            )
+                        }
+                    } else {
+                        AndroidView(
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    webViewClient = object : WebViewClient() {
+                                        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                            super.onPageStarted(view, url, favicon)
+                                            isWebViewLoading = true
+                                            webViewError = null
+                                        }
+                                        override fun onPageFinished(view: WebView?, url: String?) {
+                                            super.onPageFinished(view, url)
+                                            isWebViewLoading = false
+                                        }
+                                        override fun onReceivedError(
+                                            view: WebView?,
+                                            errorCode: Int,
+                                            description: String?,
+                                            failingUrl: String?
+                                        ) {
+                                            super.onReceivedError(view, errorCode, description, failingUrl)
+                                            isWebViewLoading = false
+                                            webViewError = description ?: "Unable to load this article."
+                                        }
+
+                                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                            val targetUrl = request?.url?.toString() ?: return false
+                                            val scheme = request.url?.scheme?.lowercase() ?: return false
+                                            // Block non-http/https schemes (javascript:, file:, intent:, etc.)
+                                            if (scheme != "http" && scheme != "https") {
+                                                return true
+                                            }
+                                            // Let the WebView handle http/https navigation normally
+                                            return false
+                                        }
                                     }
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
-                                        isWebViewLoading = false
-                                    }
-                                    override fun onReceivedError(
-                                        view: WebView?,
-                                        errorCode: Int,
-                                        description: String?,
-                                        failingUrl: String?
-                                    ) {
-                                        super.onReceivedError(view, errorCode, description, failingUrl)
-                                        isWebViewLoading = false
-                                    }
+                                    settings.javaScriptEnabled = true
+                                    settings.domStorageEnabled = true
+                                    settings.allowFileAccess = false
+                                    settings.allowContentAccess = false
+                                    loadUrl(secureUrl)
                                 }
-                                settings.javaScriptEnabled = true
-                                settings.domStorageEnabled = true
-                                loadUrl(url)
-                            }
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                     
                     if (isWebViewLoading) {
                         LinearProgressIndicator(
@@ -1000,10 +1037,11 @@ fun DetailScreen(
                     Row(
                         modifier = Modifier.clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            val shareUrl = UrlSecurityValidator.normalizeToHttps(url) ?: url
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, article.title)
-                                putExtra(Intent.EXTRA_TEXT, url)
+                                putExtra(Intent.EXTRA_TEXT, shareUrl)
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
                         },

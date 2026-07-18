@@ -14,8 +14,10 @@ import uk.sume.streamfolio.data.network.NewsRepository
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.net.URLEncoder
 import uk.sume.streamfolio.util.OpmlFeed
+import uk.sume.streamfolio.util.UrlSecurityValidator
 import uk.sume.streamfolio.playback.TtsPlaybackManager
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -351,7 +353,8 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val pendingArticleUrl: StateFlow<String?> = _pendingArticleUrl.asStateFlow()
 
     fun setPendingArticleUrl(url: String?) {
-        _pendingArticleUrl.value = url
+        val safeUrl = url?.let { UrlSecurityValidator.normalizeToHttps(it) }
+        _pendingArticleUrl.value = safeUrl
     }
 
     fun selectCategory(category: String) {
@@ -509,38 +512,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 // Scrape page metadata dynamically to build transient article
                 try {
                     val transientArticle = withContext(Dispatchers.IO) {
-                        val realUrl = repository.resolveGoogleNewsUrl(url)
-                        val doc = org.jsoup.Jsoup.connect(realUrl)
-                            .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                            .timeout(8000)
-                            .get()
-
-                        val title = doc.select("h1").firstOrNull()?.text()?.trim() 
-                            ?: doc.title() 
-                            ?: "Article Details"
-                        val source = doc.select("meta[property=og:site_name]").attr("content").trim().ifBlank {
-                            try { java.net.URL(realUrl).host.replace("www.", "") } catch (e: Exception) { "Web Article" }
-                        }
-                        val thumb = doc.select("meta[property=og:image]").attr("content").trim()
-
-                        Article(
-                            link = url,
-                            title = title,
-                            description = title,
-                            pubDate = java.text.SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", java.util.Locale.US).format(java.util.Date()),
-                            sourceName = source,
-                            sourceUrl = realUrl,
-                            category = "TOP STORIES",
-                            thumbnailUrl = thumb.ifBlank { null },
-                            isRead = true
-                        )
+                        repository.scrapeTransientArticle(url)
                     }
                     _currentArticleDetail.value = transientArticle
-                    
+
                     val body = repository.fetchArticleBody(url)
                     _articleBody.value = body
                     _isLoadingBody.value = false
-                    if (body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
+                    if (transientArticle != null && body.isNotBlank() && !body.startsWith("Failed to load") && !body.startsWith("Unable to parse")) {
                         repository.insertArticle(transientArticle.copy(fullText = body))
                     }
                 } catch (e: Exception) {
@@ -601,7 +580,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     // Custom Feed actions
     fun addCustomRssFeed(title: String, url: String, category: String) {
         viewModelScope.launch {
-            val feed = CustomFeed(title = title, url = url, category = category)
+            val safeUrl = UrlSecurityValidator.sanitizeUrl(url, requireHttps = true)
+            if (safeUrl == null) {
+                android.util.Log.w("NewsViewModel", "Rejected unsafe custom feed URL")
+                return@launch
+            }
+            val feed = CustomFeed(title = title, url = safeUrl, category = category)
             repository.addCustomFeed(feed)
             refreshCurrentFeed()
         }
@@ -609,30 +593,35 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateCustomRssFeed(feed: CustomFeed) {
         viewModelScope.launch {
-            repository.addCustomFeed(feed)
+            val safeUrl = UrlSecurityValidator.sanitizeUrl(feed.url, requireHttps = true)
+            if (safeUrl == null) {
+                android.util.Log.w("NewsViewModel", "Rejected unsafe custom feed URL")
+                return@launch
+            }
+            repository.addCustomFeed(feed.copy(url = safeUrl))
             refreshCurrentFeed()
         }
     }
-
 
     fun importCustomRssFeeds(feeds: List<OpmlFeed>, categoryMapping: Map<String, String>, selectedCategories: Set<String>) {
         viewModelScope.launch {
             val existingFeeds = repository.getAllCustomFeedsSync()
             val existingUrls = existingFeeds.map { it.url.trim().lowercase() }.toSet()
-            
+
             for (opmlFeed in feeds) {
                 if (selectedCategories.contains(opmlFeed.category)) {
                     val mappedCategory = categoryMapping[opmlFeed.category] ?: opmlFeed.category
-                    var formattedUrl = opmlFeed.xmlUrl.trim()
-                    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
-                        formattedUrl = "https://$formattedUrl"
+                    val safeUrl = UrlSecurityValidator.sanitizeUrl(opmlFeed.xmlUrl, requireHttps = true)
+                    if (safeUrl == null) {
+                        android.util.Log.w("NewsViewModel", "Rejected unsafe OPML feed URL: ${UrlSecurityValidator.normalizeUrl(opmlFeed.xmlUrl)?.toHttpUrlOrNull()?.host ?: "[invalid]"}")
+                        continue
                     }
-                    if (existingUrls.contains(formattedUrl.lowercase())) {
+                    if (existingUrls.contains(safeUrl.lowercase())) {
                         continue
                     }
                     val feed = CustomFeed(
                         title = opmlFeed.title.trim(),
-                        url = formattedUrl,
+                        url = safeUrl,
                         category = mappedCategory.trim()
                     )
                     repository.addCustomFeed(feed)
@@ -664,7 +653,6 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun restoreSettingsBackup(backupJson: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
-        android.util.Log.d("StreamFolioBackup", "Restoring backup JSON: $backupJson")
         viewModelScope.launch {
             try {
                 repository.deleteAllCustomFeeds()
@@ -980,7 +968,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 repository.resolveThumbnailIfNeeded(link)
             } catch (e: Exception) {
-                android.util.Log.d("NewsViewModel", "On-demand thumbnail retry failed for $link: ${e.message}")
+                android.util.Log.d("NewsViewModel", "On-demand thumbnail retry failed: ${UrlSecurityValidator.normalizeUrl(link)?.toHttpUrlOrNull()?.host ?: "[invalid]"}: ${e.message}")
             }
         }
     }

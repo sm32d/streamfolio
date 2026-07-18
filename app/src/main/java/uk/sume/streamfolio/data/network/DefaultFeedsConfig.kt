@@ -17,11 +17,11 @@ object DefaultFeedsConfig {
             ),
             "World" to listOf(
                 "https://www.theguardian.com/world/rss",
-                "http://feeds.bbci.co.uk/news/world/rss.xml"
+                "https://feeds.bbci.co.uk/news/world/rss.xml"
             ),
             "Business" to listOf(
                 "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147",
-                "http://feeds.marketwatch.com/marketwatch/topstories/"
+                "https://feeds.marketwatch.com/marketwatch/topstories/"
             ),
             "Technology" to listOf(
                 "https://techcrunch.com/feed/",

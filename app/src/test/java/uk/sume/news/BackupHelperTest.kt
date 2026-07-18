@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.sume.streamfolio.data.local.PreferencesHelper
+import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.util.BackupHelper
 import java.util.HashMap
@@ -100,7 +101,8 @@ class BackupHelperTest {
 
         // 2. Generate backup JSON
         val customFeeds = listOf(CustomFeed(title = "Wired", url = "https://wired.com/feed", category = "Tech"))
-        val backupJson = BackupHelper.generateBackupJson(context, customFeeds)
+        val articles = emptyList<Article>()
+        val backupJson = BackupHelper.generateBackupJson(context, customFeeds, articles)
 
         println("Generated JSON:\n$backupJson")
 

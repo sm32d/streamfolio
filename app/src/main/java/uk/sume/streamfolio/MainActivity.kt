@@ -13,6 +13,7 @@ import androidx.work.*
 import uk.sume.streamfolio.ui.navigation.AppNavigation
 import uk.sume.streamfolio.ui.theme.NewsTheme
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.util.UrlSecurityValidator
 import uk.sume.streamfolio.worker.NewsSyncWorker
 import java.util.concurrent.TimeUnit
 
@@ -26,7 +27,8 @@ class MainActivity : ComponentActivity() {
         viewModel = ViewModelProvider(this)[NewsViewModel::class.java]
 
         intent?.getStringExtra("article_url")?.let { url ->
-            viewModel.setPendingArticleUrl(url)
+            val safeUrl = UrlSecurityValidator.normalizeToHttps(url)
+            viewModel.setPendingArticleUrl(safeUrl)
         }
 
         setupBackgroundSync()
@@ -58,7 +60,8 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         intent.getStringExtra("article_url")?.let { url ->
-            viewModel.setPendingArticleUrl(url)
+            val safeUrl = UrlSecurityValidator.normalizeToHttps(url)
+            viewModel.setPendingArticleUrl(safeUrl)
         }
     }
 }
