@@ -5,6 +5,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -95,14 +97,20 @@ fun HomeScreen(
     val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
     val hasSeenAiSpotlight by viewModel.hasSeenAiSpotlight.collectAsState()
 
-    val scrollState = rememberSaveable(saver = LazyListState.Saver) {
-        LazyListState()
+    val articlesMap = remember { mutableStateMapOf<String, List<Article>>() }
+    val scrollStates = remember { mutableStateMapOf<String, LazyListState>() }
+    val visibleListCounts = remember { mutableStateMapOf<String, Int>() }
+
+    LaunchedEffect(selectedCategory, articles) {
+        if (articles.isNotEmpty() || !isRefreshing) {
+            articlesMap[selectedCategory] = articles
+        }
     }
 
     LaunchedEffect(Unit) {
         viewModel.tabResetEvent.collect { route ->
             if (route == "home_screen") {
-                scrollState.animateScrollToItem(0)
+                scrollStates[selectedCategory]?.animateScrollToItem(0)
             }
         }
     }
@@ -110,31 +118,7 @@ fun HomeScreen(
     val context = LocalContext.current
 
     val activeRegion = remember(viewModel.prefs.region) { viewModel.prefs.region.uppercase() }
-    val hasCuratedFeeds = remember(activeRegion, selectedCategory) {
-        DefaultFeedsConfig.getFeedsFor(
-            region = activeRegion,
-            category = selectedCategory,
-            disabledFeedUrls = emptySet(),
-            enabledCrossRegionFeeds = emptySet()
-        ).isNotEmpty()
-    }
-    
-    val enabledFeeds = remember(activeRegion, selectedCategory, viewModel.prefs.disabledFeedUrls, viewModel.prefs.enabledCrossRegionFeeds) {
-        DefaultFeedsConfig.getFeedsFor(
-            region = activeRegion,
-            category = selectedCategory,
-            disabledFeedUrls = viewModel.prefs.disabledFeedUrls,
-            enabledCrossRegionFeeds = viewModel.prefs.enabledCrossRegionFeeds
-        )
-    }
-    
-    val emptyFeedDescription = remember(hasCuratedFeeds, enabledFeeds, selectedCategory, activeRegion) {
-        when {
-            !hasCuratedFeeds -> "There are no default curated feeds for the \"$selectedCategory\" category in your active region ($activeRegion). You can enable sources from other regions or add a custom feed."
-            enabledFeeds.isEmpty() -> "All curation sources for the \"$selectedCategory\" category are currently disabled. Tap below to enable them."
-            else -> "No articles found for \"$selectedCategory\". Drag down to refresh or verify your connection."
-        }
-    }
+
 
     val selectedCategoriesPref = remember { viewModel.prefs.selectedCategories }
     val isDefaultFeedsEnabled = remember { viewModel.prefs.isDefaultFeedsEnabled }
@@ -171,66 +155,7 @@ fun HomeScreen(
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
 
-    // Derive publisher domains from current articles for publisher filter carousel
-    val publishers = remember(articles) {
-        articles.map { it.sourceName to getPublisherDomain(it.sourceName, it.sourceUrl, it.link) }
-            .distinctBy { it.first }
-            .take(10)
-    }
-
-    val filteredArticles = remember(articles, selectedPublisher) {
-        if (selectedPublisher == null) articles else articles.filter { it.sourceName == selectedPublisher }
-    }
-
-    val activeTags = remember(articles) {
-        articles.flatMap { article ->
-            article.tags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
-        }.distinct().take(10)
-    }
-
-    // Split trending (first 3 articles) and regular list
-    val trendingArticles = remember(filteredArticles) {
-        filteredArticles.take(3)
-    }
-    
-    // Remaining articles
-    val listArticles = remember(filteredArticles) {
-        filteredArticles.drop(3)
-    }
-    
     val pageSize = 12
-    var visibleListCount by rememberSaveable(selectedCategory, selectedPublisher) {
-        mutableIntStateOf(pageSize)
-    }
-    var isPaging by remember(listArticles) { mutableStateOf(false) }
-    
-    LaunchedEffect(listArticles.size) {
-        val minimumVisible = minOf(pageSize, listArticles.size)
-        visibleListCount = visibleListCount
-            .coerceAtLeast(minimumVisible)
-            .coerceAtMost(listArticles.size)
-    }
-    
-    val pagedListArticles = remember(listArticles, visibleListCount) {
-        listArticles.take(visibleListCount)
-    }
-    
-    val shouldLoadMore by remember(scrollState, listArticles.size) {
-        derivedStateOf {
-            val hasMore = visibleListCount < listArticles.size
-            val total = scrollState.layoutInfo.totalItemsCount
-            val lastVisible = scrollState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            hasMore && total > 0 && lastVisible >= total - 4
-        }
-    }
-    
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore && !isPaging) {
-            isPaging = true
-            visibleListCount = (visibleListCount + pageSize).coerceAtMost(listArticles.size)
-            isPaging = false
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -302,342 +227,435 @@ fun HomeScreen(
                 }
             }
 
-            // Refresh indicator or Shimmer Loader
-            if (categories.isEmpty()) {
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        Text(
-                            text = "No feeds active",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Please enable Google News or add a custom RSS feed in Settings to start reading.",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
+            // Refresh indicator or Shimmer Loader or content
+            AnimatedContent(
+                targetState = selectedCategory,
+                transitionSpec = {
+                    val initialIndex = categories.indexOf(initialState)
+                    val targetIndex = categories.indexOf(targetState)
+                    val direction = if (targetIndex > initialIndex) {
+                        AnimatedContentTransitionScope.SlideDirection.Left
+                    } else {
+                        AnimatedContentTransitionScope.SlideDirection.Right
+                    }
+                    slideIntoContainer(
+                        direction,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(300)) togetherWith
+                    slideOutOfContainer(
+                        direction,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(300))
+                },
+                modifier = Modifier.weight(1f),
+                label = "categoryTransition"
+            ) { targetCategory ->
+                val currentCategoryArticles = articlesMap[targetCategory] ?: emptyList()
+                val currentScrollState = scrollStates.getOrPut(targetCategory) { LazyListState() }
+
+                val currentFilteredArticles = remember(currentCategoryArticles, selectedPublisher) {
+                    if (selectedPublisher == null) {
+                        currentCategoryArticles
+                    } else {
+                        currentCategoryArticles.filter { it.sourceName == selectedPublisher }
                     }
                 }
-            } else if (isRefreshing && articles.isEmpty()) {
-                SkeletonLoader(modifier = Modifier.weight(1f))
-            } else {
-                PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refreshCurrentFeed() },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    LazyColumn(
-                        state = scrollState,
+
+                val currentPublishers = remember(currentCategoryArticles) {
+                    currentCategoryArticles.map { it.sourceName to getPublisherDomain(it.sourceName, it.sourceUrl, it.link) }
+                        .distinctBy { it.first }
+                        .take(10)
+                }
+
+                val currentActiveTags = remember(currentCategoryArticles) {
+                    currentCategoryArticles.flatMap { article ->
+                        article.tags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+                    }.distinct().take(10)
+                }
+
+                val currentTrendingArticles = remember(currentFilteredArticles) {
+                    currentFilteredArticles.take(3)
+                }
+
+                val currentListArticles = remember(currentFilteredArticles) {
+                    currentFilteredArticles.drop(3)
+                }
+
+                var currentVisibleListCount by remember(targetCategory) {
+                    mutableIntStateOf(visibleListCounts[targetCategory] ?: pageSize)
+                }
+
+                LaunchedEffect(currentVisibleListCount) {
+                    visibleListCounts[targetCategory] = currentVisibleListCount
+                }
+
+                LaunchedEffect(currentListArticles.size) {
+                    val minimumVisible = minOf(pageSize, currentListArticles.size)
+                    if (currentVisibleListCount < minimumVisible) {
+                        currentVisibleListCount = minimumVisible
+                    }
+                    if (currentVisibleListCount > currentListArticles.size) {
+                        currentVisibleListCount = currentListArticles.size
+                    }
+                }
+
+                val currentPagedListArticles = remember(currentListArticles, currentVisibleListCount) {
+                    currentListArticles.take(currentVisibleListCount)
+                }
+
+                val shouldLoadMore by remember(currentScrollState, currentListArticles.size) {
+                    derivedStateOf {
+                        val hasMore = currentVisibleListCount < currentListArticles.size
+                        val total = currentScrollState.layoutInfo.totalItemsCount
+                        val lastVisible = currentScrollState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        hasMore && total > 0 && lastVisible >= total - 4
+                    }
+                }
+
+                var isPaging by remember(currentListArticles) { mutableStateOf(false) }
+
+                LaunchedEffect(shouldLoadMore) {
+                    if (shouldLoadMore && !isPaging) {
+                        isPaging = true
+                        currentVisibleListCount = (currentVisibleListCount + pageSize).coerceAtMost(currentListArticles.size)
+                        isPaging = false
+                    }
+                }
+
+                val hasCuratedFeedsForTarget = remember(activeRegion, targetCategory) {
+                    DefaultFeedsConfig.getFeedsFor(
+                        region = activeRegion,
+                        category = targetCategory,
+                        disabledFeedUrls = emptySet(),
+                        enabledCrossRegionFeeds = emptySet()
+                    ).isNotEmpty()
+                }
+
+                val enabledFeedsForTarget = remember(activeRegion, targetCategory, viewModel.prefs.disabledFeedUrls, viewModel.prefs.enabledCrossRegionFeeds) {
+                    DefaultFeedsConfig.getFeedsFor(
+                        region = activeRegion,
+                        category = targetCategory,
+                        disabledFeedUrls = viewModel.prefs.disabledFeedUrls,
+                        enabledCrossRegionFeeds = viewModel.prefs.enabledCrossRegionFeeds
+                    )
+                }
+
+                val emptyFeedDescriptionForTarget = remember(hasCuratedFeedsForTarget, enabledFeedsForTarget, targetCategory, activeRegion) {
+                    when {
+                        !hasCuratedFeedsForTarget -> "There are no default curated feeds for the \"$targetCategory\" category in your active region ($activeRegion). You can enable sources from other regions or add a custom feed."
+                        enabledFeedsForTarget.isEmpty() -> "All curation sources for the \"$targetCategory\" category are currently disabled. Tap below to enable them."
+                        else -> "No articles found for \"$targetCategory\". Drag down to refresh or verify your connection."
+                    }
+                }
+
+                if (categories.isEmpty()) {
+                    Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 96.dp)
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (!hasSeenAiSpotlight && !isAiEnabled) {
-                            item {
-                                AiSpotlightBanner(
-                                    onEnable = {
-                                        viewModel.setHasSeenAiSpotlight(true)
-                                        navController.navigate("settings_ai")
-                                    },
-                                    onDismiss = { viewModel.setHasSeenAiSpotlight(true) }
-                                )
-                            }
-                        }
-
-                        if (isAiEnabled && isSmartTagsEnabled && activeTags.isNotEmpty()) {
-                            item {
-                                TagFilterPillsRow(
-                                    tags = activeTags,
-                                    selectedTag = selectedDynamicTag,
-                                    onTagClick = { tag ->
-                                        if (selectedDynamicTag == tag) {
-                                            viewModel.setDynamicTagFilter(null)
-                                            viewModel.selectCategory(categories.first())
-                                        } else {
-                                            viewModel.setDynamicTagFilter(tag)
-                                            viewModel.selectCategory(tag)
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    
-                        // Publisher Favicon filter carousel
-                        if (publishers.size > 1) {
-                        item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(24.dp)
+                        ) {
                             Text(
-                                text = "Publishers",
-                                fontSize = 16.sp,
+                                text = "No feeds active",
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(publishers) { (name, domain) ->
-                                    val isPubSelected = selectedPublisher == name
-                                    val borderAlpha = if (isPubSelected) 1f else 0.1f
-                                    val borderColor = if (isPubSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Please enable Google News or add a custom RSS feed in Settings to start reading.",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else if (isRefreshing && currentCategoryArticles.isEmpty()) {
+                    SkeletonLoader(modifier = Modifier.fillMaxSize())
+                } else {
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = { viewModel.refreshCurrentFeed() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        LazyColumn(
+                            state = currentScrollState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 96.dp)
+                        ) {
+                            if (!hasSeenAiSpotlight && !isAiEnabled) {
+                                item {
+                                    AiSpotlightBanner(
+                                        onEnable = {
+                                            viewModel.setHasSeenAiSpotlight(true)
+                                            navController.navigate("settings_ai")
+                                        },
+                                        onDismiss = { viewModel.setHasSeenAiSpotlight(true) }
+                                    )
+                                }
+                            }
 
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier
-                                            .clickable {
-                                                viewModel.selectPublisher(if (isPubSelected) null else name)
+                            if (isAiEnabled && isSmartTagsEnabled && currentActiveTags.isNotEmpty()) {
+                                item {
+                                    TagFilterPillsRow(
+                                        tags = currentActiveTags,
+                                        selectedTag = selectedDynamicTag,
+                                        onTagClick = { tag ->
+                                            if (selectedDynamicTag == tag) {
+                                                viewModel.setDynamicTagFilter(null)
+                                                viewModel.selectCategory(categories.first())
+                                            } else {
+                                                viewModel.setDynamicTagFilter(tag)
+                                                viewModel.selectCategory(tag)
                                             }
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(56.dp)
-                                                .shadow(3.dp, CircleShape)
-                                                .clip(CircleShape)
-                                                .background(MaterialTheme.colorScheme.surface)
-                                                .border(
-                                                    2.dp,
-                                                    borderColor.copy(alpha = borderAlpha),
-                                                    CircleShape
-                                                )
-                                                .padding(6.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            AsyncImage(
-                                        model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
-                                                contentDescription = name,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                            )
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = name,
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
+                                    )
+                                }
+                            }
+
+                            // Publisher Favicon filter carousel
+                            if (currentPublishers.size > 1) {
+                                item {
+                                    Text(
+                                        text = "Publishers",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                                    )
+                                    LazyRow(
+                                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        items(currentPublishers) { (name, domain) ->
+                                            val isPubSelected = selectedPublisher == name
+                                            val borderAlpha = if (isPubSelected) 1f else 0.1f
+                                            val borderColor = if (isPubSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                modifier = Modifier
+                                                    .clickable {
+                                                        viewModel.selectPublisher(if (isPubSelected) null else name)
+                                                    }
+                                                    .width(64.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(56.dp)
+                                                        .clip(CircleShape)
+                                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                                        .border(
+                                                            2.dp,
+                                                            borderColor.copy(alpha = borderAlpha),
+                                                            CircleShape
+                                                        )
+                                                        .padding(6.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    AsyncImage(
+                                                        model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
+                                                        contentDescription = name,
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .clip(CircleShape),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = name,
+                                                    fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    // Horizontal Carousel for Trending Highlights
-                    if (trendingArticles.isNotEmpty()) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp)
-                            ) {
+                            // Horizontal Carousel for Trending Highlights
+                            if (currentTrendingArticles.isNotEmpty()) {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp)
+                                    ) {
+                                        Text(
+                                            text = "Trending Highlights",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
+                                        )
+
+                                        val pagerState = rememberPagerState(pageCount = { currentTrendingArticles.size })
+
+                                        HorizontalPager(
+                                            state = pagerState,
+                                            contentPadding = PaddingValues(horizontal = 24.dp),
+                                            pageSpacing = 16.dp,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) { page ->
+                                            val article = currentTrendingArticles[page]
+                                            val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                                            val scale = (1f - (pageOffset.absoluteValue * 0.15f)).coerceIn(0.85f, 1f)
+                                            val alpha = (1f - (pageOffset.absoluteValue * 0.3f)).coerceIn(0.5f, 1f)
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .graphicsLayer {
+                                                        scaleX = scale
+                                                        scaleY = scale
+                                                        this.alpha = alpha
+                                                    }
+                                                    .shadow(
+                                                        elevation = 8.dp,
+                                                        shape = RoundedCornerShape(24.dp),
+                                                        clip = false
+                                                    )
+                                            ) {
+                                                TrendingCard(
+                                                    article = article,
+                                                    viewModel = viewModel,
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    onBookmarkClick = {
+                                                        viewModel.toggleBookmark(article)
+                                                    },
+                                                    onPlayClick = {
+                                                        viewModel.speakArticle(article)
+                                                    },
+                                                    onQueueClick = {
+                                                        viewModel.addToTtsPlaylist(article)
+                                                        Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    onTap = {
+                                                        val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                                        navController.navigate("detail_screen/$encodedUrl")
+                                                    }
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(16.dp))
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .align(Alignment.CenterHorizontally),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            for (i in 0 until currentTrendingArticles.size) {
+                                                val isActive = pagerState.currentPage == i
+                                                val indicatorWidth = if (isActive) 24.dp else 8.dp
+                                                val indicatorAlpha = if (isActive) 1f else 0.4f
+                                                val indicatorColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 4.dp)
+                                                        .height(8.dp)
+                                                        .width(indicatorWidth)
+                                                        .clip(CircleShape)
+                                                        .background(indicatorColor.copy(alpha = indicatorAlpha))
+                                                        .animateContentSize()
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // List of regular news stories
+                            item {
                                 Text(
-                                    text = "Trending Highlights",
+                                    text = "Latest Stories",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
                                 )
+                            }
 
-                                val pagerState = rememberPagerState(pageCount = { trendingArticles.size })
-
-                                HorizontalPager(
-                                    state = pagerState,
-                                    contentPadding = PaddingValues(horizontal = 24.dp),
-                                    pageSpacing = 12.dp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(260.dp)
-                                ) { page ->
-                                    val article = trendingArticles[page]
-                                    val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
-                                    val scale = (1f - (pageOffset.absoluteValue * 0.15f)).coerceIn(0.85f, 1f)
-                                    val alpha = (1f - (pageOffset.absoluteValue * 0.3f)).coerceIn(0.5f, 1f)
-
-                                    Box(
+                            if (currentListArticles.isEmpty() && currentTrendingArticles.isEmpty()) {
+                                item {
+                                    Column(
                                         modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                scaleX = scale
-                                                scaleY = scale
-                                                this.alpha = alpha
-                                            }
-                                            .shadow(
-                                                elevation = 8.dp,
-                                                shape = RoundedCornerShape(24.dp),
-                                                clip = false
-                                            )
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 32.dp, vertical = 64.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
                                     ) {
-                                         TrendingCard(
-                                             article = article,
-                                             viewModel = viewModel,
-                                             sharedTransitionScope = sharedTransitionScope,
-                                             animatedVisibilityScope = animatedVisibilityScope,
-                                             onBookmarkClick = {
-                                                 viewModel.toggleBookmark(article)
-                                             },
-                                             onPlayClick = {
-                                                 viewModel.speakArticle(article)
-                                             },
-                                             onQueueClick = {
-                                                 viewModel.addToTtsPlaylist(article)
-                                                 Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
-                                             },
-                                             onTap = {
-                                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                                 navController.navigate("detail_screen/$encodedUrl")
-                                             }
-                                         )
+                                        Text(
+                                            text = "No Articles Available",
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = emptyFeedDescriptionForTarget,
+                                            fontSize = 13.sp,
+                                            textAlign = TextAlign.Center,
+                                            lineHeight = 18.sp,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Button(
+                                            onClick = {
+                                                navController.navigate("settings_screen")
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary
+                                            )
+                                        ) {
+                                            Text("Go to Settings")
+                                        }
                                     }
                                 }
+                            } else {
+                                items(currentPagedListArticles) { article ->
+                                    ArticleListItem(
+                                        article = article,
+                                        viewModel = viewModel,
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        onTap = {
+                                            val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
+                                            navController.navigate("detail_screen/$encodedUrl")
+                                        },
+                                        onBookmarkToggle = { viewModel.toggleBookmark(article) },
+                                        onPlayClick = { viewModel.speakArticle(article) },
+                                        onQueueClick = {
+                                            viewModel.addToTtsPlaylist(article)
+                                            Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                }
 
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .align(Alignment.CenterHorizontally),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    for (i in 0 until trendingArticles.size) {
-                                        val isActive = pagerState.currentPage == i
-                                        val indicatorWidth = if (isActive) 24.dp else 8.dp
-                                        val indicatorAlpha = if (isActive) 1f else 0.4f
-                                        val indicatorColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-
+                                if (currentVisibleListCount < currentListArticles.size) {
+                                    item {
                                         Box(
                                             modifier = Modifier
-                                                .padding(horizontal = 4.dp)
-                                                .height(8.dp)
-                                                .width(indicatorWidth)
-                                                .clip(CircleShape)
-                                                .background(indicatorColor.copy(alpha = indicatorAlpha))
-                                                .animateContentSize()
-                                        )
+                                                .fillMaxWidth()
+                                                .padding(vertical = 24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(28.dp),
+                                                color = MaterialTheme.colorScheme.primary,
+                                                strokeWidth = 3.dp
+                                            )
+                                        }
                                     }
-                                }
-                            }
-                        }
-                    }
-
-                    // List of regular news stories
-                    item {
-                        Text(
-                            text = "Latest Stories",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-                        )
-                    }
-
-                    if (listArticles.isEmpty() && trendingArticles.isEmpty()) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 32.dp, vertical = 64.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = "No Articles Available",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = emptyFeedDescription,
-                                    fontSize = 13.sp,
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 18.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                                Spacer(modifier = Modifier.height(24.dp))
-                                Button(
-                                    onClick = {
-                                        viewModel.filterCategoryOnSettings = selectedCategory
-                                        navController.navigate("settings_providers")
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                                    modifier = Modifier.fillMaxWidth(0.85f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Bookmark,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Manage Curation Sources", fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                OutlinedButton(
-                                    onClick = {
-                                        navController.navigate("settings_feeds")
-                                    },
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                                    modifier = Modifier.fillMaxWidth(0.85f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.BookmarkAdd,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Add Custom RSS Feed", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                        }
-                    } else {
-                        items(pagedListArticles) { article ->
-                            ArticleListItem(
-                                article = article,
-                                viewModel = viewModel,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                onTap = {
-                                    val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
-                                    navController.navigate("detail_screen/$encodedUrl")
-                                },
-                                onBookmarkToggle = { viewModel.toggleBookmark(article) },
-                                onPlayClick = { viewModel.speakArticle(article) },
-                                onQueueClick = {
-                                    viewModel.addToTtsPlaylist(article)
-                                    Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        }
-                        
-                        if (visibleListCount < listArticles.size) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 24.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(28.dp),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        strokeWidth = 3.dp
-                                    )
                                 }
                             }
                         }
@@ -646,7 +664,6 @@ fun HomeScreen(
             }
         }
     }
-}
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)

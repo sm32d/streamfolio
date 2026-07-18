@@ -202,8 +202,21 @@ class RssParser {
                 thumbnailUrl = extractFirstImageUrlFromHtml(description.orEmpty(), articleLink)
             }
             
-            // Try resolving publisher from URL domains (robust for curated feeds)
-            val resolvedName = DefaultFeedsConfig.getPublisherName(articleLink)
+            // Try resolving publisher from feed URL or article link (robust for curated feeds)
+            var resolvedName = "Unknown Source"
+            if (!sourceUrl.isNullOrBlank()) {
+                val nameByFeed = DefaultFeedsConfig.getPublisherName(sourceUrl!!)
+                if (nameByFeed != "Unknown Source") {
+                    resolvedName = nameByFeed
+                }
+            }
+            if (resolvedName == "Unknown Source") {
+                val nameByArticle = DefaultFeedsConfig.getPublisherName(articleLink)
+                if (nameByArticle != "Unknown Source") {
+                    resolvedName = nameByArticle
+                }
+            }
+
             if (resolvedName != "Unknown Source" && customFeedTitle == null) {
                 cleanSource = resolvedName
             } else if (customFeedTitle == null) {
@@ -216,11 +229,14 @@ class RssParser {
                 // Only split if the suffix is capitalized (likely a publisher name)
                 if (suffix.isNotEmpty() && suffix[0].isUpperCase()) {
                     cleanTitle = rawTitle.substring(0, lastDashIndex).trim()
-                    if (sourceName == null || sourceName!!.isEmpty()) {
+                    if (customFeedTitle != null || resolvedName != "Unknown Source") {
+                        // Keep the canonical resolved or custom source name, do not overwrite with title suffix
+                    } else if (sourceName == null || sourceName!!.isEmpty()) {
                         cleanSource = suffix
                     }
                 }
             }
+
 
             val cleanDesc = description?.replace(Regex("<[^>]*>"), "")?.trim() ?: ""
 

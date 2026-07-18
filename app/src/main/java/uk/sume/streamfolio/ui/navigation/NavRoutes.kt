@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -83,7 +84,11 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 composable("onboarding") {
                     OnboardingScreen(navController = navController, viewModel = viewModel)
                 }
-                composable(BottomTab.HOME.route) {
+                composable(
+                    route = BottomTab.HOME.route,
+                    enterTransition = { tabEnterTransition() },
+                    exitTransition = { tabExitTransition() }
+                ) {
                     HomeScreen(
                         navController = navController,
                         viewModel = viewModel,
@@ -91,7 +96,11 @@ fun AppNavigation(viewModel: NewsViewModel) {
                         animatedVisibilityScope = this
                     )
                 }
-                composable(BottomTab.SEARCH.route) {
+                composable(
+                    route = BottomTab.SEARCH.route,
+                    enterTransition = { tabEnterTransition() },
+                    exitTransition = { tabExitTransition() }
+                ) {
                     SearchScreen(
                         navController = navController,
                         viewModel = viewModel,
@@ -99,7 +108,11 @@ fun AppNavigation(viewModel: NewsViewModel) {
                         animatedVisibilityScope = this
                     )
                 }
-                composable(BottomTab.BOOKMARKS.route) {
+                composable(
+                    route = BottomTab.BOOKMARKS.route,
+                    enterTransition = { tabEnterTransition() },
+                    exitTransition = { tabExitTransition() }
+                ) {
                     BookmarkScreen(
                         navController = navController,
                         viewModel = viewModel,
@@ -107,9 +120,14 @@ fun AppNavigation(viewModel: NewsViewModel) {
                         animatedVisibilityScope = this
                     )
                 }
-                composable(BottomTab.SETTINGS.route) {
+                composable(
+                    route = BottomTab.SETTINGS.route,
+                    enterTransition = { tabEnterTransition() },
+                    exitTransition = { tabExitTransition() }
+                ) {
                     SettingsScreen(navController = navController, viewModel = viewModel)
                 }
+
             composable(
                 route = "settings_preferences",
                 enterTransition = {
@@ -478,3 +496,58 @@ fun AppNavigation(viewModel: NewsViewModel) {
     }
 }
 }
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabEnterTransition(): EnterTransition {
+    val bottomTabs = listOf(
+        BottomTab.HOME.route,
+        BottomTab.SEARCH.route,
+        BottomTab.BOOKMARKS.route,
+        BottomTab.SETTINGS.route
+    )
+    val initialRoute = initialState.destination.route ?: return fadeIn(animationSpec = tween(250))
+    val targetRoute = targetState.destination.route ?: return fadeIn(animationSpec = tween(250))
+    
+    val initialIndex = bottomTabs.indexOf(initialRoute)
+    val targetIndex = bottomTabs.indexOf(targetRoute)
+    
+    if (initialIndex == -1 || targetIndex == -1) return fadeIn(animationSpec = tween(250))
+    
+    val direction = if (targetIndex > initialIndex) {
+        AnimatedContentTransitionScope.SlideDirection.Left
+    } else {
+        AnimatedContentTransitionScope.SlideDirection.Right
+    }
+    
+    return slideIntoContainer(
+        direction,
+        animationSpec = tween(300, easing = FastOutSlowInEasing)
+    ) + fadeIn(animationSpec = tween(300))
+}
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.tabExitTransition(): ExitTransition {
+    val bottomTabs = listOf(
+        BottomTab.HOME.route,
+        BottomTab.SEARCH.route,
+        BottomTab.BOOKMARKS.route,
+        BottomTab.SETTINGS.route
+    )
+    val initialRoute = initialState.destination.route ?: return fadeOut(animationSpec = tween(250))
+    val targetRoute = targetState.destination.route ?: return fadeOut(animationSpec = tween(250))
+    
+    val initialIndex = bottomTabs.indexOf(initialRoute)
+    val targetIndex = bottomTabs.indexOf(targetRoute)
+    
+    if (initialIndex == -1 || targetIndex == -1) return fadeOut(animationSpec = tween(250))
+    
+    val direction = if (targetIndex > initialIndex) {
+        AnimatedContentTransitionScope.SlideDirection.Left
+    } else {
+        AnimatedContentTransitionScope.SlideDirection.Right
+    }
+    
+    return slideOutOfContainer(
+        direction,
+        animationSpec = tween(300, easing = FastOutSlowInEasing)
+    ) + fadeOut(animationSpec = tween(300))
+}
+
