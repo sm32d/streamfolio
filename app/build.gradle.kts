@@ -6,6 +6,12 @@ plugins {
 
 }
 
+kapt {
+    arguments {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
+}
+
 android {
     namespace = "uk.sume.streamfolio"
     compileSdk = 36

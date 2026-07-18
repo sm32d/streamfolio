@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 
-@Database(entities = [Article::class, CustomFeed::class], version = 5, exportSchema = false)
+@Database(entities = [Article::class, CustomFeed::class], version = 5, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun customFeedDao(): CustomFeedDao
@@ -23,7 +23,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "news_database"
                 )
-                .fallbackToDestructiveMigration()
+                .addMigrations(*ALL_MIGRATIONS)
+                // Allow destructive migration only from very old schema versions (1-4).
+                // Current version 5 and all future versions must use explicit migrations
+                // to prevent accidental data loss (bookmarks, reading history, etc.).
+                .fallbackToDestructiveMigrationFrom(1, 2, 3, 4)
                 .build()
                 INSTANCE = instance
                 instance
