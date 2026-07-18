@@ -24,7 +24,8 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     iconTint: Color = MaterialTheme.colorScheme.primary,
     actionLabel: String? = null,
-    onAction: (() -> Unit)? = null
+    onAction: (() -> Unit)? = null,
+    actions: @Composable ColumnScope.() -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -66,5 +67,6 @@ fun EmptyState(
                 Text(actionLabel)
             }
         }
+        actions()
     }
 }

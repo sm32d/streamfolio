@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.outlined.Newspaper
@@ -622,8 +623,53 @@ fun HomeScreen(
                                         icon = Icons.Outlined.Newspaper,
                                         title = "No Articles Available",
                                         description = emptyFeedDescriptionForTarget,
-                                        actionLabel = "Go to Settings",
-                                        onAction = { navController.navigate("settings_screen") }
+                                        actions = {
+                                            Spacer(modifier = Modifier.height(24.dp))
+                                            Button(
+                                                onClick = {
+                                                    viewModel.filterCategoryOnSettings = targetCategory
+                                                    navController.navigate("settings_providers")
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary
+                                                ),
+                                                shape = RoundedCornerShape(12.dp),
+                                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                                                modifier = Modifier.fillMaxWidth(0.85f)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Bookmark,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = "Manage Curation Sources",
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            OutlinedButton(
+                                                onClick = { navController.navigate("settings_feeds") },
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                                                shape = RoundedCornerShape(12.dp),
+                                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                                                modifier = Modifier.fillMaxWidth(0.85f)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.BookmarkAdd,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = "Add Custom RSS Feed",
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
                                     )
                                 }
                             } else {
