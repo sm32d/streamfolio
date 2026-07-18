@@ -73,6 +73,7 @@ import uk.sume.streamfolio.util.UrlSecurityValidator
 
 
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.launch
@@ -620,7 +621,7 @@ fun HomeScreen(
                                             .fillMaxWidth()
                                             .padding(horizontal = 32.dp, vertical = 64.dp)
                                             .padding(bottom = emptyStateBottomPadding),
-                                        icon = Icons.Outlined.Newspaper,
+                                        illustration = painterResource(id = uk.sume.streamfolio.R.drawable.otter_no_articles),
                                         title = "No Articles Available",
                                         description = emptyFeedDescriptionForTarget,
                                         actions = {

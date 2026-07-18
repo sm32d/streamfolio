@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -100,7 +101,7 @@ fun BookmarkScreen(
                         .weight(1f)
                         .fillMaxWidth()
                         .padding(bottom = emptyStateBottomPadding),
-                    icon = Icons.Outlined.BookmarkBorder,
+                    illustration = painterResource(id = uk.sume.streamfolio.R.drawable.otter_no_bookmarks),
                     title = "No saved bookmarks",
                     description = "Swipe right on articles in the Home feed to save them for later reading."
                 )

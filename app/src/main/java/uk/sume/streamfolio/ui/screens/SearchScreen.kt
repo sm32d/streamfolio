@@ -28,6 +28,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -391,7 +392,7 @@ fun SearchScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(bottom = emptyStateBottomPadding),
-                            icon = Icons.Outlined.SearchOff,
+                            illustration = painterResource(id = uk.sume.streamfolio.R.drawable.otter_no_search),
                             title = "No articles found",
                             description = "Try a different keyword or broaden your search."
                         )
