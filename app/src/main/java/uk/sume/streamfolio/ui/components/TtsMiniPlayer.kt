@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,6 +71,9 @@ fun TtsMiniPlayer(
     val article = playlist[currentIndex]
     val haptic = LocalHapticFeedback.current
 
+    var showDismissConfirmDialog by remember { mutableStateOf(false) }
+    var pendingDismissOffset by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
     val offsetY = remember { Animatable(0f) }
     val threshold = 150f
@@ -91,8 +95,8 @@ fun TtsMiniPlayer(
                         coroutineScope.launch {
                             if (offsetY.value > threshold) {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                offsetY.animateTo(300f, animationSpec = tween(200))
-                                viewModel.clearTtsPlaylist()
+                                pendingDismissOffset = true
+                                showDismissConfirmDialog = true
                             } else {
                                 offsetY.animateTo(0f, animationSpec = tween(150))
                             }
@@ -230,6 +234,106 @@ fun TtsMiniPlayer(
                         tint = if (currentIndex < playlist.size - 1) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                         modifier = Modifier.size(24.dp)
                     )
+                }
+            }
+        }
+
+        if (showDismissConfirmDialog) {
+            ModalBottomSheet(
+                onDismissRequest = {
+                    showDismissConfirmDialog = false
+                    pendingDismissOffset = false
+                    coroutineScope.launch {
+                        offsetY.animateTo(0f, animationSpec = tween(150))
+                    }
+                },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                dragHandle = { BottomSheetDefaults.DragHandle() },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 24.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Stop,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Stop audio playback?",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Dismissing the player will stop the current article and clear the audio queue.",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        lineHeight = 20.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showDismissConfirmDialog = false
+                                pendingDismissOffset = false
+                                coroutineScope.launch {
+                                    offsetY.animateTo(0f, animationSpec = tween(150))
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                        ) {
+                            Text("Keep Playing", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                showDismissConfirmDialog = false
+                                coroutineScope.launch {
+                                    if (pendingDismissOffset) {
+                                        offsetY.animateTo(300f, animationSpec = tween(200))
+                                    }
+                                    viewModel.clearTtsPlaylist()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Stop", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
+                    }
                 }
             }
         }

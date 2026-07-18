@@ -45,12 +45,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -374,12 +379,21 @@ private fun BottomNavigation(
                 containerColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text(
-                text = if (isFinalStep) "Start Reading →" else "Continue →",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (isFinalStep) "Start Reading" else "Continue",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -850,13 +864,13 @@ private fun WelcomeStep(systemLocale: Locale) {
 
         Spacer(modifier = Modifier.height(36.dp))
 
-        FeatureRow(emoji = "🌍", title = "Global Coverage", subtitle = "News from top sources worldwide")
+        FeatureRow(icon = Icons.Default.Public, title = "Global Coverage", subtitle = "News from top sources worldwide")
         Spacer(modifier = Modifier.height(16.dp))
-        FeatureRow(emoji = "📂", title = "Custom Feeds", subtitle = "Add your own RSS feeds")
+        FeatureRow(icon = Icons.Default.RssFeed, title = "Custom Feeds", subtitle = "Add your own RSS feeds")
         Spacer(modifier = Modifier.height(16.dp))
-        FeatureRow(emoji = "🎙️", title = "Text-to-Speech", subtitle = "Listen to articles hands-free")
+        FeatureRow(icon = Icons.Default.Hearing, title = "Text-to-Speech", subtitle = "Listen to articles hands-free")
         Spacer(modifier = Modifier.height(16.dp))
-        FeatureRow(emoji = "🔖", title = "Bookmarks", subtitle = "Save stories to read later")
+        FeatureRow(icon = Icons.Default.Bookmark, title = "Bookmarks", subtitle = "Save stories to read later")
 
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -868,7 +882,12 @@ private fun WelcomeStep(systemLocale: Locale) {
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "✨", fontSize = 14.sp)
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "Detected: ${systemLocale.displayLanguage} · ${systemLocale.displayCountry}",
@@ -881,7 +900,7 @@ private fun WelcomeStep(systemLocale: Locale) {
 }
 
 @Composable
-private fun FeatureRow(emoji: String, title: String, subtitle: String) {
+private fun FeatureRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -890,7 +909,12 @@ private fun FeatureRow(emoji: String, title: String, subtitle: String) {
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = emoji, fontSize = 20.sp)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column {
@@ -921,14 +945,14 @@ private fun DefaultFeedsAndCacheStep(
     onCacheDaysSelected: (String) -> Unit
 ) {
     val availableCategories = listOf(
-        "🗞️ Top Stories" to "Top Stories",
-        "🌍 World" to "World",
-        "💼 Business" to "Business",
-        "💻 Technology" to "Technology",
-        "🔬 Science" to "Science",
-        "⚽ Sports" to "Sports",
-        "❤️ Health" to "Health",
-        "🎬 Entertainment" to "Entertainment"
+        "Top Stories" to "Top Stories",
+        "World" to "World",
+        "Business" to "Business",
+        "Technology" to "Technology",
+        "Science" to "Science",
+        "Sports" to "Sports",
+        "Health" to "Health",
+        "Entertainment" to "Entertainment"
     )
     val cacheOptions = mapOf(
         "1" to "1 Day",
@@ -1092,23 +1116,23 @@ private fun TranslationRegionStep(
     onRegionSelected: (String) -> Unit
 ) {
     val languages = mapOf(
-        "en" to "🇬🇧 English",
-        "es" to "🇪🇸 Español",
-        "fr" to "🇫🇷 Français",
-        "de" to "🇩🇪 Deutsch",
-        "hi" to "🇮🇳 हिन्दी",
-        "zh" to "🇨🇳 中文"
+        "en" to "English",
+        "es" to "Español",
+        "fr" to "Français",
+        "de" to "Deutsch",
+        "hi" to "हिन्दी",
+        "zh" to "中文"
     )
     val regions = mapOf(
-        "US" to "🇺🇸 United States",
-        "GB" to "🇬🇧 United Kingdom",
-        "CA" to "🇨🇦 Canada",
-        "FR" to "🇫🇷 France",
-        "DE" to "🇩🇪 Germany",
-        "IN" to "🇮🇳 India",
-        "AU" to "🇦🇺 Australia",
-        "SG" to "🇸🇬 Singapore",
-        "HK" to "🇭🇰 Hong Kong"
+        "US" to "United States",
+        "GB" to "United Kingdom",
+        "CA" to "Canada",
+        "FR" to "France",
+        "DE" to "Germany",
+        "IN" to "India",
+        "AU" to "Australia",
+        "SG" to "Singapore",
+        "HK" to "Hong Kong"
     )
 
     val headerText = when {

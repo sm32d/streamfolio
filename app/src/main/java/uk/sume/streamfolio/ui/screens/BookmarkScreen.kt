@@ -18,16 +18,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import uk.sume.streamfolio.ui.components.EmptyState
+import uk.sume.streamfolio.ui.components.OfflineIndicator
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
-
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.util.NetworkMonitor
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
 import java.net.URLEncoder
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Hearing
+import androidx.compose.material.icons.outlined.BookmarkBorder
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -39,6 +43,13 @@ fun BookmarkScreen(
 ) {
     val bookmarkedArticles by viewModel.bookmarkedArticles.collectAsState()
     val context = LocalContext.current
+    val isOnline by NetworkMonitor.observe(context).collectAsState(initial = NetworkMonitor.isOnline(context))
+    val isOffline = !isOnline
+
+    val ttsPlaylist by viewModel.ttsPlaylist.collectAsState()
+    val currentTtsIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val showMiniPlayer = ttsPlaylist.isNotEmpty() && currentTtsIndex != -1 && currentTtsIndex < ttsPlaylist.size
+    val emptyStateBottomPadding = if (showMiniPlayer) 160.dp else 96.dp
 
     val scrollState = rememberLazyListState()
 
@@ -80,34 +91,18 @@ fun BookmarkScreen(
                 )
             }
 
+            OfflineIndicator(isOffline = isOffline)
+
             if (bookmarkedArticles.isEmpty()) {
-                Box(
+                EmptyState(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        modifier = Modifier.padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "🔖", fontSize = 48.sp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "No saved bookmarks",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Swipe right on articles in the Home feed to save them for later reading.",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
+                        .fillMaxWidth()
+                        .padding(bottom = emptyStateBottomPadding),
+                    icon = Icons.Outlined.BookmarkBorder,
+                    title = "No saved bookmarks",
+                    description = "Swipe right on articles in the Home feed to save them for later reading."
+                )
             } else {
                 LazyColumn(
                     state = scrollState,

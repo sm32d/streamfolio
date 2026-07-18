@@ -641,6 +641,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _isSmartTagsEnabled.value = prefs.isSmartTagsEnabled
         _translationTargetLanguage.value = prefs.translationTargetLanguage
         _hasSeenAiSpotlight.value = prefs.hasSeenAiSpotlight
+        _hasSeenSwipeHint.value = prefs.hasSeenSwipeHint
         _swipeLeftAction.value = prefs.swipeLeftAction
         _swipeRightAction.value = prefs.swipeRightAction
         playbackManager.setTtsSpeechRate(prefs.ttsSpeechRate)
@@ -711,6 +712,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _hasSeenAiSpotlight = MutableStateFlow(prefs.hasSeenAiSpotlight)
     val hasSeenAiSpotlight: StateFlow<Boolean> = _hasSeenAiSpotlight.asStateFlow()
+
+    private val _hasSeenSwipeHint = MutableStateFlow(prefs.hasSeenSwipeHint)
+    val hasSeenSwipeHint: StateFlow<Boolean> = _hasSeenSwipeHint.asStateFlow()
 
     // Dynamic Tag Filter state
     private val _selectedDynamicTag = MutableStateFlow<String?>(null)
@@ -800,7 +804,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _hasSeenAiSpotlight.value = seen
     }
 
-
+    fun setHasSeenSwipeHint(seen: Boolean) {
+        prefs.hasSeenSwipeHint = seen
+        _hasSeenSwipeHint.value = seen
+    }
 
     fun translateArticleText(title: String, body: String) {
         _isTranslationLoading.value = true

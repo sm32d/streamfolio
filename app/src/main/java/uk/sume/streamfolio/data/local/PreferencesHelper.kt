@@ -109,4 +109,8 @@ class PreferencesHelper(context: Context) {
         set(value) {
             prefs.edit().putString("recent_searches", value.take(10).joinToString("|||")).apply()
         }
+
+    var hasSeenSwipeHint: Boolean
+        get() = prefs.getBoolean("has_seen_swipe_hint", false)
+        set(value) = prefs.edit().putBoolean("has_seen_swipe_hint", value).apply()
 }

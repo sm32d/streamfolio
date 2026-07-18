@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -11,23 +12,30 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.*
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -37,10 +45,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import java.net.URLEncoder
+import uk.sume.streamfolio.ui.components.EmptyState
+import uk.sume.streamfolio.ui.components.OfflineIndicator
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.util.NetworkMonitor
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     navController: NavController,
@@ -56,7 +67,17 @@ fun SearchScreen(
     val trendingTopics by viewModel.trendingTopics.collectAsState()
     val haptic = LocalHapticFeedback.current
 
+    val ttsPlaylist by viewModel.ttsPlaylist.collectAsState()
+    val currentTtsIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val showMiniPlayer = ttsPlaylist.isNotEmpty() && currentTtsIndex != -1 && currentTtsIndex < ttsPlaylist.size
+    val emptyStateBottomPadding = if (showMiniPlayer) 160.dp else 96.dp
+    val isOnline by NetworkMonitor.observe(context).collectAsState(initial = NetworkMonitor.isOnline(context))
+    val isOffline = !isOnline
+
+    var showClearAllDialog by remember { mutableStateOf(false) }
+
     val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
 
     val searchSuggestions = remember {
         listOf(
@@ -134,6 +155,8 @@ fun SearchScreen(
                 )
             }
 
+            OfflineIndicator(isOffline = isOffline)
+
             // Search Bar Input
             OutlinedTextField(
                 value = searchQuery,
@@ -173,6 +196,7 @@ fun SearchScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
                     onSearch = {
+                        focusManager.clearFocus()
                         viewModel.addRecentSearch(searchQuery)
                     }
                 ),
@@ -287,7 +311,7 @@ fun SearchScreen(
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            viewModel.clearRecentSearches()
+                                            showClearAllDialog = true
                                         }
                                     )
                                 }
@@ -339,28 +363,15 @@ fun SearchScreen(
                                     }
                                 }
                             } else {
-                                Box(
+                                EmptyState(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "🔍",
-                                            fontSize = 36.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        Text(
-                                            text = "Type to search articles",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                        )
-                                    }
-                                }
+                                        .fillMaxWidth()
+                                        .padding(bottom = emptyStateBottomPadding),
+                                    icon = Icons.Outlined.Search,
+                                    title = "Start searching",
+                                    description = "Type a keyword to find articles and topics."
+                                )
                             }
                         }
                     }
@@ -376,31 +387,14 @@ fun SearchScreen(
                         }
                     }
                     SearchState.NO_RESULTS -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(text = "📰", fontSize = 48.sp)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "No articles found",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "Try a different keyword or broaden your search",
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
+                        EmptyState(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = emptyStateBottomPadding),
+                            icon = Icons.Outlined.SearchOff,
+                            title = "No articles found",
+                            description = "Try a different keyword or broaden your search."
+                        )
                     }
                     SearchState.RESULTS -> {
                         LazyColumn(
@@ -423,6 +417,89 @@ fun SearchScreen(
                                         Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
                                     }
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showClearAllDialog) {
+                ModalBottomSheet(
+                    onDismissRequest = { showClearAllDialog = false },
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                    dragHandle = { BottomSheetDefaults.DragHandle() },
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 24.dp)
+                            .padding(bottom = 24.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Clear recent searches?",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "This will permanently remove all recent searches. This action cannot be undone.",
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            lineHeight = 20.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showClearAllDialog = false },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+                            ) {
+                                Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    viewModel.clearRecentSearches()
+                                    showClearAllDialog = false
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Clear", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }

@@ -25,6 +25,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.BookmarkAdd
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -341,23 +345,23 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
     var selectedRegion by remember { mutableStateOf(currentRegion) }
 
     val languages = mapOf(
-        "en" to "🇬🇧 English",
-        "es" to "🇪🇸 Español",
-        "fr" to "🇫🇷 Français",
-        "de" to "🇩🇪 Deutsch",
-        "hi" to "🇮🇳 हिन्दी",
-        "zh" to "🇨🇳 中文"
+        "en" to "English",
+        "es" to "Español",
+        "fr" to "Français",
+        "de" to "Deutsch",
+        "hi" to "हिन्दी",
+        "zh" to "中文"
     )
     val regions = mapOf(
-        "US" to "🇺🇸 United States",
-        "GB" to "🇬🇧 United Kingdom",
-        "CA" to "🇨🇦 Canada",
-        "FR" to "🇫🇷 France",
-        "DE" to "🇩🇪 Germany",
-        "IN" to "🇮🇳 India",
-        "AU" to "🇦🇺 Australia",
-        "SG" to "🇸🇬 Singapore",
-        "HK" to "🇭🇰 Hong Kong"
+        "US" to "United States",
+        "GB" to "United Kingdom",
+        "CA" to "Canada",
+        "FR" to "France",
+        "DE" to "Germany",
+        "IN" to "India",
+        "AU" to "Australia",
+        "SG" to "Singapore",
+        "HK" to "Hong Kong"
     )
     val cacheOptions = mapOf(
         "1" to "1 Day",
@@ -397,7 +401,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 label = "Region / Country",
                 icon = Icons.Default.Place,
                 value = regions[selectedRegion] ?: "United States",
-                options = regions,
+                options = regions.mapValues { it.value to null },
                 onSelected = {
                     selectedRegion = it
                     viewModel.updatePreferences(viewModel.prefs.language, it)
@@ -410,7 +414,7 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 label = "Offline Cache History",
                 icon = Icons.Default.History,
                 value = cacheOptions[cacheDays] ?: "7 Days",
-                options = cacheOptions,
+                options = cacheOptions.mapValues { it.value to null },
                 onSelected = {
                     cacheDays = it
                     viewModel.prefs.cacheHistoryDays = it.toInt()
@@ -495,14 +499,14 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
 fun SettingsManageContentScreen(navController: NavController, viewModel: NewsViewModel) {
     var isDefaultFeedsEnabled by remember { mutableStateOf(viewModel.prefs.isDefaultFeedsEnabled) }
     val availableCategories = listOf(
-        "🗞️ Top Stories" to "Top Stories",
-        "🌍 World" to "World",
-        "💼 Business" to "Business",
-        "💻 Technology" to "Technology",
-        "🔬 Science" to "Science",
-        "⚽ Sports" to "Sports",
-        "❤️ Health" to "Health",
-        "🎬 Entertainment" to "Entertainment"
+        "Top Stories" to "Top Stories",
+        "World" to "World",
+        "Business" to "Business",
+        "Technology" to "Technology",
+        "Science" to "Science",
+        "Sports" to "Sports",
+        "Health" to "Health",
+        "Entertainment" to "Entertainment"
     )
     var selectedCats by remember { mutableStateOf(viewModel.prefs.selectedCategories) }
 
@@ -2053,7 +2057,7 @@ private fun SettingsSelectorField(
     label: String,
     value: String,
     icon: ImageVector,
-    options: Map<String, String>,
+    options: Map<String, Pair<String, ImageVector?>>,
     onSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -2111,14 +2115,26 @@ private fun SettingsSelectorField(
                     .fillMaxWidth(0.9f)
                     .background(MaterialTheme.colorScheme.surface)
             ) {
-                options.forEach { (code, name) ->
+                options.forEach { (code, pair) ->
+                    val (name, optionIcon) = pair
                     DropdownMenuItem(
                         text = {
-                            Text(
-                                text = name,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                optionIcon?.let {
+                                    Icon(
+                                        imageVector = it,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                }
+                                Text(
+                                    text = name,
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         },
                         onClick = {
                             onSelected(code)
@@ -2191,12 +2207,12 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
     var showLangDropdown by remember { mutableStateOf(false) }
 
     val languagesMap = mapOf(
-        "en" to "🇬🇧 English",
-        "es" to "🇪🇸 Español",
-        "fr" to "🇫🇷 Français",
-        "de" to "🇩🇪 Deutsch",
-        "hi" to "🇮🇳 हिन्दी",
-        "zh" to "🇨🇳 中文"
+        "en" to "English",
+        "es" to "Español",
+        "fr" to "Français",
+        "de" to "Deutsch",
+        "hi" to "हिन्दी",
+        "zh" to "中文"
     )
 
     val isDark = isSystemInDarkTheme()
@@ -2563,10 +2579,10 @@ fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewMode
     val swipeRightAction by viewModel.swipeRightAction.collectAsState()
 
     val options = mapOf(
-        "bookmark" to "📌 Toggle Bookmark",
-        "share" to "📤 Share Article",
-        "read" to "📖 Toggle Read Status",
-        "none" to "❌ None / Disable"
+        "bookmark" to ("Toggle Bookmark" to Icons.Outlined.BookmarkAdd),
+        "share" to ("Share Article" to Icons.Outlined.Share),
+        "read" to ("Toggle Read Status" to Icons.Outlined.CheckCircle),
+        "none" to ("None / Disable" to Icons.Outlined.Block)
     )
 
     val isDark = isSystemInDarkTheme()
@@ -2596,7 +2612,7 @@ fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewMode
             SettingsSelectorField(
                 label = "Swipe Left Action",
                 icon = Icons.Default.KeyboardArrowLeft,
-                value = options[swipeLeftAction] ?: "Toggle Bookmark",
+                value = options[swipeLeftAction]?.first ?: "Toggle Bookmark",
                 options = options,
                 onSelected = {
                     viewModel.setSwipeLeftAction(it)
@@ -2608,7 +2624,7 @@ fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewMode
             SettingsSelectorField(
                 label = "Swipe Right Action",
                 icon = Icons.Default.KeyboardArrowRight,
-                value = options[swipeRightAction] ?: "Share",
+                value = options[swipeRightAction]?.first ?: "Share",
                 options = options,
                 onSelected = {
                     viewModel.setSwipeRightAction(it)

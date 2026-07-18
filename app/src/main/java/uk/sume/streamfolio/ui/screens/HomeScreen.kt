@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.outlined.Hearing
+import androidx.compose.material.icons.outlined.Gesture
+import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
@@ -62,9 +64,12 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.ui.components.EmptyState
+import uk.sume.streamfolio.ui.components.OfflineIndicator
 import uk.sume.streamfolio.ui.components.SkeletonLoader
 import uk.sume.streamfolio.ui.components.SwipeableCard
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
+import uk.sume.streamfolio.util.NetworkMonitor
 import uk.sume.streamfolio.util.UrlSecurityValidator
 
 
@@ -98,6 +103,13 @@ fun HomeScreen(
     val isAiEnabled by viewModel.isAiEnabled.collectAsState()
     val isSmartTagsEnabled by viewModel.isSmartTagsEnabled.collectAsState()
     val hasSeenAiSpotlight by viewModel.hasSeenAiSpotlight.collectAsState()
+    val swipeLeftAction by viewModel.swipeLeftAction.collectAsState()
+    val swipeRightAction by viewModel.swipeRightAction.collectAsState()
+
+    val ttsPlaylist by viewModel.ttsPlaylist.collectAsState()
+    val currentTtsIndex by viewModel.currentTtsArticleIndex.collectAsState()
+    val showMiniPlayer = ttsPlaylist.isNotEmpty() && currentTtsIndex != -1 && currentTtsIndex < ttsPlaylist.size
+    val emptyStateBottomPadding = if (showMiniPlayer) 160.dp else 96.dp
 
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
@@ -163,6 +175,10 @@ fun HomeScreen(
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
 
+    val isOnline by NetworkMonitor.observe(context).collectAsState(initial = NetworkMonitor.isOnline(context))
+    val isOffline = !isOnline
+    val hasSeenSwipeHint by viewModel.hasSeenSwipeHint.collectAsState()
+
     val pageSize = 12
 
     Box(
@@ -193,6 +209,8 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
+
+            OfflineIndicator(isOffline = isOffline)
 
             // Scrollable Categories Tabs
             ScrollableTabRow(
@@ -357,29 +375,14 @@ fun HomeScreen(
                 }
 
                 if (categories.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(24.dp)
-                        ) {
-                            Text(
-                                text = "No feeds active",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Please enable Google News or add a custom RSS feed in Settings to start reading.",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+                    EmptyState(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = emptyStateBottomPadding),
+                        icon = Icons.Outlined.Newspaper,
+                        title = "No feeds active",
+                        description = "Please enable Google News or add a custom RSS feed in Settings to start reading."
+                    )
                 } else if (isRefreshing && currentCategoryArticles.isEmpty()) {
                     SkeletonLoader(modifier = Modifier.fillMaxSize())
                 } else {
@@ -419,6 +422,16 @@ fun HomeScreen(
                                                 viewModel.selectCategory(tag)
                                             }
                                         }
+                                    )
+                                }
+                            }
+
+                            if (!hasSeenSwipeHint && currentFilteredArticles.isNotEmpty()) {
+                                item {
+                                    SwipeHintBanner(
+                                        swipeLeftAction = swipeLeftAction,
+                                        swipeRightAction = swipeRightAction,
+                                        onDismiss = { viewModel.setHasSeenSwipeHint(true) }
                                     )
                                 }
                             }
@@ -595,39 +608,17 @@ fun HomeScreen(
 
                             if (currentListArticles.isEmpty() && currentTrendingArticles.isEmpty()) {
                                 item {
-                                    Column(
+                                    EmptyState(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 32.dp, vertical = 64.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.Center
-                                    ) {
-                                        Text(
-                                            text = "No Articles Available",
-                                            fontSize = 18.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = emptyFeedDescriptionForTarget,
-                                            fontSize = 13.sp,
-                                            textAlign = TextAlign.Center,
-                                            lineHeight = 18.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                        )
-                                        Spacer(modifier = Modifier.height(24.dp))
-                                        Button(
-                                            onClick = {
-                                                navController.navigate("settings_screen")
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary
-                                            )
-                                        ) {
-                                            Text("Go to Settings")
-                                        }
-                                    }
+                                            .padding(horizontal = 32.dp, vertical = 64.dp)
+                                            .padding(bottom = emptyStateBottomPadding),
+                                        icon = Icons.Outlined.Newspaper,
+                                        title = "No Articles Available",
+                                        description = emptyFeedDescriptionForTarget,
+                                        actionLabel = "Go to Settings",
+                                        onAction = { navController.navigate("settings_screen") }
+                                    )
                                 }
                             } else {
                                 items(currentPagedListArticles) { article ->
@@ -1581,6 +1572,85 @@ fun TagFilterPillsRow(
                         color = textCol
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwipeHintBanner(
+    swipeLeftAction: String,
+    swipeRightAction: String,
+    onDismiss: () -> Unit
+) {
+    if (swipeLeftAction == "none" && swipeRightAction == "none") return
+
+    val actionLabel = { action: String ->
+        when (action) {
+            "bookmark" -> "save"
+            "share" -> "share"
+            "read" -> "mark as read"
+            else -> null
+        }
+    }
+
+    val leftLabel = actionLabel(swipeLeftAction)
+    val rightLabel = actionLabel(swipeRightAction)
+    val message = buildString {
+        append("Swipe cards to act quickly: ")
+        val parts = listOfNotNull(
+            leftLabel?.let { "left to $it" },
+            rightLabel?.let { "right to $it" }
+        )
+        append(parts.joinToString(", "))
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Gesture,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = message,
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
             }
         }
     }
