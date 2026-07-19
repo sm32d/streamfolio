@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -121,7 +122,8 @@ fun BookmarkScreen(
                                 navController.navigate("detail_screen/$encodedUrl")
                             }
                         }
-                        val onBookmarkToggle = remember(article.link) { { viewModel.toggleBookmark(article) } }
+                        val articleState = rememberUpdatedState(article)
+                        val onBookmarkToggle = remember { { viewModel.toggleBookmark(articleState.value) } }
                         val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
                         val onQueueClick = remember(article.link, context) {
                             {

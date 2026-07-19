@@ -403,7 +403,8 @@ fun SearchScreen(
                                         navController.navigate("detail_screen/$encodedUrl")
                                     }
                                 }
-                                val onBookmarkToggle = remember(article.link) { { viewModel.toggleBookmark(article) } }
+                                val articleState = rememberUpdatedState(article)
+                                val onBookmarkToggle = remember { { viewModel.toggleBookmark(articleState.value) } }
                                 val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
                                 val onQueueClick = remember(article.link, context) {
                                     {

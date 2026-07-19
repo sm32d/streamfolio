@@ -124,29 +124,10 @@ fun HomeScreen(
 
     val articlesMap = remember { mutableStateMapOf<String, List<uk.sume.streamfolio.data.model.ArticleGroup>>() }
 
-    // Keep the previous category's content visible while the newly selected category is loading
-    // so the screen doesn't blank out / flash between category switches.
-    var displayedCategory by remember { mutableStateOf(selectedCategory) }
-    var displayedArticles by remember { mutableStateOf(articles) }
-
-    LaunchedEffect(articles, isRefreshing) {
-        val targetCategory = selectedCategory
-        if (targetCategory == displayedCategory) {
-            // Same category: update the list when data arrives or loading finishes
-            displayedArticles = articles
-            if (articles.isNotEmpty() || !isRefreshing) {
-                articlesMap[targetCategory] = articles
-            }
-        } else if (articles.isNotEmpty()) {
-            // New category now has data; switch to it
-            displayedCategory = targetCategory
-            displayedArticles = articles
-            articlesMap[targetCategory] = articles
-        } else if (!isRefreshing) {
-            // New category finished loading but is empty
-            displayedCategory = targetCategory
-            displayedArticles = articles
-            articlesMap[targetCategory] = articles
+    // Cache category articles so switching back is instant; always reflect live updates (e.g. bookmarks).
+    LaunchedEffect(articles) {
+        if (articles.isNotEmpty() || !isRefreshing) {
+            articlesMap[selectedCategory] = articles
         }
     }
 
@@ -281,8 +262,11 @@ fun HomeScreen(
 
             // Refresh indicator or Shimmer Loader or content
             Box(modifier = Modifier.weight(1f)) {
-                val targetCategory = displayedCategory
-                val currentCategoryArticles = displayedArticles
+                val targetCategory = selectedCategory
+                val currentCategoryArticles = articles
+                    .takeIf { it.isNotEmpty() }
+                    ?: articlesMap[targetCategory]
+                    ?: emptyList()
                 val currentScrollState = viewModel.scrollStates.getOrPut(targetCategory) { LazyListState() }
 
                 val currentFilteredArticles = remember(currentCategoryArticles, selectedPublisher) {
@@ -690,7 +674,8 @@ fun HomeScreen(
                                             navController.navigate("detail_screen/$encodedUrl")
                                         }
                                     }
-                                    val onBookmarkToggle = remember(article.link) { { viewModel.toggleBookmark(article) } }
+                                    val articleState = rememberUpdatedState(article)
+                                    val onBookmarkToggle = remember { { viewModel.toggleBookmark(articleState.value) } }
                                     val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
                                     val onQueueClick = remember(article.link, context) {
                                         {
@@ -1017,15 +1002,19 @@ fun ArticleListItem(
     val swipeLeftAction = viewModel?.swipeLeftAction?.collectAsState()?.value ?: "bookmark"
     val swipeRightAction = viewModel?.swipeRightAction?.collectAsState()?.value ?: "share"
 
+    fun handleBookmarkToggle() {
+        if (currentArticle.isBookmarked) {
+            showRemoveConfirmationState.value = true
+        } else {
+            currentOnBookmarkToggle()
+        }
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+    }
+
     fun executeSwipeAction(action: String): Boolean {
         when (action) {
             "bookmark" -> {
-                if (currentArticle.isBookmarked) {
-                    showRemoveConfirmationState.value = true
-                } else {
-                    currentOnBookmarkToggle()
-                }
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                handleBookmarkToggle()
             }
             "share" -> {
                 val shareUrl = UrlSecurityValidator.normalizeToHttps(currentArticle.link) ?: currentArticle.link
@@ -1343,7 +1332,7 @@ fun ArticleListItem(
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 IconButton(
-                                    onClick = onBookmarkToggle,
+                                    onClick = { handleBookmarkToggle() },
                                     modifier = Modifier.size(24.dp)
                                 ) {
                                     Icon(
@@ -1364,13 +1353,13 @@ fun ArticleListItem(
         if (secondaryArticles.isNotEmpty()) {
             var isExpanded by remember { mutableStateOf(false) }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 8.dp)
-                    .zIndex(-1f)
-                    .offset(y = (-1).dp)
-                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 8.dp)
+                            .zIndex(-1f)
+                            .offset(y = (-1).dp)
+                            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                     .border(
                         1.dp,
@@ -1384,7 +1373,7 @@ fun ArticleListItem(
                         .fillMaxWidth()
                         .clickable { isExpanded = !isExpanded }
                         .padding(horizontal = 16.dp, vertical = 10.dp)
-                        .padding(top = 8.dp),
+                        .padding(top = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -1417,9 +1406,7 @@ fun ArticleListItem(
                 if (isExpanded) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         secondaryArticles.forEach { secArticle ->
                             Row(
