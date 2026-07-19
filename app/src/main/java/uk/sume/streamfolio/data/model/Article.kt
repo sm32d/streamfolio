@@ -25,3 +25,8 @@ data class Article(
     val detectedLanguage: String? = null,
     val isRead: Boolean = false
 )
+
+data class ArticleGroup(
+    val primary: Article,
+    val secondary: List<Article> = emptyList()
+)

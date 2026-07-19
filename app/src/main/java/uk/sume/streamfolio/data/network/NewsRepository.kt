@@ -827,6 +827,7 @@ class NewsRepository(private val context: Context) {
     fun getBookmarkedArticles(): Flow<List<Article>> = articleDao.getBookmarkedArticles()
     fun searchArticlesLocal(query: String): Flow<List<Article>> = articleDao.searchArticles(query)
     fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles()
+    fun getAllArticlesUnlimited(): Flow<List<Article>> = articleDao.getAllArticlesUnlimited()
 
     // Bookmark actions
     suspend fun toggleBookmark(articleLink: String, isBookmarked: Boolean) {
@@ -847,6 +848,10 @@ class NewsRepository(private val context: Context) {
 
     suspend fun restoreArticles(articles: List<Article>) = withContext(Dispatchers.IO) {
         articleDao.insertArticles(articles)
+    }
+
+    suspend fun getAllArticlesUnlimitedSync(): List<Article> = withContext(Dispatchers.IO) {
+        articleDao.getAllArticlesUnlimitedSync()
     }
 
     suspend fun deleteArticlesForFeed(sourceUrl: String) = withContext(Dispatchers.IO) {

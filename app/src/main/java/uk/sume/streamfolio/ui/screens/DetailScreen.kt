@@ -305,6 +305,115 @@ fun DetailScreen(
                 }
             }
 
+            val similarArticles by viewModel.similarArticlesForDetail.collectAsState()
+            if (currentTab == "Reader" && similarArticles.isNotEmpty()) {
+                var isExpanded by remember { mutableStateOf(false) }
+                AnimatedVisibility(
+                    visible = true,
+                    enter = expandVertically(),
+                    exit = shrinkVertically(),
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f))
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                RoundedCornerShape(16.dp)
+                            )
+                            .animateContentSize()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { isExpanded = !isExpanded }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.LibraryBooks,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Also covered by ${similarArticles.size} other ${if (similarArticles.size == 1) "source" else "sources"}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                )
+                            }
+                            Icon(
+                                imageVector = if (isExpanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                                contentDescription = "Toggle similar coverage",
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        if (isExpanded) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 150.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(bottom = 6.dp)
+                            ) {
+                                similarArticles.forEach { secArticle ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                isExpanded = false
+                                                val encodedUrl = java.net.URLEncoder.encode(secArticle.link, "UTF-8")
+                                                navController.navigate("detail_screen/$encodedUrl") {
+                                                    popUpTo("detail_screen/{url}") { inclusive = true }
+                                                }
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = secArticle.sourceName,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Text(
+                                            text = secArticle.title,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Article Content Shell
             if (currentTab == "Reader") {
                 if (article == null) {

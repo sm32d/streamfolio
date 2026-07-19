@@ -424,6 +424,73 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
+                text = "FEED CURATION",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val groupSimilarStories by viewModel.groupSimilarStories.collectAsState()
+
+            SettingsCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.secondary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Layers,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Group Similar Stories",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Consolidate duplicate stories from different sources",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
+                    HapticSwitch(
+                        checked = groupSimilarStories,
+                        onCheckedChange = { checked ->
+                            viewModel.setGroupSimilarStories(checked)
+                        },
+                        enabled = true,
+                        modifier = Modifier.scale(0.85f),
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
                 text = "THEME & STYLE",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,

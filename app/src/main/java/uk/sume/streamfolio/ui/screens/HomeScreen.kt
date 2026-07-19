@@ -34,6 +34,9 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.outlined.Newspaper
@@ -74,6 +77,7 @@ import uk.sume.streamfolio.util.UrlSecurityValidator
 
 
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.BorderStroke
@@ -94,7 +98,7 @@ fun HomeScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val articles by viewModel.articles.collectAsState()
+    val articles by viewModel.groupedArticles.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
@@ -118,9 +122,7 @@ fun HomeScreen(
         }
     }
 
-    val articlesMap = remember { mutableStateMapOf<String, List<Article>>() }
-    val scrollStates = remember { mutableStateMapOf<String, LazyListState>() }
-    val visibleListCounts = remember { mutableStateMapOf<String, Int>() }
+    val articlesMap = remember { mutableStateMapOf<String, List<uk.sume.streamfolio.data.model.ArticleGroup>>() }
 
     // Keep the previous category's content visible while the newly selected category is loading
     // so the screen doesn't blank out / flash between category switches.
@@ -151,7 +153,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         viewModel.tabResetEvent.collect { route ->
             if (route == "home_screen") {
-                scrollStates[selectedCategory]?.animateScrollToItem(0)
+                viewModel.scrollStates[selectedCategory]?.animateScrollToItem(0)
             }
         }
     }
@@ -281,25 +283,25 @@ fun HomeScreen(
             Box(modifier = Modifier.weight(1f)) {
                 val targetCategory = displayedCategory
                 val currentCategoryArticles = displayedArticles
-                val currentScrollState = scrollStates.getOrPut(targetCategory) { LazyListState() }
+                val currentScrollState = viewModel.scrollStates.getOrPut(targetCategory) { LazyListState() }
 
                 val currentFilteredArticles = remember(currentCategoryArticles, selectedPublisher) {
                     if (selectedPublisher == null) {
                         currentCategoryArticles
                     } else {
-                        currentCategoryArticles.filter { it.sourceName == selectedPublisher }
+                        currentCategoryArticles.filter { it.primary.sourceName == selectedPublisher }
                     }
                 }
 
                 val currentPublishers = remember(currentCategoryArticles) {
-                    currentCategoryArticles.map { it.sourceName to getPublisherDomain(it.sourceName, it.sourceUrl, it.link) }
+                    currentCategoryArticles.map { it.primary.sourceName to getPublisherDomain(it.primary.sourceName, it.primary.sourceUrl, it.primary.link) }
                         .distinctBy { it.first }
                         .take(10)
                 }
 
                 val currentActiveTags = remember(currentCategoryArticles) {
-                    currentCategoryArticles.flatMap { article ->
-                        article.tags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+                    currentCategoryArticles.flatMap { group ->
+                        group.primary.tags?.split(",")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
                     }.distinct().take(10)
                 }
 
@@ -312,11 +314,11 @@ fun HomeScreen(
                 }
 
                 var currentVisibleListCount by remember(targetCategory) {
-                    mutableIntStateOf(visibleListCounts[targetCategory] ?: pageSize)
+                    mutableIntStateOf(viewModel.visibleListCounts[targetCategory] ?: pageSize)
                 }
 
                 LaunchedEffect(currentVisibleListCount) {
-                    visibleListCounts[targetCategory] = currentVisibleListCount
+                    viewModel.visibleListCounts[targetCategory] = currentVisibleListCount
                 }
 
                 LaunchedEffect(currentListArticles.size) {
@@ -532,7 +534,8 @@ fun HomeScreen(
                                                 .fillMaxWidth()
                                                 .height(280.dp)
                                         ) { page ->
-                                            val article = currentTrendingArticles[page]
+                                            val group = currentTrendingArticles[page]
+                                            val article = group.primary
                                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                                             val scale = (1f - (pageOffset.absoluteValue * 0.15f)).coerceIn(0.85f, 1f)
                                             val alpha = (1f - (pageOffset.absoluteValue * 0.3f)).coerceIn(0.5f, 1f)
@@ -677,8 +680,9 @@ fun HomeScreen(
                             } else {
                                 items(
                                     items = currentPagedListArticles,
-                                    key = { it.link }
-                                ) { article ->
+                                    key = { it.primary.link }
+                                ) { group ->
+                                    val article = group.primary
                                     val onTap = remember(article.link) {
                                         {
                                             val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
@@ -699,9 +703,16 @@ fun HomeScreen(
                                             Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show()
                                         }
                                     }
+                                    val onSecondaryTap = remember(navController) {
+                                        { secArticle: Article ->
+                                            val encodedUrl = URLEncoder.encode(secArticle.link, "UTF-8")
+                                            navController.navigate("detail_screen/$encodedUrl")
+                                        }
+                                    }
 
                                     ArticleListItem(
                                         article = article,
+                                        secondaryArticles = group.secondary,
                                         viewModel = viewModel,
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
@@ -709,7 +720,8 @@ fun HomeScreen(
                                         onBookmarkToggle = onBookmarkToggle,
                                         onPlayClick = onPlayClick,
                                         onQueueClick = onQueueClick,
-                                        onPlayNextClick = onPlayNextClick
+                                        onPlayNextClick = onPlayNextClick,
+                                        onSecondaryTap = onSecondaryTap
                                     )
                                 }
 
@@ -981,6 +993,7 @@ fun TrendingCard(
 @Composable
 fun ArticleListItem(
     article: Article,
+    secondaryArticles: List<Article> = emptyList(),
     viewModel: NewsViewModel? = null,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -988,7 +1001,8 @@ fun ArticleListItem(
     onBookmarkToggle: () -> Unit,
     onPlayClick: () -> Unit,
     onQueueClick: () -> Unit,
-    onPlayNextClick: () -> Unit
+    onPlayNextClick: () -> Unit,
+    onSecondaryTap: (Article) -> Unit = {}
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -1054,7 +1068,10 @@ fun ArticleListItem(
         }
     }
 
-    SwipeToDismissBox(
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
             val direction = dismissState.dismissDirection
@@ -1124,14 +1141,27 @@ fun ArticleListItem(
         }
     },
         content = {
+            val cardShape = remember(secondaryArticles) {
+                if (secondaryArticles.isNotEmpty()) {
+                    RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 0.dp, bottomEnd = 0.dp)
+                } else {
+                    RoundedCornerShape(20.dp)
+                }
+            }
+
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        top = 8.dp,
+                        bottom = if (secondaryArticles.isNotEmpty()) 0.dp else 8.dp
+                    )
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                        RoundedCornerShape(20.dp)
+                        cardShape
                     )
                     .graphicsLayer(alpha = if (article.isRead) 0.55f else 1.0f)
                     .combinedClickable(
@@ -1141,7 +1171,7 @@ fun ArticleListItem(
                             showLongPressModal = true
                         }
                     ),
-                shape = RoundedCornerShape(20.dp),
+                shape = cardShape,
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
                 )
@@ -1329,6 +1359,103 @@ fun ArticleListItem(
             }
         }
     )
+
+        if (secondaryArticles.isNotEmpty()) {
+            var isExpanded by remember { mutableStateOf(false) }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, end = 24.dp, top = 0.dp, bottom = 8.dp)
+                    .zIndex(-1f)
+                    .offset(y = (-1).dp)
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                        RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                    )
+                    .animateContentSize()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isExpanded = !isExpanded }
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                        .padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LibraryBooks,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Also covered by ${secondaryArticles.size} other ${if (secondaryArticles.size == 1) "source" else "sources"}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
+                    }
+                    Icon(
+                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Expand coverage",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                if (isExpanded) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        secondaryArticles.forEach { secArticle ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onSecondaryTap(secArticle) }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = secArticle.sourceName,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = secArticle.title,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     if (showRemoveConfirmationState.value) {
         ModalBottomSheet(

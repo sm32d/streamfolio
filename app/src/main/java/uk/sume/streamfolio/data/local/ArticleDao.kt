@@ -106,6 +106,9 @@ interface ArticleDao {
     @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 50")
     fun getAllArticles(): Flow<List<Article>>
 
+    @Query("SELECT * FROM articles ORDER BY pubDate DESC")
+    fun getAllArticlesUnlimited(): Flow<List<Article>>
+
     @Query("DELETE FROM articles WHERE category = :category AND isBookmarked = 0")
     suspend fun clearNonBookmarkedArticlesByCategory(category: String)
 
@@ -126,6 +129,9 @@ interface ArticleDao {
 
     @Query("SELECT * FROM articles WHERE isBookmarked = 1 OR isRead = 1")
     suspend fun getBookmarkedAndReadArticlesSync(): List<Article>
+
+    @Query("SELECT * FROM articles")
+    suspend fun getAllArticlesUnlimitedSync(): List<Article>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertArticles(articles: List<Article>)

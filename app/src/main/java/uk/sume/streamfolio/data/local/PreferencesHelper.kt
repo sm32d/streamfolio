@@ -113,4 +113,8 @@ class PreferencesHelper(context: Context) {
     var hasSeenSwipeHint: Boolean
         get() = prefs.getBoolean("has_seen_swipe_hint", false)
         set(value) = prefs.edit().putBoolean("has_seen_swipe_hint", value).apply()
+
+    var groupSimilarStories: Boolean
+        get() = prefs.getBoolean("group_similar_stories", true)
+        set(value) = prefs.edit().putBoolean("group_similar_stories", value).apply()
 }

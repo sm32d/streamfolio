@@ -25,6 +25,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = NewsRepository(application)
     val prefs = PreferencesHelper(application)
+
+    private val _groupSimilarStories = MutableStateFlow(prefs.groupSimilarStories)
+    val groupSimilarStories: StateFlow<Boolean> = _groupSimilarStories.asStateFlow()
     private val playbackManager = TtsPlaybackManager.getInstance(application)
     val ttsHelper = playbackManager.ttsHelper
     private val requestedThumbnailRetries = mutableSetOf<String>()
@@ -112,6 +115,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentArticleDetail = MutableStateFlow<Article?>(null)
     val currentArticleDetail: StateFlow<Article?> = _currentArticleDetail.asStateFlow()
 
+    private val _similarArticlesForDetail = MutableStateFlow<List<Article>>(emptyList())
+    val similarArticlesForDetail: StateFlow<List<Article>> = _similarArticlesForDetail.asStateFlow()
+
+    val scrollStates = mutableMapOf<String, androidx.compose.foundation.lazy.LazyListState>()
+    val visibleListCounts = mutableMapOf<String, Int>()
+
     private val _articleLanguage = MutableStateFlow<String?>(null)
     val articleLanguage: StateFlow<String?> = _articleLanguage.asStateFlow()
 
@@ -187,7 +196,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
         .flatMapLatest { category ->
             if (category.startsWith("#")) {
-                repository.getAllArticles().map { list ->
+                repository.getAllArticlesUnlimited().map { list ->
                     list.filter { article ->
                         article.tags?.lowercase()?.contains(category.lowercase()) == true
                     }
@@ -208,6 +217,16 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val groupedArticles: StateFlow<List<uk.sume.streamfolio.data.model.ArticleGroup>> = combine(articles, groupSimilarStories) { list, groupEnabled ->
+        if (groupEnabled) {
+            groupSimilarArticles(list)
+        } else {
+            list.map { uk.sume.streamfolio.data.model.ArticleGroup(primary = it, secondary = emptyList()) }
+        }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // Bookmarked articles flow
     val bookmarkedArticles: StateFlow<List<Article>> = repository.getBookmarkedArticles()
@@ -468,8 +487,22 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadArticleBody(url: String) {
         viewModelScope.launch {
+            _similarArticlesForDetail.value = emptyList()
             val art = repository.getArticleByLink(url)
             _currentArticleDetail.value = art
+
+            if (art != null) {
+                try {
+                    val allArticles = repository.getAllArticlesUnlimitedSync()
+                    val similar = allArticles.filter { other ->
+                        other.link != art.link && calculateJaccardSimilarity(art.title, other.title) >= 0.35f
+                    }
+                    android.util.Log.d("NewsViewModel", "Detail similar articles for ${art.title}: ${similar.size}")
+                    _similarArticlesForDetail.value = similar
+                } catch (e: Exception) {
+                    android.util.Log.e("NewsViewModel", "Error loading similar articles: ${e.message}")
+                }
+            }
 
             // Check if this article is already active in the reader/speech playlist.
             // If yes, do not clear the body or stop the playback.
@@ -731,6 +764,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _useDynamicColors = MutableStateFlow(prefs.useDynamicColors)
     val useDynamicColors: StateFlow<Boolean> = _useDynamicColors.asStateFlow()
 
+
     fun setTtsSpeechRate(rate: Float) {
         playbackManager.setTtsSpeechRate(rate)
     }
@@ -738,6 +772,11 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     fun setUseDynamicColors(enabled: Boolean) {
         prefs.useDynamicColors = enabled
         _useDynamicColors.value = enabled
+    }
+
+    fun setGroupSimilarStories(enabled: Boolean) {
+        prefs.groupSimilarStories = enabled
+        _groupSimilarStories.value = enabled
     }
 
     fun setSwipeLeftAction(action: String) {
@@ -986,6 +1025,85 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _prefsChangedSignal.value = _prefsChangedSignal.value + 1
     }
 
+    fun cleanTitle(title: String): String {
+        var cleaned = title.lowercase().trim()
+        
+        // Remove punctuation
+        cleaned = cleaned.replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
+        
+        // Clean common source suffixes and prefixes
+        val sourceSuffixes = listOf(
+            "bbc news", "bbc", "reuters", "cnn", "ap", "ap news", "the guardian", 
+            "new york times", "nytimes", "washington post", "wapo", "fox news",
+            "cna", "the straits times", "straits times", "bloomberg"
+        )
+        for (suffix in sourceSuffixes) {
+            if (cleaned.endsWith(suffix)) {
+                cleaned = cleaned.removeSuffix(suffix).trim()
+            }
+            if (cleaned.startsWith(suffix)) {
+                cleaned = cleaned.removePrefix(suffix).trim()
+            }
+        }
+        
+        // Remove standard stopwords and very short words (length <= 2)
+        val stopwords = setOf(
+            "a", "an", "the", "in", "on", "at", "by", "of", "to", "for", "with", 
+            "and", "but", "or", "is", "are", "was", "were", "has", "have", "had", 
+            "that", "this", "these", "those", "will", "would", "could", "should",
+            "after", "before", "about", "from", "into", "over", "under", "been",
+            "says", "said", "reporting", "reports", "latest", "update", "live", "news"
+        )
+        
+        val words = cleaned.split(Regex("\\s+"))
+            .map { it.trim() }
+            .filter { it.length > 2 && !stopwords.contains(it) }
+        
+        return words.joinToString(" ")
+    }
+
+    fun calculateJaccardSimilarity(title1: String, title2: String): Float {
+        val words1 = cleanTitle(title1).split(" ").filter { it.isNotBlank() }.toSet()
+        val words2 = cleanTitle(title2).split(" ").filter { it.isNotBlank() }.toSet()
+        if (words1.isEmpty() && words2.isEmpty()) return 1.0f
+        if (words1.isEmpty() || words2.isEmpty()) return 0.0f
+        
+        val intersectionSize = words1.intersect(words2).size
+        val unionSize = words1.union(words2).size
+        return intersectionSize.toFloat() / unionSize.toFloat()
+    }
+
+    fun groupSimilarArticles(articles: List<Article>, threshold: Float = 0.35f): List<uk.sume.streamfolio.data.model.ArticleGroup> {
+        val groups = mutableListOf<MutableList<Article>>()
+        
+        for (article in articles) {
+            var placed = false
+            for (group in groups) {
+                val primary = group[0]
+                val similarity = calculateJaccardSimilarity(primary.title, article.title)
+                if (similarity >= threshold) {
+                    group.add(article)
+                    placed = true
+                    break
+                }
+            }
+            if (!placed) {
+                groups.add(mutableListOf(article))
+            }
+        }
+        
+        return groups.map { group ->
+            val sortedGroup = group.sortedWith(
+                compareByDescending<Article> { it.thumbnailUrl != null && it.thumbnailUrl.isNotBlank() && it.thumbnailUrl != "failed" }
+                    .thenByDescending { it.description.length }
+                    .thenByDescending { it.pubDate }
+            )
+            uk.sume.streamfolio.data.model.ArticleGroup(
+                primary = sortedGroup[0],
+                secondary = sortedGroup.drop(1)
+            )
+        }.sortedByDescending { it.primary.pubDate }
+    }
 }
 
 sealed interface AiSummaryState {
