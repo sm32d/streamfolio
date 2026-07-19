@@ -627,6 +627,7 @@ fun HomeScreen(
                                             .padding(bottom = emptyStateBottomPadding),
                                         illustration = painterResource(id = uk.sume.streamfolio.R.drawable.otter_no_articles),
                                         title = "No Articles Available",
+                                        scrollable = false,
                                         description = emptyFeedDescriptionForTarget,
                                         actions = {
                                             Spacer(modifier = Modifier.height(24.dp))

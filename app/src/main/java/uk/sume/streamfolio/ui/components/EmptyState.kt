@@ -29,69 +29,64 @@ fun EmptyState(
     modifier: Modifier = Modifier,
     illustration: Painter? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
+    scrollable: Boolean = true,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
     actions: @Composable ColumnScope.() -> Unit = {}
 ) {
-    BoxWithConstraints(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (scrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+            .padding(horizontal = 32.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        val isBoundedHeight = constraints.hasBoundedHeight
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (isBoundedHeight) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                .padding(horizontal = 32.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            if (illustration != null) {
-                Image(
-                    painter = illustration,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth(0.65f)
-                        .aspectRatio(1f),
-                    contentScale = ContentScale.Fit
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            } else if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
+        if (illustration != null) {
+            Image(
+                painter = illustration,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth(0.55f)
+                    .aspectRatio(1f),
+                contentScale = ContentScale.Fit
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = description,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
+            Spacer(modifier = Modifier.height(16.dp))
+        } else if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(64.dp)
             )
-            if (actionLabel != null && onAction != null) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = onAction,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(actionLabel)
-                }
-            }
-            actions()
+            Spacer(modifier = Modifier.height(20.dp))
         }
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = description,
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp
+        )
+        if (actionLabel != null && onAction != null) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onAction,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(actionLabel)
+            }
+        }
+        actions()
     }
 }
