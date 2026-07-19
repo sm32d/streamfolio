@@ -31,6 +31,9 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
     private var activeParagraphOffset = 0
     private var lastPausedCharOffset = 0
 
+    val paragraphsCount: Int
+        get() = paragraphsList.size
+
     var onArticleCompleted: (() -> Unit)? = null
 
     init {

@@ -13,6 +13,7 @@ import kotlin.math.absoluteValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 
@@ -692,6 +693,12 @@ fun HomeScreen(
                                             Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
                                         }
                                     }
+                                    val onPlayNextClick = remember(article.link, context) {
+                                        {
+                                            viewModel.playNextInTtsPlaylist(article)
+                                            Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
 
                                     ArticleListItem(
                                         article = article,
@@ -701,7 +708,8 @@ fun HomeScreen(
                                         onTap = onTap,
                                         onBookmarkToggle = onBookmarkToggle,
                                         onPlayClick = onPlayClick,
-                                        onQueueClick = onQueueClick
+                                        onQueueClick = onQueueClick,
+                                        onPlayNextClick = onPlayNextClick
                                     )
                                 }
 
@@ -979,7 +987,8 @@ fun ArticleListItem(
     onTap: () -> Unit,
     onBookmarkToggle: () -> Unit,
     onPlayClick: () -> Unit,
-    onQueueClick: () -> Unit
+    onQueueClick: () -> Unit,
+    onPlayNextClick: () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
     val context = LocalContext.current
@@ -987,6 +996,7 @@ fun ArticleListItem(
     val currentArticle by rememberUpdatedState(article)
     val currentOnBookmarkToggle by rememberUpdatedState(onBookmarkToggle)
     val showRemoveConfirmationState = remember { mutableStateOf(false) }
+    var showLongPressModal by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val swipeLeftAction = viewModel?.swipeLeftAction?.collectAsState()?.value ?: "bookmark"
@@ -1124,7 +1134,13 @@ fun ArticleListItem(
                         RoundedCornerShape(20.dp)
                     )
                     .graphicsLayer(alpha = if (article.isRead) 0.55f else 1.0f)
-                    .clickable(onClick = onTap),
+                    .combinedClickable(
+                        onClick = onTap,
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showLongPressModal = true
+                        }
+                    ),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
@@ -1396,7 +1412,181 @@ fun ArticleListItem(
             }
         }
     }
+
+    if (showLongPressModal) {
+        ModalBottomSheet(
+            onDismissRequest = { showLongPressModal = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp)
+            ) {
+                // Header: Article Title & Source
+                Text(
+                    text = article.title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                article.sourceName.let { source ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = source,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // List of Actions:
+                // 1. Play Next
+                BottomSheetActionRow(
+                    icon = Icons.Default.PlayArrow,
+                    iconBgColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Play Next",
+                    subtitle = "Insert next in the audio playlist queue",
+                    onClick = {
+                        showLongPressModal = false
+                        onPlayNextClick()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 2. Add to Queue
+                BottomSheetActionRow(
+                    icon = Icons.Default.PlaylistAdd,
+                    iconBgColor = Color(0xFF10B981).copy(alpha = 0.1f),
+                    iconTint = Color(0xFF10B981),
+                    title = "Add to Queue",
+                    subtitle = "Queue to end of the audio playlist",
+                    onClick = {
+                        showLongPressModal = false
+                        onQueueClick()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 3. Bookmark Action
+                val isBookmarked = article.isBookmarked
+                BottomSheetActionRow(
+                    icon = if (isBookmarked) Icons.Default.Delete else Icons.Outlined.BookmarkAdd,
+                    iconBgColor = (if (isBookmarked) Color(0xFFEF5350) else MaterialTheme.colorScheme.secondary).copy(alpha = 0.1f),
+                    iconTint = if (isBookmarked) Color(0xFFEF5350) else MaterialTheme.colorScheme.secondary,
+                    title = if (isBookmarked) "Remove Bookmark" else "Save Bookmark",
+                    subtitle = if (isBookmarked) "Remove from your saved articles list" else "Save to read offline later",
+                    onClick = {
+                        showLongPressModal = false
+                        onBookmarkToggle()
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 4. Read Status Action
+                val isRead = article.isRead
+                BottomSheetActionRow(
+                    icon = if (isRead) Icons.Default.Close else Icons.Default.Done,
+                    iconBgColor = Color(0xFF00B0FF).copy(alpha = 0.1f),
+                    iconTint = Color(0xFF00B0FF),
+                    title = if (isRead) "Mark as Unread" else "Mark as Read",
+                    subtitle = if (isRead) "Keep in feed to read later" else "Mark this article as completed",
+                    onClick = {
+                        showLongPressModal = false
+                        viewModel?.toggleReadStatus(article)
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // 5. Share Action
+                BottomSheetActionRow(
+                    icon = Icons.Default.Share,
+                    iconBgColor = Color(0xFFF59E0B).copy(alpha = 0.1f),
+                    iconTint = Color(0xFFF59E0B),
+                    title = "Share Article",
+                    subtitle = "Send this article link to other apps",
+                    onClick = {
+                        showLongPressModal = false
+                        val shareUrl = UrlSecurityValidator.normalizeToHttps(article.link) ?: article.link
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, article.title)
+                            putExtra(Intent.EXTRA_TEXT, "${article.title}\n\nRead more at: $shareUrl")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
+                    }
+                )
+            }
+        }
+    }
 }
+
+@Composable
+private fun BottomSheetActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconBgColor: Color,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(iconBgColor, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 
 // Extract publisher domain helper
 fun getPublisherDomain(sourceName: String, sourceUrl: String, articleLink: String = ""): String {

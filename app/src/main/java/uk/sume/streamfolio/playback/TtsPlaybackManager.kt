@@ -153,6 +153,39 @@ class TtsPlaybackManager private constructor(
         }
     }
 
+    fun playNextInTtsPlaylist(article: Article) {
+        val current = _ttsPlaylist.value.toMutableList()
+        val existingIndex = current.indexOfFirst { it.link == article.link }
+        val activeIndex = _currentTtsArticleIndex.value
+
+        if (existingIndex != -1) {
+            if (existingIndex == activeIndex) {
+                // Already playing this article, nothing to do
+                return
+            }
+            current.removeAt(existingIndex)
+            // Adjust active index if we removed an item before the playing item
+            if (existingIndex < activeIndex) {
+                _currentTtsArticleIndex.value = activeIndex - 1
+            }
+        }
+
+        val currentActiveIndex = _currentTtsArticleIndex.value
+        if (currentActiveIndex == -1 || current.isEmpty()) {
+            current.add(0, article)
+            _ttsPlaylist.value = current
+            _currentTtsArticleIndex.value = 0
+        } else {
+            val insertIndex = currentActiveIndex + 1
+            if (insertIndex <= current.size) {
+                current.add(insertIndex, article)
+            } else {
+                current.add(article)
+            }
+            _ttsPlaylist.value = current
+        }
+    }
+
     fun removeFromTtsPlaylist(article: Article) {
         val current = _ttsPlaylist.value.toMutableList()
         val index = current.indexOfFirst { it.link == article.link }

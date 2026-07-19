@@ -421,14 +421,23 @@ fun SearchScreen(
                                     }
                                 }
 
+                                val onPlayNextClick = remember(article.link, context) {
+                                    {
+                                        viewModel.playNextInTtsPlaylist(article)
+                                        Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+
                                 ArticleListItem(
                                     article = article,
+                                    viewModel = viewModel,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                     onTap = onTap,
                                     onBookmarkToggle = onBookmarkToggle,
                                     onPlayClick = onPlayClick,
-                                    onQueueClick = onQueueClick
+                                    onQueueClick = onQueueClick,
+                                    onPlayNextClick = onPlayNextClick
                                 )
                             }
                         }

@@ -24,6 +24,11 @@ import kotlinx.coroutines.launch
 import uk.sume.streamfolio.MainActivity
 import uk.sume.streamfolio.R
 import uk.sume.streamfolio.data.model.Article
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 
 class TtsPlaybackService : Service() {
 
@@ -33,6 +38,9 @@ class TtsPlaybackService : Service() {
     private lateinit var mediaSession: MediaSessionCompat
 
     private var isForegroundStarted = false
+
+    private var currentArticleThumbnail: Bitmap? = null
+    private var currentArticleThumbnailLink: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -109,9 +117,10 @@ class TtsPlaybackService : Service() {
                 playbackManager.currentTtsArticleIndex,
                 playbackManager.ttsPlaylist,
                 playbackManager.ttsHelper.isPlaying,
-                playbackManager.sleepTimerRemainingMillis
-            ) { article, _, _, _, _ ->
-                article
+                playbackManager.sleepTimerRemainingMillis,
+                playbackManager.ttsHelper.currentParagraphIndex
+            ) { flows ->
+                flows[0] as Article?
             }.collect {
                 refreshForegroundState()
             }
@@ -126,7 +135,26 @@ class TtsPlaybackService : Service() {
         if (!hasActiveSession) {
             stopForegroundCompat()
             stopSelf()
+            currentArticleThumbnail = null
+            currentArticleThumbnailLink = null
             return
+        }
+
+        if (article != null) {
+            if (currentArticleThumbnailLink != article.link) {
+                currentArticleThumbnailLink = article.link
+                currentArticleThumbnail = null
+                serviceScope.launch {
+                    val bitmap = loadThumbnailBitmap(article.thumbnailUrl)
+                    if (bitmap != null && currentArticleThumbnailLink == article.link) {
+                        currentArticleThumbnail = bitmap
+                        refreshForegroundState(forceStart)
+                    }
+                }
+            }
+        } else {
+            currentArticleThumbnail = null
+            currentArticleThumbnailLink = null
         }
 
         updateMediaSession(article)
@@ -156,6 +184,11 @@ class TtsPlaybackService : Service() {
         val skipActions = (if (canSkipPrevious) PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS else 0L) or
             (if (canSkipNext) PlaybackStateCompat.ACTION_SKIP_TO_NEXT else 0L)
 
+        val currentParagraph = playbackManager.ttsHelper.currentParagraphIndex.value
+        val totalParagraphs = playbackManager.ttsHelper.paragraphsCount.coerceAtLeast(1)
+        val positionMs = currentParagraph * 10000L
+        val durationMs = totalParagraphs * 10000L
+
         val playbackState = PlaybackStateCompat.Builder()
             .setActions(baseActions or skipActions)
             .setState(
@@ -164,7 +197,7 @@ class TtsPlaybackService : Service() {
                 } else {
                     PlaybackStateCompat.STATE_PAUSED
                 },
-                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
+                positionMs,
                 playbackManager.ttsSpeechRate.value
             )
             .build()
@@ -179,9 +212,17 @@ class TtsPlaybackService : Service() {
                 MediaMetadataCompat.METADATA_KEY_ARTIST,
                 article?.sourceName ?: "Text to speech"
             )
+            putLong(
+                MediaMetadataCompat.METADATA_KEY_DURATION,
+                durationMs
+            )
             article?.thumbnailUrl?.takeIf { it.isNotBlank() && it != "failed" }?.let { thumbnail ->
                 putString(MediaMetadataCompat.METADATA_KEY_ART_URI, thumbnail)
                 putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, thumbnail)
+            }
+            currentArticleThumbnail?.let { bitmap ->
+                putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
+                putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
             }
         }.build()
         mediaSession.setMetadata(metadata)
@@ -193,6 +234,7 @@ class TtsPlaybackService : Service() {
         sleepRemainingMillis: Long?
     ) = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_tts_notification)
+        .setLargeIcon(currentArticleThumbnail)
         .setContentTitle(article?.title ?: "TTS player active")
         .setContentText(buildNotificationText(article, sleepRemainingMillis))
         .setContentIntent(createContentIntent())
@@ -227,6 +269,24 @@ class TtsPlaybackService : Service() {
                 .setShowActionsInCompactView(0, 1, 2)
         )
         .build()
+
+    private suspend fun loadThumbnailBitmap(url: String?): Bitmap? {
+        val validUrl = url?.takeIf { it.isNotBlank() && it != "failed" } ?: return null
+        return try {
+            val request = ImageRequest.Builder(this)
+                .data(validUrl)
+                .allowHardware(false)
+                .build()
+            val result = imageLoader.execute(request)
+            if (result is SuccessResult) {
+                (result.drawable as? BitmapDrawable)?.bitmap
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
 
     private fun buildNotificationText(article: Article?, sleepRemainingMillis: Long?): String {
         val source = article?.sourceName ?: "StreamFolio"

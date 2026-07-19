@@ -148,6 +148,8 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun addToTtsPlaylist(article: Article) = playbackManager.addToTtsPlaylist(article)
 
+    fun playNextInTtsPlaylist(article: Article) = playbackManager.playNextInTtsPlaylist(article)
+
     fun removeFromTtsPlaylist(article: Article) = playbackManager.removeFromTtsPlaylist(article)
 
     fun clearTtsPlaylist() = playbackManager.clearTtsPlaylist()
