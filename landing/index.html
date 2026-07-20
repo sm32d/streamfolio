@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamFolio — Smart, Private News Reader for Android</title>
-    <meta name="description" content="StreamFolio is a private, clutter-free news reader for Android. Get instant AI summaries on your phone, listen to audio articles, and read global news with zero tracking.">
+    <meta name="description" content="StreamFolio is a private, clutter-free news reader for Android. Add custom RSS & Atom feeds, get instant AI summaries on your phone, listen to audio articles, Material You theming, and read global news with zero tracking.">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="canonical" href="https://streamfolio.sume.uk/">
     
     <!-- Open Graph / Facebook SEO Meta -->
     <meta property="og:title" content="StreamFolio — Smart, Private News Reader for Android">
-    <meta property="og:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy instant AI summaries, audio listening, Hong Kong news coverage, and zero ad tracking on Android.">
+    <meta property="og:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy custom RSS/Atom feeds, instant AI summaries, audio listening, Material You theming, and zero ad tracking on Android.">
     <meta property="og:image" content="https://streamfolio.sume.uk/logo.png">
     <meta property="og:url" content="https://streamfolio.sume.uk/">
     <meta property="og:type" content="website">
@@ -18,7 +18,7 @@
     <!-- Twitter SEO Meta -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="StreamFolio — Smart, Private News Reader for Android">
-    <meta name="twitter:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy instant AI summaries, audio listening, Hong Kong news coverage, and zero ad tracking on Android.">
+    <meta name="twitter:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy custom RSS/Atom feeds, instant AI summaries, audio listening, Material You theming, and zero ad tracking on Android.">
     <meta name="twitter:image" content="https://streamfolio.sume.uk/logo.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,7 +86,7 @@
                     <span>🚀 v1.2.0-beta.8 Live on GitHub &bull; Smart AI Active</span>
                 </div>
                 <h1 id="hero-title">Your News.<br><span class="gradient-text">Locally Curated.</span><br>Completely Private.</h1>
-                <p class="hero-description">StreamFolio is a sleek, simple news app for Android that keeps you informed without clutter or ads. Get instant AI article summaries directly on your phone, listen to news like a podcast, and follow global coverage—with zero tracking.</p>
+                <p class="hero-description">StreamFolio is a sleek, simple news app for Android that keeps you informed without clutter or ads. Add custom RSS feeds, get instant AI article summaries directly on your phone, listen to news like a podcast, and follow global coverage—with zero tracking.</p>
                 
                 <!-- Primary CTAs & Waitlist Form -->
                 <div class="hero-actions">
@@ -150,18 +150,18 @@
         </div>
     </section>
 
-    <!-- Features Section (Bento Grid) -->
+    <!-- Features Section (Harmonized Alternating Bento Grid) -->
     <section class="features" id="features">
         <div class="container">
             <div class="section-header">
                 <span class="badge">Features You'll Love</span>
                 <h2 class="section-title">Designed for Effortless Daily Reading</h2>
-                <p class="section-subtitle">Smart AI summarization, audio listening, and regional feeds built for speed and privacy.</p>
+                <p class="section-subtitle">Custom RSS feeds, smart AI summarization, audio listening, Material You theming, and zero vendor lock-in.</p>
             </div>
 
             <div class="bento-grid">
-                <!-- Large AI Feature Card -->
-                <div class="bento-card bento-hero-card">
+                <!-- ROW 1: Card 1 (Spans 2 cols) + Card 2 (Spans 1 col) -->
+                <div class="bento-card bento-span-2 bento-hero-card">
                     <div class="bento-card-bg"></div>
                     <div class="bento-card-content">
                         <div class="feature-header">
@@ -175,7 +175,7 @@
                         <h3>Smart AI Summaries (On Your Phone)</h3>
                         <p>Get quick bullet-point takeaways for long stories in seconds. Powered by AI that runs directly on your phone, so your reading habits remain 100% private, work offline, and cost nothing.</p>
                         
-                        <div class="ai-demo-box">
+                        <div class="bento-preview-box ai-demo-box">
                             <div class="ai-demo-header">
                                 <span class="ai-sparkle">✨</span>
                                 <span class="ai-demo-title">Key Insight Preview</span>
@@ -188,59 +188,150 @@
                     </div>
                 </div>
 
-                <!-- Feature 2: Cross-Regional Feeds -->
                 <div class="bento-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="2" y1="12" x2="22" y2="12"></line>
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                            </svg>
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 11a9 9 0 0 1 9 9"></path>
+                                    <path d="M4 4a16 16 0 0 1 16 16"></path>
+                                    <circle cx="5" cy="19" r="1"></circle>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Any Website</span>
                         </div>
-                        <span class="feature-tag active">Hong Kong Added</span>
-                    </div>
-                    <h3>Global & Local News</h3>
-                    <p>Switch seamlessly between top publishers in Hong Kong, US, UK, Singapore, India, Canada, and Australia. Read SCMP, HKFP, RTHK, and more with a single tap.</p>
-                    <div class="region-chips">
-                        <span class="chip chip-new">🇭🇰 HK (New)</span>
-                        <span class="chip">🇺🇸 US</span>
-                        <span class="chip">🇬🇧 UK</span>
-                        <span class="chip">🇸🇬 SG</span>
-                        <span class="chip">🇮🇳 IN</span>
-                        <span class="chip">🇨🇦 CA</span>
-                        <span class="chip">🇦🇺 AU</span>
+                        <h3>Custom RSS & Atom Curation</h3>
+                        <p>Paste any custom blog or news RSS/Atom URL. Organise custom channels into personalized categories and reorder feeds without limits.</p>
+                        
+                        <div class="bento-preview-box rss-demo-box">
+                            <div class="rss-demo-input">
+                                <span class="rss-icon">📡</span>
+                                <span class="rss-url">https://techcrunch.com/feed/</span>
+                            </div>
+                            <span class="rss-status-tag">Status: Added to Tech</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Feature 3: Audio Playlist Memory -->
+                <!-- ROW 2: 3 Equal Columns (1 col each) -->
                 <div class="bento-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 18V5l12-2v13"></path>
-                                <circle cx="6" cy="18" r="3"></circle>
-                                <circle cx="18" cy="16" r="3"></circle>
-                            </svg>
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Hong Kong Added</span>
                         </div>
-                        <span class="feature-tag active">Audio Player</span>
+                        <h3>Global & Local News</h3>
+                        <p>Switch seamlessly between top publishers in Hong Kong, US, UK, Singapore, India, Canada, and Australia with a single tap.</p>
+                        
+                        <div class="bento-preview-box region-chips">
+                            <span class="chip chip-new">🇭🇰 HK (New)</span>
+                            <span class="chip">🇺🇸 US</span>
+                            <span class="chip">🇬🇧 UK</span>
+                            <span class="chip">🇸🇬 SG</span>
+                            <span class="chip">🇮🇳 IN</span>
+                            <span class="chip">🇨🇦 CA</span>
+                            <span class="chip">🇦🇺 AU</span>
+                        </div>
                     </div>
-                    <h3>Listen to Articles Anywhere</h3>
-                    <p>Turn your news into a podcast! Listen to articles with clear Text-to-Speech audio. Your playlist saves automatically, so you can resume listening even after restarting your app.</p>
                 </div>
 
-                <!-- Feature 4: 100% Private -->
                 <div class="bento-card">
-                    <div class="feature-header">
-                        <div class="feature-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                            </svg>
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 18V5l12-2v13"></path>
+                                    <circle cx="6" cy="18" r="3"></circle>
+                                    <circle cx="18" cy="16" r="3"></circle>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Audio Player</span>
                         </div>
-                        <span class="feature-tag active">100% Private</span>
+                        <h3>Listen to Articles Anywhere</h3>
+                        <p>Turn your news into a podcast! Listen to articles with clear Text-to-Speech audio that saves automatically.</p>
+                        
+                        <div class="bento-preview-box audio-demo-box">
+                            <div class="audio-track-info">
+                                <span class="audio-wave">▶ 🎧</span>
+                                <span class="audio-title">Reading: Tech Digest #42</span>
+                            </div>
+                            <div class="audio-progress-bar"><div class="audio-progress"></div></div>
+                        </div>
                     </div>
-                    <h3>Zero Tracking & Offline Ready</h3>
-                    <p>No account or signup needed. Your bookmarks and news feeds stay strictly on your phone. Plus, a helpful offline indicator lets you know when you're reading saved stories without internet.</p>
+                </div>
+
+                <div class="bento-card">
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="13.5" cy="6.5" r="2.5"></circle>
+                                    <circle cx="17.5" cy="10.5" r="2.5"></circle>
+                                    <circle cx="8.5" cy="7.5" r="2.5"></circle>
+                                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.76-.24 2.5-.66 1.07-.61 1.5-1.92 1-3.04-.33-.75-.12-1.63.5-2.14.74-.6 1.76-.55 2.45.1.75.7 1.8 1.14 2.95.84C22.4 15.9 23 14.04 23 12c0-5.5-5-10-11-10z"></path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Dynamic Colors</span>
+                        </div>
+                        <h3>Material You Design</h3>
+                        <p>StreamFolio dynamically adapts its accent colors to match your Android wallpaper on Android 12+ devices.</p>
+                        
+                        <div class="bento-preview-box theme-demo-box">
+                            <div class="color-dot c-1"></div>
+                            <div class="color-dot c-2"></div>
+                            <div class="color-dot c-3"></div>
+                            <div class="color-dot c-4"></div>
+                            <span class="theme-text">System Palette Sync</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ROW 3: Card 6 (Spans 1 col) + Card 7 (Spans 2 cols - Wider Right!) -->
+                <div class="bento-card">
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Zero Lock-In</span>
+                        </div>
+                        <h3>OPML Import & Backup</h3>
+                        <p>You own your news feeds. Import existing feed collections or backup your subscriptions anytime via standard OPML files.</p>
+                        
+                        <div class="bento-preview-box opml-demo-box">
+                            <span class="opml-file-icon">📄 feeds_backup.opml</span>
+                            <span class="opml-badge">100% Portable</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bento-card bento-span-2 bento-hero-card">
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">100% Private</span>
+                        </div>
+                        <h3>Zero Tracking & Offline Ready</h3>
+                        <p>No account or signup needed. Your bookmarks and news feeds stay strictly on your phone inside Android Room SQLite. Plus, a helpful offline indicator lets you know when you're reading saved stories without internet.</p>
+                        
+                        <div class="bento-preview-box privacy-demo-box">
+                            <span class="privacy-lock-icon">🔒 100% Local Device Storage &bull; Zero Server Calls &bull; Offline Ready</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
