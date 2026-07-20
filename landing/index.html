@@ -1,34 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamFolio — Smart, Private News Reader for Android</title>
-    <meta name="description" content="StreamFolio is a private, clutter-free news reader for Android. Add custom RSS & Atom feeds, get instant AI summaries on your phone, listen to audio articles, Material You theming, and read global news with zero tracking.">
+    <meta name="description"
+        content="StreamFolio is a private, clutter-free news reader for Android. Add custom RSS & Atom feeds, get instant AI summaries on your phone, listen to audio articles, Material You theming, and read global news with zero tracking.">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="canonical" href="https://streamfolio.sume.uk/">
-    
+
     <!-- Open Graph / Facebook SEO Meta -->
     <meta property="og:title" content="StreamFolio — Smart, Private News Reader for Android">
-    <meta property="og:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy custom RSS/Atom feeds, instant AI summaries, audio listening, Material You theming, and zero ad tracking on Android.">
+    <meta property="og:description"
+        content="StreamFolio v1.2.0-beta.8 is live! Enjoy custom RSS/Atom feeds, instant AI summaries, audio listening, Material You theming, and zero ad tracking on Android.">
     <meta property="og:image" content="https://streamfolio.sume.uk/logo.png">
     <meta property="og:url" content="https://streamfolio.sume.uk/">
     <meta property="og:type" content="website">
-    
+
     <!-- Twitter SEO Meta -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="StreamFolio — Smart, Private News Reader for Android">
-    <meta name="twitter:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy custom RSS/Atom feeds, instant AI summaries, audio listening, Material You theming, and zero ad tracking on Android.">
+    <meta name="twitter:description"
+        content="StreamFolio v1.2.0-beta.8 is live! Enjoy custom RSS/Atom feeds, instant AI summaries, audio listening, Material You theming, and zero ad tracking on Android.">
     <meta name="twitter:image" content="https://streamfolio.sume.uk/logo.png">
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="index.css">
-    
+
     <!-- Instant Theme Persistence Script -->
     <script>
-        (function() {
+        (function () {
             var params = new URLSearchParams(window.location.search);
             var urlTheme = params.get('theme');
             var savedTheme = localStorage.getItem('streamfolio_landing_theme');
@@ -39,6 +45,7 @@
         })();
     </script>
 </head>
+
 <body>
     <!-- Navbar -->
     <header class="navbar" id="navbar">
@@ -48,16 +55,18 @@
                 <span>StreamFolio</span>
             </a>
             <nav class="nav-links">
-                <a href="#features">Features</a>
-                <a href="#showcase">Screenshots</a>
-                <a href="#how-it-works">How It Works</a>
-                <a href="#testimonials">Reviews</a>
                 <a href="changelog.html">Changelog</a>
-                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
-            </nav>
-            <div class="nav-mobile-actions">
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank"
+                    rel="noopener">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M17.523 15.3414C17.06 15.3414 16.687 14.9684 16.687 14.507C16.687 14.0456 17.06 13.6726 17.523 13.6726C17.984 13.6726 18.357 14.0456 18.357 14.507C18.357 14.9684 17.984 15.3414 17.523 15.3414ZM6.477 15.3414C6.015 15.3414 5.642 14.9684 5.642 14.507C5.642 14.0456 6.015 13.6726 6.477 13.6726C6.938 13.6726 7.311 14.0456 7.311 14.507C7.311 14.9684 6.938 15.3414 6.477 15.3414ZM17.886 10.457L19.467 7.719C19.605 7.48 19.525 7.174 19.286 7.036C19.047 6.898 18.74 6.978 18.603 7.217L17.001 9.992C15.525 9.317 13.84 8.932 12 8.932C10.16 8.932 8.475 9.317 6.999 9.992L5.397 7.217C5.259 6.978 4.953 6.898 4.714 7.036C4.475 7.174 4.395 7.48 4.533 7.719L6.114 10.457C2.695 12.316 0.358 15.807 0 19.932H24C23.642 15.807 21.305 12.316 17.886 10.457Z" />
+                    </svg>
+                    <span>Download for Android</span>
+                </a>
                 <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Switch Theme" title="Switch Theme">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="5"></circle>
                         <line x1="12" y1="1" x2="12" y2="3"></line>
                         <line x1="12" y1="21" x2="12" y2="23"></line>
@@ -69,8 +78,11 @@
                         <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                     </svg>
                 </button>
+            </nav>
+            <div class="nav-mobile-actions">
                 <button class="hamburger-btn" id="hamburger-btn" aria-label="Open Navigation Menu">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -88,7 +100,8 @@
                     <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
                     <span>StreamFolio</span>
                 </a>
-                <button class="drawer-close-btn" id="drawer-close-btn" aria-label="Close Navigation Menu">&times;</button>
+                <button class="drawer-close-btn" id="drawer-close-btn"
+                    aria-label="Close Navigation Menu">&times;</button>
             </div>
             <div class="mobile-drawer-body">
                 <a href="#features" class="drawer-link">Features</a>
@@ -98,7 +111,7 @@
                 <a href="changelog.html" class="drawer-link">Changelog</a>
                 <a href="privacy.html" class="drawer-link">Privacy Policy</a>
                 <a href="terms.html" class="drawer-link">Terms of Service</a>
-                
+
                 <button class="drawer-theme-btn theme-toggle-btn" id="drawer-theme-btn">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -107,7 +120,14 @@
                 </button>
             </div>
             <div class="mobile-drawer-footer">
-                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-full" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-full" target="_blank"
+                    rel="noopener">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M17.523 15.3414C17.06 15.3414 16.687 14.9684 16.687 14.507C16.687 14.0456 17.06 13.6726 17.523 13.6726C17.984 13.6726 18.357 14.0456 18.357 14.507C18.357 14.9684 17.984 15.3414 17.523 15.3414ZM6.477 15.3414C6.015 15.3414 5.642 14.9684 5.642 14.507C5.642 14.0456 6.015 13.6726 6.477 13.6726C6.938 13.6726 7.311 14.0456 7.311 14.507C7.311 14.9684 6.938 15.3414 6.477 15.3414ZM17.886 10.457L19.467 7.719C19.605 7.48 19.525 7.174 19.286 7.036C19.047 6.898 18.74 6.978 18.603 7.217L17.001 9.992C15.525 9.317 13.84 8.932 12 8.932C10.16 8.932 8.475 9.317 6.999 9.992L5.397 7.217C5.259 6.978 4.953 6.898 4.714 7.036C4.475 7.174 4.395 7.48 4.533 7.719L6.114 10.457C2.695 12.316 0.358 15.807 0 19.932H24C23.642 15.807 21.305 12.316 17.886 10.457Z" />
+                    </svg>
+                    <span>Download for Android (APK)</span>
+                </a>
             </div>
         </div>
     </div>
@@ -118,32 +138,39 @@
         <div class="hero-glow hero-glow-2"></div>
         <div class="container hero-container">
             <div class="hero-content">
-                <h1 id="hero-title">The RSS reader that runs on your phone, <span class="gradient-text">not in the cloud.</span></h1>
-                <p class="hero-description">StreamFolio combines local news curation, on-device Gemini AI summaries*, and background audio listening into a clean, ad-free Android app. Zero tracking, zero accounts, zero cloud servers.</p>
-                
+                <h1 id="hero-title">The RSS reader that runs on your phone, <span class="gradient-text">not in the
+                        cloud.</span></h1>
+                <p class="hero-description">StreamFolio combines local news curation, on-device Gemini AI summaries*,
+                    and background audio listening into a clean, ad-free Android app. Zero tracking, zero accounts, zero
+                    cloud servers.</p>
+
                 <!-- Live Feature Micro-Badges Row -->
                 <div class="hero-ticker-group">
                     <span class="ticker-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                         </svg>
                         100% On-Device AI*
                     </span>
                     <span class="ticker-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                         </svg>
                         Zero Tracking
                     </span>
                     <span class="ticker-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <circle cx="12" cy="12" r="10"></circle>
                             <line x1="2" y1="12" x2="22" y2="12"></line>
                         </svg>
                         7 Global Regions
                     </span>
                     <span class="ticker-badge">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
                             <path d="M9 18V5l12-2v13"></path>
                             <circle cx="6" cy="18" r="3"></circle>
                             <circle cx="18" cy="16" r="3"></circle>
@@ -155,11 +182,13 @@
                 <!-- Primary CTAs & Waitlist Form -->
                 <div class="hero-actions">
                     <div class="cta-group">
-                        <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank" rel="noopener">
+                        <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank"
+                            rel="noopener">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                                <path
+                                    d="M17.523 15.3414C17.06 15.3414 16.687 14.9684 16.687 14.507C16.687 14.0456 17.06 13.6726 17.523 13.6726C17.984 13.6726 18.357 14.0456 18.357 14.507C18.357 14.9684 17.984 15.3414 17.523 15.3414ZM6.477 15.3414C6.015 15.3414 5.642 14.9684 5.642 14.507C5.642 14.0456 6.015 13.6726 6.477 13.6726C6.938 13.6726 7.311 14.0456 7.311 14.507C7.311 14.9684 6.938 15.3414 6.477 15.3414ZM17.886 10.457L19.467 7.719C19.605 7.48 19.525 7.174 19.286 7.036C19.047 6.898 18.74 6.978 18.603 7.217L17.001 9.992C15.525 9.317 13.84 8.932 12 8.932C10.16 8.932 8.475 9.317 6.999 9.992L5.397 7.217C5.259 6.978 4.953 6.898 4.714 7.036C4.475 7.174 4.395 7.48 4.533 7.719L6.114 10.457C2.695 12.316 0.358 15.807 0 19.932H24C23.642 15.807 21.305 12.316 17.886 10.457Z" />
                             </svg>
-                            <span>Download v1.2.0-beta.8 APK</span>
+                            <span>Download for Android (APK)</span>
                         </a>
                     </div>
 
@@ -167,7 +196,8 @@
                     <div class="waitlist-card" id="waitlist-card">
                         <div class="waitlist-header">
                             <div class="waitlist-icon-badge">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                                     <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                                 </svg>
@@ -179,11 +209,15 @@
                         </div>
                         <form class="waitlist-form" id="waitlist-form">
                             <div class="input-wrapper">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z">
+                                    </path>
                                     <polyline points="22,6 12,13 2,6"></polyline>
                                 </svg>
-                                <input type="email" id="waitlist-email" placeholder="Enter your email address..." required autocomplete="email">
+                                <input type="email" id="waitlist-email" placeholder="Enter your email address..."
+                                    required autocomplete="email">
                             </div>
                             <button type="submit" class="btn-waitlist" id="waitlist-btn">Join Waitlist</button>
                         </form>
@@ -191,15 +225,19 @@
 
                     <div class="store-badge-container">
                         <span class="store-badge">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
                                 <path d="M5 16.5A3.5 3.5 0 0 0 8.5 20h7a3.5 3.5 0 0 0 3.5-3.5V10h-14v6.5z"></path>
                                 <polyline points="6 6 12 10 18 6"></polyline>
                             </svg>
                             Google Play Release Pending
                         </span>
                         <span class="store-badge">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polygon
+                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                                </polygon>
                             </svg>
                             Built-In On-Device AI Active*
                         </span>
@@ -215,7 +253,8 @@
                         <div class="phone-camera"></div>
                     </div>
                     <div class="showcase-phone-screen">
-                        <img src="feed_screenshot.png" alt="StreamFolio Android Home Feed Screenshot" class="showcase-img">
+                        <img src="feed_screenshot.png" alt="StreamFolio Android Home Feed Screenshot"
+                            class="showcase-img">
                     </div>
                     <div class="phone-glare"></div>
                 </div>
@@ -229,12 +268,15 @@
             <div class="section-header">
                 <span class="badge">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
                     </svg>
                     Features You'll Love
                 </span>
                 <h2 class="section-title">Designed for Effortless Daily Reading</h2>
-                <p class="section-subtitle">Custom RSS feeds, smart AI summarization*, audio listening, Material You theming, and zero vendor lock-in.</p>
+                <p class="section-subtitle">Custom RSS feeds, smart AI summarization*, audio listening, Material You
+                    theming, and zero vendor lock-in.</p>
             </div>
 
             <div class="bento-grid">
@@ -244,28 +286,39 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon ai-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z">
+                                    </path>
                                 </svg>
                             </div>
                             <span class="feature-tag ai-tag">Active in v1.2</span>
                         </div>
                         <h3>Smart AI Summaries (On Your Phone)*</h3>
-                        <p>Get quick bullet-point takeaways for long stories in seconds. Powered by AI that runs directly on your phone, so your reading habits remain 100% private, work offline, and cost nothing.</p>
-                        
+                        <p>Get quick bullet-point takeaways for long stories in seconds. Powered by AI that runs
+                            directly on your phone, so your reading habits remain 100% private, work offline, and cost
+                            nothing.</p>
+
                         <div class="bento-preview-box ai-demo-box">
                             <div class="ai-demo-header">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="ai-sparkle">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" class="ai-sparkle">
+                                    <polygon
+                                        points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                                    </polygon>
                                 </svg>
                                 <span class="ai-demo-title">Key Insight Preview</span>
                             </div>
                             <ul class="ai-demo-list">
-                                <li><strong>Runs On Your Phone:</strong> Summaries are processed right inside your device.</li>
-                                <li><strong>Total Privacy:</strong> Your articles are never uploaded to company servers or cloud AI.</li>
+                                <li><strong>Runs On Your Phone:</strong> Summaries are processed right inside your
+                                    device.</li>
+                                <li><strong>Total Privacy:</strong> Your articles are never uploaded to company servers
+                                    or cloud AI.</li>
                             </ul>
                         </div>
-                        <p class="ai-disclaimer-note">* On-device AI features require a compatible Android device supporting Google AICore / Gemini Nano or NPU hardware acceleration.</p>
+                        <p class="ai-disclaimer-note">* On-device AI features require a compatible Android device
+                            supporting Google AICore / Gemini Nano or NPU hardware acceleration.</p>
                     </div>
                 </div>
 
@@ -273,7 +326,8 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M4 11a9 9 0 0 1 9 9"></path>
                                     <path d="M4 4a16 16 0 0 1 16 16"></path>
                                     <circle cx="5" cy="19" r="1"></circle>
@@ -282,11 +336,13 @@
                             <span class="feature-tag active">Any Website</span>
                         </div>
                         <h3>Custom RSS & Atom Curation</h3>
-                        <p>Paste any custom blog or news RSS/Atom URL. Organise custom channels into personalized categories and reorder feeds without limits.</p>
-                        
+                        <p>Paste any custom blog or news RSS/Atom URL. Organise custom channels into personalized
+                            categories and reorder feeds without limits.</p>
+
                         <div class="bento-preview-box rss-demo-box">
                             <div class="rss-demo-input">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M4 11a9 9 0 0 1 9 9"></path>
                                     <path d="M4 4a16 16 0 0 1 16 16"></path>
                                     <circle cx="5" cy="19" r="1"></circle>
@@ -303,17 +359,21 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <circle cx="12" cy="12" r="10"></circle>
                                     <line x1="2" y1="12" x2="22" y2="12"></line>
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                    <path
+                                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z">
+                                    </path>
                                 </svg>
                             </div>
                             <span class="feature-tag active">Global News</span>
                         </div>
                         <h3>Global & Local News</h3>
-                        <p>Switch seamlessly between top publishers across the US, UK, Hong Kong, Singapore, India, Canada, and Australia with a single tap.</p>
-                        
+                        <p>Switch seamlessly between top publishers across the US, UK, Hong Kong, Singapore, India,
+                            Canada, and Australia with a single tap.</p>
+
                         <div class="bento-preview-box region-chips">
                             <span class="chip">US</span>
                             <span class="chip">UK</span>
@@ -330,7 +390,8 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M9 18V5l12-2v13"></path>
                                     <circle cx="6" cy="18" r="3"></circle>
                                     <circle cx="18" cy="16" r="3"></circle>
@@ -339,16 +400,20 @@
                             <span class="feature-tag active">Audio Player</span>
                         </div>
                         <h3>Listen to Articles Anywhere</h3>
-                        <p>Turn your news into a podcast! Listen to articles with clear Text-to-Speech audio that saves automatically.</p>
-                        
+                        <p>Turn your news into a podcast! Listen to articles with clear Text-to-Speech audio that saves
+                            automatically.</p>
+
                         <div class="bento-preview-box audio-demo-box">
                             <div class="audio-track-info">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <polygon points="5 3 19 12 5 21 5 3"></polygon>
                                 </svg>
                                 <span class="audio-title">Reading: Tech Digest #42</span>
                             </div>
-                            <div class="audio-progress-bar"><div class="audio-progress"></div></div>
+                            <div class="audio-progress-bar">
+                                <div class="audio-progress"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -357,18 +422,22 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <circle cx="13.5" cy="6.5" r="2.5"></circle>
                                     <circle cx="17.5" cy="10.5" r="2.5"></circle>
                                     <circle cx="8.5" cy="7.5" r="2.5"></circle>
-                                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.76-.24 2.5-.66 1.07-.61 1.5-1.92 1-3.04-.33-.75-.12-1.63.5-2.14.74-.6 1.76-.55 2.45.1.75.7 1.8 1.14 2.95.84C22.4 15.9 23 14.04 23 12c0-5.5-5-10-11-10z"></path>
+                                    <path
+                                        d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.76-.24 2.5-.66 1.07-.61 1.5-1.92 1-3.04-.33-.75-.12-1.63.5-2.14.74-.6 1.76-.55 2.45.1.75.7 1.8 1.14 2.95.84C22.4 15.9 23 14.04 23 12c0-5.5-5-10-11-10z">
+                                    </path>
                                 </svg>
                             </div>
                             <span class="feature-tag active">Dynamic Colors</span>
                         </div>
                         <h3>Material You Design</h3>
-                        <p>StreamFolio dynamically adapts its accent colors to match your Android wallpaper on Android 12+ devices.</p>
-                        
+                        <p>StreamFolio dynamically adapts its accent colors to match your Android wallpaper on Android
+                            12+ devices.</p>
+
                         <div class="bento-preview-box theme-demo-box">
                             <div class="color-dot c-1"></div>
                             <div class="color-dot c-2"></div>
@@ -384,7 +453,8 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                                     <polyline points="17 8 12 3 7 8"></polyline>
                                     <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -393,11 +463,13 @@
                             <span class="feature-tag active">Zero Lock-In</span>
                         </div>
                         <h3>OPML Import & Backup</h3>
-                        <p>You own your news feeds. Import existing feed collections or backup your subscriptions anytime via standard OPML files.</p>
-                        
+                        <p>You own your news feeds. Import existing feed collections or backup your subscriptions
+                            anytime via standard OPML files.</p>
+
                         <div class="bento-preview-box opml-demo-box">
                             <span class="opml-file-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; vertical-align:middle; margin-right:4px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="display:inline; vertical-align:middle; margin-right:4px;">
                                     <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
                                     <polyline points="13 2 13 9 20 9"></polyline>
                                 </svg>
@@ -412,18 +484,22 @@
                     <div class="bento-card-content">
                         <div class="feature-header">
                             <div class="feature-icon">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
                                 </svg>
                             </div>
                             <span class="feature-tag active">100% Private</span>
                         </div>
                         <h3>Zero Tracking & Offline Ready</h3>
-                        <p>No account or signup needed. Your bookmarks and news feeds stay strictly on your phone inside Android Room SQLite. Plus, a helpful offline indicator lets you know when you're reading saved stories without internet.</p>
-                        
+                        <p>No account or signup needed. Your bookmarks and news feeds stay strictly on your phone inside
+                            Android Room SQLite. Plus, a helpful offline indicator lets you know when you're reading
+                            saved stories without internet.</p>
+
                         <div class="bento-preview-box privacy-demo-box">
                             <span class="privacy-lock-icon">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline; vertical-align:middle; margin-right:6px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" style="display:inline; vertical-align:middle; margin-right:6px;">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                                 </svg>
@@ -445,12 +521,15 @@
                         <circle cx="13.5" cy="6.5" r="2.5"></circle>
                         <circle cx="17.5" cy="10.5" r="2.5"></circle>
                         <circle cx="8.5" cy="7.5" r="2.5"></circle>
-                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.76-.24 2.5-.66 1.07-.61 1.5-1.92 1-3.04-.33-.75-.12-1.63.5-2.14.74-.6 1.76-.55 2.45.1.75.7 1.8 1.14 2.95.84C22.4 15.9 23 14.04 23 12c0-5.5-5-10-11-10z"></path>
+                        <path
+                            d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.76-.24 2.5-.66 1.07-.61 1.5-1.92 1-3.04-.33-.75-.12-1.63.5-2.14.74-.6 1.76-.55 2.45.1.75.7 1.8 1.14 2.95.84C22.4 15.9 23 14.04 23 12c0-5.5-5-10-11-10z">
+                        </path>
                     </svg>
                     4 Flexible Theme Styles
                 </span>
                 <h2 class="section-title">Designed for Every Reading Style</h2>
-                <p class="section-subtitle">StreamFolio adapts to your preference. Switch seamlessly between dark mode, light mode, and dynamic Material You theme matching.</p>
+                <p class="section-subtitle">StreamFolio adapts to your preference. Switch seamlessly between dark mode,
+                    light mode, and dynamic Material You theme matching.</p>
             </div>
 
             <div class="showcase-grid">
@@ -470,7 +549,8 @@
                         <div class="phone-glare"></div>
                     </div>
                     <h3 class="showcase-caption">Daily News Feed</h3>
-                    <p class="showcase-subcaption">High-contrast dark theme for comfortable night reading. Browse curated multi-region feeds with zero ad clutter.</p>
+                    <p class="showcase-subcaption">High-contrast dark theme for comfortable night reading. Browse
+                        curated multi-region feeds with zero ad clutter.</p>
                 </div>
 
                 <!-- Phone 2: Material You Dark & On-Device AI Summaries -->
@@ -484,12 +564,14 @@
                             <div class="phone-camera"></div>
                         </div>
                         <div class="showcase-phone-screen">
-                            <img src="material_you_ai_summary.jpg" alt="StreamFolio Gemini AI Summary Screenshot" class="showcase-img">
+                            <img src="material_you_ai_summary.jpg" alt="StreamFolio Gemini AI Summary Screenshot"
+                                class="showcase-img">
                         </div>
                         <div class="phone-glare"></div>
                     </div>
                     <h3 class="showcase-caption">On-Device AI Summaries*</h3>
-                    <p class="showcase-subcaption">Dynamic dark palette auto-synced to your wallpaper. Generate instant 3-bullet takeaways processed 100% on your phone.</p>
+                    <p class="showcase-subcaption">Dynamic dark palette auto-synced to your wallpaper. Generate instant
+                        3-bullet takeaways processed 100% on your phone.</p>
                 </div>
 
                 <!-- Phone 3: Default Light Theme & Instant Search -->
@@ -508,7 +590,8 @@
                         <div class="phone-glare"></div>
                     </div>
                     <h3 class="showcase-caption">Instant Keyword Search</h3>
-                    <p class="showcase-subcaption">Crisp daytime light theme with high contrast typography. Filter through saved articles and topics in real time.</p>
+                    <p class="showcase-subcaption">Crisp daytime light theme with high contrast typography. Filter
+                        through saved articles and topics in real time.</p>
                 </div>
 
                 <!-- Phone 4: Material You Light & Offline Bookmarks -->
@@ -522,12 +605,14 @@
                             <div class="phone-camera"></div>
                         </div>
                         <div class="showcase-phone-screen">
-                            <img src="light_bookmarks.jpg" alt="StreamFolio Light Theme Bookmarks Screenshot" class="showcase-img">
+                            <img src="light_bookmarks.jpg" alt="StreamFolio Light Theme Bookmarks Screenshot"
+                                class="showcase-img">
                         </div>
                         <div class="phone-glare"></div>
                     </div>
                     <h3 class="showcase-caption">Offline Bookmarks</h3>
-                    <p class="showcase-subcaption">Warm daytime theme adapted to system accent colors. Save important stories to Android SQLite for offline reading.</p>
+                    <p class="showcase-subcaption">Warm daytime theme adapted to system accent colors. Save important
+                        stories to Android SQLite for offline reading.</p>
                 </div>
             </div>
         </div>
@@ -552,17 +637,20 @@
                 <div class="step-card">
                     <div class="step-number">01</div>
                     <h3>Download the App</h3>
-                    <p>Get the latest v1.2.0-beta.8 release directly from GitHub, or join our waitlist for the upcoming Google Play release.</p>
+                    <p>Get the latest v1.2.0-beta.8 release directly from GitHub, or join our waitlist for the upcoming
+                        Google Play release.</p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">02</div>
                     <h3>Pick Your Topics</h3>
-                    <p>Select news regions (like US, UK, or HK) or add your favorite blog links. Easily drag and drop tabs to reorder your feeds.</p>
+                    <p>Select news regions (like US, UK, or HK) or add your favorite blog links. Easily drag and drop
+                        tabs to reorder your feeds.</p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">03</div>
                     <h3>Read & Listen Worry-Free</h3>
-                    <p>Enjoy clean, ad-free news with instant AI bullet summaries*, offline saved articles, and background audio listening.</p>
+                    <p>Enjoy clean, ad-free news with instant AI bullet summaries*, offline saved articles, and
+                        background audio listening.</p>
                 </div>
             </div>
         </div>
@@ -574,7 +662,9 @@
             <div class="section-header">
                 <span class="badge">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                        <path
+                            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+                        </path>
                     </svg>
                     Community Reviews
                 </span>
@@ -585,13 +675,35 @@
             <div class="testimonials-grid">
                 <div class="testimonial-card">
                     <div class="rating-stars">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
                     </div>
-                    <p class="testimonial-quote">"The multi-region news coverage is awesome! And having the AI summary run directly on my phone without sending data to cloud servers gives me complete peace of mind."</p>
+                    <p class="testimonial-quote">"The multi-region news coverage is awesome! And having the AI summary
+                        run directly on my phone without sending data to cloud servers gives me complete peace of mind."
+                    </p>
                     <div class="testimonial-author">
                         <div class="author-avatar">AC</div>
                         <div>
@@ -603,13 +715,34 @@
 
                 <div class="testimonial-card">
                     <div class="rating-stars">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="#F59E0B" stroke="#F59E0B">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                            </polygon>
+                        </svg>
                     </div>
-                    <p class="testimonial-quote">"The audio playlist feature is a game-changer for my commute. I can queue up 5 articles, get on the subway, and listen hands-free even when I lose signal!"</p>
+                    <p class="testimonial-quote">"The audio playlist feature is a game-changer for my commute. I can
+                        queue up 5 articles, get on the subway, and listen hands-free even when I lose signal!"</p>
                     <div class="testimonial-author">
                         <div class="author-avatar">ER</div>
                         <div>
@@ -628,10 +761,18 @@
             <div class="cta-banner">
                 <div class="cta-banner-content">
                     <h2>Ready for Better News Reading?</h2>
-                    <p>Download StreamFolio v1.2.0-beta.8 today or join our waitlist for the official Google Play launch.</p>
+                    <p>Download StreamFolio v1.2.0-beta.8 today or join our waitlist for the official Google Play
+                        launch.</p>
                 </div>
                 <div class="cta-banner-actions">
-                    <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank" rel="noopener">Download v1.2.0-beta.8 APK</a>
+                    <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank"
+                        rel="noopener">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M17.523 15.3414C17.06 15.3414 16.687 14.9684 16.687 14.507C16.687 14.0456 17.06 13.6726 17.523 13.6726C17.984 13.6726 18.357 14.0456 18.357 14.507C18.357 14.9684 17.984 15.3414 17.523 15.3414ZM6.477 15.3414C6.015 15.3414 5.642 14.9684 5.642 14.507C5.642 14.0456 6.015 13.6726 6.477 13.6726C6.938 13.6726 7.311 14.0456 7.311 14.507C7.311 14.9684 6.938 15.3414 6.477 15.3414ZM17.886 10.457L19.467 7.719C19.605 7.48 19.525 7.174 19.286 7.036C19.047 6.898 18.74 6.978 18.603 7.217L17.001 9.992C15.525 9.317 13.84 8.932 12 8.932C10.16 8.932 8.475 9.317 6.999 9.992L5.397 7.217C5.259 6.978 4.953 6.898 4.714 7.036C4.475 7.174 4.395 7.48 4.533 7.719L6.114 10.457C2.695 12.316 0.358 15.807 0 19.932H24C23.642 15.807 21.305 12.316 17.886 10.457Z" />
+                        </svg>
+                        <span>Download for Android (APK)</span>
+                    </a>
                     <a href="#waitlist-card" class="btn-secondary waitlist-scroll-link">Join Play Waitlist</a>
                 </div>
             </div>
@@ -641,8 +782,13 @@
     <!-- Mobile Floating Sticky CTA Bar -->
     <div class="mobile-sticky-bar" id="mobile-sticky-bar">
         <div class="mobile-sticky-container">
-            <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sticky" target="_blank" rel="noopener">
-                <span>Download APK</span>
+            <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sticky" target="_blank"
+                rel="noopener">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M17.523 15.3414C17.06 15.3414 16.687 14.9684 16.687 14.507C16.687 14.0456 17.06 13.6726 17.523 13.6726C17.984 13.6726 18.357 14.0456 18.357 14.507C18.357 14.9684 17.984 15.3414 17.523 15.3414ZM6.477 15.3414C6.015 15.3414 5.642 14.9684 5.642 14.507C5.642 14.0456 6.015 13.6726 6.477 13.6726C6.938 13.6726 7.311 14.0456 7.311 14.507C7.311 14.9684 6.938 15.3414 6.477 15.3414ZM17.886 10.457L19.467 7.719C19.605 7.48 19.525 7.174 19.286 7.036C19.047 6.898 18.74 6.978 18.603 7.217L17.001 9.992C15.525 9.317 13.84 8.932 12 8.932C10.16 8.932 8.475 9.317 6.999 9.992L5.397 7.217C5.259 6.978 4.953 6.898 4.714 7.036C4.475 7.174 4.395 7.48 4.533 7.719L6.114 10.457C2.695 12.316 0.358 15.807 0 19.932H24C23.642 15.807 21.305 12.316 17.886 10.457Z" />
+                </svg>
+                <span>Download for Android</span>
             </a>
             <a href="#waitlist-card" class="btn-secondary btn-sticky waitlist-scroll-link">
                 <span>Join Waitlist</span>
@@ -670,11 +816,13 @@
                 <span>&bull;</span>
                 <a href="terms.html" class="footer-link">Terms of Service</a>
                 <span>&bull;</span>
-                <a href="https://github.com/sm32d/streamfolio" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+                <a href="https://github.com/sm32d/streamfolio" target="_blank" rel="noopener"
+                    class="footer-link">GitHub</a>
             </div>
         </div>
     </footer>
 
     <script src="app.js"></script>
 </body>
+
 </html>

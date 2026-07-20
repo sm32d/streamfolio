@@ -469,6 +469,7 @@ h1, h2, h3, h4 {
     display: flex;
     align-items: center;
     gap: 24px;
+    margin-left: auto;
 }
 
 .nav-links a:not(.btn-primary) {
@@ -496,11 +497,10 @@ h1, h2, h3, h4 {
     cursor: pointer;
     transition: var(--transition);
     font-size: 16px;
-    margin-left: 8px;
 }
 
 .nav-mobile-actions {
-    display: flex;
+    display: none;
     align-items: center;
     gap: 12px;
 }
@@ -2108,6 +2108,10 @@ h1, h2, h3, h4 {
 @media (max-width: 768px) {
     .nav-links {
         display: none;
+    }
+
+    .nav-mobile-actions {
+        display: flex;
     }
 
     .hamburger-btn {
