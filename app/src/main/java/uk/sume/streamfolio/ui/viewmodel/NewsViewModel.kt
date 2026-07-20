@@ -20,6 +20,11 @@ import uk.sume.streamfolio.util.OpmlFeed
 import uk.sume.streamfolio.util.UrlSecurityValidator
 import uk.sume.streamfolio.playback.TtsPlaybackManager
 
+data class CategoryArticlesState(
+    val category: String = "",
+    val groups: List<uk.sume.streamfolio.data.model.ArticleGroup> = emptyList()
+)
+
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -189,13 +194,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val selectedPublisher: StateFlow<String?> = _selectedPublisher
 
     private val _prefsChangedSignal = MutableStateFlow(0)
+    private val categoryLastRefreshedMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
 
-    // Articles flow
-    val articles: StateFlow<List<Article>> = combine(_selectedCategory, _prefsChangedSignal) { category, _ ->
+    // Category articles state holder to prevent cross-category state leaks
+    val categoryArticlesState: StateFlow<CategoryArticlesState> = combine(_selectedCategory, _prefsChangedSignal) { category, _ ->
         category
     }
         .flatMapLatest { category ->
-            if (category.startsWith("#")) {
+            val flow = if (category.startsWith("#")) {
                 repository.getAllArticlesUnlimited().map { list ->
                     list.filter { article ->
                         article.tags?.lowercase()?.contains(category.lowercase()) == true
@@ -215,17 +221,24 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+            combine(flow, groupSimilarStories) { list, groupEnabled ->
+                val groups = if (groupEnabled) {
+                    groupSimilarArticles(list)
+                } else {
+                    list.map { uk.sume.streamfolio.data.model.ArticleGroup(primary = it, secondary = emptyList()) }
+                }
+                CategoryArticlesState(category = category, groups = groups)
+            }
         }
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CategoryArticlesState())
+
+    val articles: StateFlow<List<Article>> = categoryArticlesState
+        .map { state -> state.groups.map { it.primary } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val groupedArticles: StateFlow<List<uk.sume.streamfolio.data.model.ArticleGroup>> = combine(articles, groupSimilarStories) { list, groupEnabled ->
-        if (groupEnabled) {
-            groupSimilarArticles(list)
-        } else {
-            list.map { uk.sume.streamfolio.data.model.ArticleGroup(primary = it, secondary = emptyList()) }
-        }
-    }
-        .flowOn(Dispatchers.Default)
+    val groupedArticles: StateFlow<List<uk.sume.streamfolio.data.model.ArticleGroup>> = categoryArticlesState
+        .map { state -> state.groups }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // Bookmarked articles flow
@@ -381,19 +394,29 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     fun selectCategory(category: String) {
         _selectedCategory.value = category
         _selectedPublisher.value = null
-        refreshCurrentFeed()
+
+        val lastRefreshed = categoryLastRefreshedMap[category] ?: 0L
+        val now = System.currentTimeMillis()
+        val isStale = (now - lastRefreshed) > 15 * 60 * 1000L
+        val isLoadedForCategory = categoryArticlesState.value.category == category && categoryArticlesState.value.groups.isNotEmpty()
+
+        if (isStale || !isLoadedForCategory) {
+            refreshCurrentFeed(silent = true)
+        }
     }
 
     fun selectPublisher(publisher: String?) {
         _selectedPublisher.value = publisher
     }
 
-    fun refreshCurrentFeed() {
+    fun refreshCurrentFeed(silent: Boolean = false) {
         viewModelScope.launch {
-            _isRefreshing.value = true
+            if (!silent) {
+                _isRefreshing.value = true
+            }
             val currentCat = _selectedCategory.value
             if (currentCat.startsWith("#")) {
-                _isRefreshing.value = false
+                if (!silent) _isRefreshing.value = false
                 return@launch
             }
             
@@ -413,7 +436,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
                 )
             }
-            _isRefreshing.value = false
+            categoryLastRefreshedMap[currentCat] = System.currentTimeMillis()
+            if (!silent) {
+                _isRefreshing.value = false
+            }
         }
     }
 

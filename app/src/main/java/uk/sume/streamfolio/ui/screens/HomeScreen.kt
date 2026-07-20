@@ -98,7 +98,7 @@ fun HomeScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val articles by viewModel.groupedArticles.collectAsState()
+    val categoryArticlesState by viewModel.categoryArticlesState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val customFeeds by viewModel.customFeeds.collectAsState()
@@ -125,9 +125,9 @@ fun HomeScreen(
     val articlesMap = remember { mutableStateMapOf<String, List<uk.sume.streamfolio.data.model.ArticleGroup>>() }
 
     // Cache category articles so switching back is instant; always reflect live updates (e.g. bookmarks).
-    LaunchedEffect(articles) {
-        if (articles.isNotEmpty() || !isRefreshing) {
-            articlesMap[selectedCategory] = articles
+    LaunchedEffect(categoryArticlesState) {
+        if (categoryArticlesState.category.isNotBlank()) {
+            articlesMap[categoryArticlesState.category] = categoryArticlesState.groups
         }
     }
 
@@ -263,8 +263,8 @@ fun HomeScreen(
             // Refresh indicator or Shimmer Loader or content
             Box(modifier = Modifier.weight(1f)) {
                 val targetCategory = selectedCategory
-                val currentCategoryArticles = articles
-                    .takeIf { it.isNotEmpty() }
+                val liveCategoryArticles = categoryArticlesState.groups.takeIf { categoryArticlesState.category == targetCategory }
+                val currentCategoryArticles = liveCategoryArticles
                     ?: articlesMap[targetCategory]
                     ?: emptyList()
                 val currentScrollState = viewModel.scrollStates.getOrPut(targetCategory) { LazyListState() }
@@ -373,7 +373,7 @@ fun HomeScreen(
                         title = "No feeds active",
                         description = "Please enable default feeds or add a custom RSS feed in Settings to start reading."
                     )
-                } else if (isRefreshing && currentCategoryArticles.isEmpty()) {
+                } else if (currentCategoryArticles.isEmpty() && (isRefreshing || categoryArticlesState.category != targetCategory)) {
                     SkeletonLoader(modifier = Modifier.fillMaxSize())
                 } else {
                     PullToRefreshBox(
