@@ -1,5 +1,11 @@
 // StreamFolio Landing Page Interactive JS
 
+// ----------------------------------------------------------------------
+// WAITLIST GOOGLE SHEETS ENDPOINT CONFIGURATION
+// Paste your Google Apps Script Web App URL below after completing setup
+// ----------------------------------------------------------------------
+const WAITLIST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzRdvpbEaRghnUtiW9-0j7L_BABCVRLvVFdQhILOqp6A_yG6DgEJai55NJCl4H971rJ/exec';
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Navbar Scroll Header Effect
     const navbar = document.getElementById('navbar');
@@ -96,13 +102,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 5. Waitlist Form Submission Logic
+    // 5. Waitlist Form Submission Logic (Google Sheets + LocalStorage Fallback)
     const waitlistForm = document.getElementById('waitlist-form');
     const waitlistEmail = document.getElementById('waitlist-email');
     const waitlistBtn = document.getElementById('waitlist-btn');
 
     if (waitlistForm && waitlistEmail) {
-        waitlistForm.addEventListener('submit', (e) => {
+        waitlistForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = waitlistEmail.value.trim();
 
@@ -111,17 +117,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Save to localStorage
+            // Save to localStorage backup
             const existingEmails = JSON.parse(localStorage.getItem('streamfolio_waitlist') || '[]');
             if (!existingEmails.includes(email)) {
                 existingEmails.push(email);
                 localStorage.setItem('streamfolio_waitlist', JSON.stringify(existingEmails));
             }
 
-            // UI Feedback
+            // UI Loading state
             if (waitlistBtn) {
+                waitlistBtn.disabled = true;
+                waitlistBtn.textContent = 'Submitting...';
+            }
+
+            // Send POST request to Google Apps Script Web App (using text/plain content-type to avoid 403 CORS preflight)
+            if (WAITLIST_ENDPOINT && WAITLIST_ENDPOINT !== 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+                try {
+                    const payload = JSON.stringify({ email: email, timestamp: new Date().toISOString() });
+                    await fetch(WAITLIST_ENDPOINT, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8'
+                        },
+                        body: payload
+                    });
+                } catch (err) {
+                    console.warn('Google Sheets submission warning:', err);
+                }
+            }
+
+            // UI Success Feedback
+            if (waitlistBtn) {
+                waitlistBtn.disabled = false;
                 waitlistBtn.textContent = 'Joined!';
-                waitlistBtn.style.opacity = '0.8';
+                waitlistBtn.style.opacity = '0.9';
             }
             showToast('🎉 Thank you! You\'re on the StreamFolio Play Store waitlist.', 'success');
 
@@ -131,7 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     waitlistBtn.textContent = 'Join Waitlist';
                     waitlistBtn.style.opacity = '1';
                 }
-            }, 3000);
+            }, 3500);
         });
     }
 
