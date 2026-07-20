@@ -2278,6 +2278,10 @@ sup {
         margin: 0 auto;
     }
 
+    .waitlist-header {
+        text-align: left;
+    }
+
     .store-badge-container {
         justify-content: center;
     }
