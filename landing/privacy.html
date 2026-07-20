@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — StreamFolio</title>
+    <meta name="description" content="StreamFolio Privacy Policy. Learn about our 100% on-device local data processing and zero-tracking commitment.">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body class="legal-page">
+    <!-- Navbar -->
+    <header class="navbar">
+        <div class="container navbar-container">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
+                StreamFolio
+            </a>
+            <nav class="nav-links">
+                <a href="index.html#features">Features</a>
+                <a href="index.html#how-it-works">How It Works</a>
+                <a href="changelog.html">Changelog</a>
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+            </nav>
+            <button class="hamburger-btn" id="hamburger-btn" aria-label="Open Navigation Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Slide-Out Drawer Overlay -->
+    <div class="mobile-drawer-overlay" id="mobile-drawer">
+        <div class="mobile-drawer">
+            <div class="mobile-drawer-header">
+                <a href="index.html" class="logo">
+                    <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
+                    <span>StreamFolio</span>
+                </a>
+                <button class="drawer-close-btn" id="drawer-close-btn" aria-label="Close Navigation Menu">&times;</button>
+            </div>
+            <div class="mobile-drawer-body">
+                <a href="index.html#features" class="drawer-link">Features</a>
+                <a href="index.html#how-it-works" class="drawer-link">How It Works</a>
+                <a href="changelog.html" class="drawer-link">Changelog</a>
+                <a href="privacy.html" class="drawer-link">Privacy Policy</a>
+                <a href="terms.html" class="drawer-link">Terms of Service</a>
+            </div>
+            <div class="mobile-drawer-footer">
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-full" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="legal-container">
+        <div class="container">
+            <a href="index.html" class="back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back to Home
+            </a>
+
+            <div class="legal-card">
+                <div class="legal-header">
+                    <span class="badge">Privacy First</span>
+                    <h1>Privacy Policy</h1>
+                    <p class="legal-date">Last Updated: July 20, 2026</p>
+                </div>
+
+                <div class="legal-body font-legal">
+                    <h3>1. Overview and Core Principle</h3>
+                    <p>StreamFolio ("the Application") is built from the ground up with an uncompromising commitment to user privacy. <strong>We do not collect, store, transmit, sell, or share any personal data.</strong> The Application functions strictly as a local RSS/Atom client that fetches public feeds directly from publisher websites and parses them locally on your physical device.</p>
+
+                    <h3>2. On-Device Local Data Processing</h3>
+                    <p>All application operations are executed strictly within your local device sandbox:</p>
+                    <ul>
+                        <li><strong>Local Database Storage:</strong> Article entries, reading state, bookmarks, custom feed URLs, and category orders are stored entirely within a local SQLite database (via Android Room) on your device. This data never leaves your hardware.</li>
+                        <li><strong>On-Device AI Summarization:</strong> Article text summarization (powered by Gemini Nano and Google AICore / ML Kit GenAI in v1.2) runs entirely on your local System SoC. No article bodies, prompts, parsed text, or logs are sent to remote AI cloud servers.</li>
+                        <li><strong>Text-to-Speech (TTS):</strong> Article listening features and persistent audio playlists rely solely on the built-in Android TextToSpeech engine on your system.</li>
+                    </ul>
+
+                    <h3>3. Third-Party Websites and Publisher WebViews</h3>
+                    <p>When you choose to open an article in full WebView mode, the Application loads the publisher's public web page directly using a hardened Android WebView component. StreamFolio does not inject tracking scripts into publisher pages. However, third-party publisher websites operate under their own independent privacy policies, terms, and cookie usage.</p>
+
+                    <h3>4. Network Access Permissions</h3>
+                    <p>The Application requests standard Android `INTERNET` permissions strictly to perform direct HTTP GET requests to public RSS/Atom XML endpoints specified by you or included in standard curated region lists (US, UK, SG, IN, CA, AU, HK). We do not use third-party telemetry, analytics services (such as Google Analytics or Firebase), or ad tracking SDKs.</p>
+
+                    <h3>5. Policy Revisions</h3>
+                    <p>We may update this Privacy Policy periodically to reflect new local device features or OS APIs. Continued usage of StreamFolio indicates acceptance of our local-only processing policy.</p>
+
+                    <h3>6. Contact Information</h3>
+                    <p>If you have any questions regarding privacy or local data handling in StreamFolio, please open an issue on our official <a href="https://github.com/sm32d/streamfolio" target="_blank" rel="noopener">GitHub Repository</a>.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <p>&copy; 2026 StreamFolio. All rights reserved. Built for absolute privacy.</p>
+            <div class="footer-links">
+                <a href="changelog.html" class="footer-link">Changelog</a>
+                <span>&bull;</span>
+                <a href="privacy.html" class="footer-link">Privacy Policy</a>
+                <span>&bull;</span>
+                <a href="terms.html" class="footer-link">Terms of Service</a>
+                <span>&bull;</span>
+                <a href="https://github.com/sm32d/streamfolio" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

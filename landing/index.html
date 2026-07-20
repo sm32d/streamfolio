@@ -3,166 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamFolio — Premium Curated News Aggregator</title>
-    <meta name="description" content="StreamFolio is a private, on-device news reader for Android. Custom category reordering, regional feeds, and upcoming Gemini Nano key insights.">
+    <title>StreamFolio — Smart, Private News Reader for Android</title>
+    <meta name="description" content="StreamFolio is a private, clutter-free news reader for Android. Get instant AI summaries on your phone, listen to audio articles, and read global news with zero tracking.">
     <link rel="icon" type="image/png" href="logo.png">
     <link rel="canonical" href="https://streamfolio.sume.uk/">
     
     <!-- Open Graph / Facebook SEO Meta -->
-    <meta property="og:title" content="StreamFolio — Premium Curated News Aggregator">
-    <meta property="og:description" content="StreamFolio is a private, on-device news reader for Android. Custom category reordering, regional feeds, and upcoming Gemini Nano key insights.">
+    <meta property="og:title" content="StreamFolio — Smart, Private News Reader for Android">
+    <meta property="og:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy instant AI summaries, audio listening, Hong Kong news coverage, and zero ad tracking on Android.">
     <meta property="og:image" content="https://streamfolio.sume.uk/logo.png">
     <meta property="og:url" content="https://streamfolio.sume.uk/">
     <meta property="og:type" content="website">
     
     <!-- Twitter SEO Meta -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="StreamFolio — Premium Curated News Aggregator">
-    <meta name="twitter:description" content="StreamFolio is a private, on-device news reader for Android. Custom category reordering, regional feeds, and upcoming Gemini Nano key insights.">
+    <meta name="twitter:title" content="StreamFolio — Smart, Private News Reader for Android">
+    <meta name="twitter:description" content="StreamFolio v1.2.0-beta.8 is live! Enjoy instant AI summaries, audio listening, Hong Kong news coverage, and zero ad tracking on Android.">
     <meta name="twitter:image" content="https://streamfolio.sume.uk/logo.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <!-- Navbar -->
-    <header class="navbar">
+    <header class="navbar" id="navbar">
         <div class="container navbar-container">
             <a href="#" class="logo" id="logo-link">
                 <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
-                StreamFolio
+                <span>StreamFolio</span>
             </a>
             <nav class="nav-links">
                 <a href="#features">Features</a>
-                <button class="nav-btn" onclick="openModal('privacy-modal')">Privacy Policy</button>
-                <button class="nav-btn" onclick="openModal('tos-modal')">Terms of Service</button>
-                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank">Download v1.0</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#testimonials">Reviews</a>
+                <a href="changelog.html">Changelog</a>
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
             </nav>
+            <button class="hamburger-btn" id="hamburger-btn" aria-label="Open Navigation Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
         </div>
     </header>
 
+    <!-- Mobile Slide-Out Drawer Overlay -->
+    <div class="mobile-drawer-overlay" id="mobile-drawer">
+        <div class="mobile-drawer">
+            <div class="mobile-drawer-header">
+                <a href="#" class="logo">
+                    <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
+                    <span>StreamFolio</span>
+                </a>
+                <button class="drawer-close-btn" id="drawer-close-btn" aria-label="Close Navigation Menu">&times;</button>
+            </div>
+            <div class="mobile-drawer-body">
+                <a href="#features" class="drawer-link">Features</a>
+                <a href="#how-it-works" class="drawer-link">How It Works</a>
+                <a href="#testimonials" class="drawer-link">Reviews</a>
+                <a href="changelog.html" class="drawer-link">Changelog</a>
+                <a href="privacy.html" class="drawer-link">Privacy Policy</a>
+                <a href="terms.html" class="drawer-link">Terms of Service</a>
+            </div>
+            <div class="mobile-drawer-footer">
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-full" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+            </div>
+        </div>
+    </div>
+
     <!-- Hero Section -->
-    <section class="hero">
+    <section class="hero" id="hero">
+        <div class="hero-glow hero-glow-1"></div>
+        <div class="hero-glow hero-glow-2"></div>
         <div class="container hero-container">
             <div class="hero-content">
-                <div class="badge">✨ v1.0 Live &bull; v1.2-Beta (AI) Coming Soon</div>
-                <h1>Your News. <br><span class="gradient-text">Locally Curated.</span> <br>Completely Private.</h1>
-                <p>StreamFolio is a premium RSS reader for Android that keeps you informed without clutter. Combine regional feeds, toggle cross-regional publishers, and organize tabs dynamically.</p>
-                <div class="cta-group-container">
+                <div class="badge">
+                    <span class="badge-dot"></span>
+                    <span>🚀 v1.2.0-beta.8 Live on GitHub &bull; Smart AI Active</span>
+                </div>
+                <h1 id="hero-title">Your News.<br><span class="gradient-text">Locally Curated.</span><br>Completely Private.</h1>
+                <p class="hero-description">StreamFolio is a sleek, simple news app for Android that keeps you informed without clutter or ads. Get instant AI article summaries directly on your phone, listen to news like a podcast, and follow global coverage—with zero tracking.</p>
+                
+                <!-- Primary CTAs & Waitlist Form -->
+                <div class="hero-actions">
                     <div class="cta-group">
-                        <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank">Download v1.0 on GitHub</a>
+                        <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank" rel="noopener">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                            </svg>
+                            <span>Download v1.2.0-beta.8 APK</span>
+                        </a>
                         <a href="#features" class="btn-secondary">Explore Features</a>
                     </div>
+
+                    <!-- Email Waitlist Capture Form -->
+                    <div class="waitlist-card" id="waitlist-card">
+                        <div class="waitlist-header">
+                            <span class="waitlist-icon">🔔</span>
+                            <div>
+                                <h4>Google Play Launch Waitlist</h4>
+                                <p>Be notified the moment StreamFolio is available on the Play Store.</p>
+                            </div>
+                        </div>
+                        <form class="waitlist-form" id="waitlist-form">
+                            <div class="input-wrapper">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                                <input type="email" id="waitlist-email" placeholder="Enter your email address..." required autocomplete="email">
+                            </div>
+                            <button type="submit" class="btn-waitlist" id="waitlist-btn">Join Waitlist</button>
+                        </form>
+                    </div>
+
                     <div class="store-badge-container">
-                        <span class="store-badge"><span class="badge-icon">🤖</span> Coming soon to Google Play Store</span>
-                        <span class="store-badge"><span class="badge-icon">✨</span> AI Insights coming in v1.2</span>
+                        <span class="store-badge"><span class="badge-icon">🤖</span> Google Play Release Pending</span>
+                        <span class="store-badge"><span class="badge-icon">✨</span> Built-In On-Device AI Active</span>
                     </div>
                 </div>
             </div>
+
+            <!-- Hero Phone Visual -->
             <div class="hero-preview">
-                <img src="feed_screenshot.png" alt="StreamFolio Feed Screenshot" class="feed-screenshot">
+                <div class="phone-frame-wrapper">
+                    <div class="phone-frame">
+                        <div class="phone-top-bar">
+                            <div class="phone-speaker"></div>
+                            <div class="phone-camera"></div>
+                        </div>
+                        <div class="phone-screen">
+                            <img src="feed_screenshot.png" alt="StreamFolio Android Feed Screenshot" class="feed-screenshot">
+                        </div>
+                        <div class="phone-glare"></div>
+                        <div class="phone-button phone-vol-up"></div>
+                        <div class="phone-button phone-vol-down"></div>
+                        <div class="phone-button phone-power"></div>
+                    </div>
+                    <div class="phone-shadow"></div>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
+    <!-- Features Section (Bento Grid) -->
     <section class="features" id="features">
         <div class="container">
-            <h2 class="section-title">Designed for Power Readers</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">✨</div>
-                    <h3>On-Device AI Summaries <span class="feature-tag">Coming in v1.2</span></h3>
-                    <p>Get instant bullet-point insights using local Gemini Nano processing. Zero remote server calls means 100% data privacy and offline access.</p>
+            <div class="section-header">
+                <span class="badge">Features You'll Love</span>
+                <h2 class="section-title">Designed for Effortless Daily Reading</h2>
+                <p class="section-subtitle">Smart AI summarization, audio listening, and regional feeds built for speed and privacy.</p>
+            </div>
+
+            <div class="bento-grid">
+                <!-- Large AI Feature Card -->
+                <div class="bento-card bento-hero-card">
+                    <div class="bento-card-bg"></div>
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon ai-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"></path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag ai-tag">Active in v1.2</span>
+                        </div>
+                        <h3>Smart AI Summaries (On Your Phone)</h3>
+                        <p>Get quick bullet-point takeaways for long stories in seconds. Powered by AI that runs directly on your phone, so your reading habits remain 100% private, work offline, and cost nothing.</p>
+                        
+                        <div class="ai-demo-box">
+                            <div class="ai-demo-header">
+                                <span class="ai-sparkle">✨</span>
+                                <span class="ai-demo-title">Key Insight Preview</span>
+                            </div>
+                            <ul class="ai-demo-list">
+                                <li><strong>Runs On Your Phone:</strong> Summaries are processed right inside your device.</li>
+                                <li><strong>Total Privacy:</strong> Your articles are never uploaded to company servers or cloud AI.</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🌍</div>
-                    <h3>Cross-Regional Feeds <span class="feature-tag active">v1.0 Live</span></h3>
-                    <p>Subscribe to top publishers from the US, GB, SG, IN, CA, AU, and more. Easily toggle cross-regional sources while maintaining your main regional feed.</p>
+
+                <!-- Feature 2: Cross-Regional Feeds -->
+                <div class="bento-card">
+                    <div class="feature-header">
+                        <div class="feature-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="2" y1="12" x2="22" y2="12"></line>
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                            </svg>
+                        </div>
+                        <span class="feature-tag active">Hong Kong Added</span>
+                    </div>
+                    <h3>Global & Local News</h3>
+                    <p>Switch seamlessly between top publishers in Hong Kong, US, UK, Singapore, India, Canada, and Australia. Read SCMP, HKFP, RTHK, and more with a single tap.</p>
+                    <div class="region-chips">
+                        <span class="chip chip-new">🇭🇰 HK (New)</span>
+                        <span class="chip">🇺🇸 US</span>
+                        <span class="chip">🇬🇧 UK</span>
+                        <span class="chip">🇸🇬 SG</span>
+                        <span class="chip">🇮🇳 IN</span>
+                        <span class="chip">🇨🇦 CA</span>
+                        <span class="chip">🇦🇺 AU</span>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>Drag-and-Drop Curation <span class="feature-tag active">v1.0 Live</span></h3>
-                    <p>Take control of your feed tabs. Drag, drop, and reorder categories or custom RSS folders through our interactive Settings dashboard.</p>
+
+                <!-- Feature 3: Audio Playlist Memory -->
+                <div class="bento-card">
+                    <div class="feature-header">
+                        <div class="feature-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18V5l12-2v13"></path>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <circle cx="18" cy="16" r="3"></circle>
+                            </svg>
+                        </div>
+                        <span class="feature-tag active">Audio Player</span>
+                    </div>
+                    <h3>Listen to Articles Anywhere</h3>
+                    <p>Turn your news into a podcast! Listen to articles with clear Text-to-Speech audio. Your playlist saves automatically, so you can resume listening even after restarting your app.</p>
+                </div>
+
+                <!-- Feature 4: 100% Private -->
+                <div class="bento-card">
+                    <div class="feature-header">
+                        <div class="feature-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                        </div>
+                        <span class="feature-tag active">100% Private</span>
+                    </div>
+                    <h3>Zero Tracking & Offline Ready</h3>
+                    <p>No account or signup needed. Your bookmarks and news feeds stay strictly on your phone. Plus, a helpful offline indicator lets you know when you're reading saved stories without internet.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Legal Privacy Modal -->
-    <div class="modal-overlay" id="privacy-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Privacy Policy</h2>
-                <button class="close-btn" onclick="closeModal('privacy-modal')">&times;</button>
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <span class="badge">Simplicity First</span>
+                <h2 class="section-title">How It Works</h2>
+                <p class="section-subtitle">Get started with private news reading in 3 simple steps.</p>
             </div>
-            <div class="modal-body font-legal">
-                <p class="legal-date">Last Updated: June 29, 2026</p>
-                
-                <h3>1. Overview and Core Principle</h3>
-                <p>StreamFolio ("the Application") is built from the ground up to respect user privacy. <strong>We do not collect, store, transmit, or share any personal data.</strong> The Application functions primarily as a local client that fetches public RSS/Atom XML feeds directly from publisher websites and parses them locally on your device.</p>
 
-                <h3>2. On-Device Local Processing</h3>
-                <p>All core actions are performed locally on your physical device, ensuring maximum security and data privacy:</p>
-                <ul>
-                    <li><strong>Local Caching:</strong> Article entries, bookmarks, custom RSS URLs, and categories are saved directly in a local database (Android Room SQLite) on your device. This data never leaves your device.</li>
-                    <li><strong>On-Device AI Summarization:</strong> Article text summarization (coming soon in v1.2) is performed strictly locally using Google's <strong>ML Kit GenAI Summarization API</strong> (powered by Gemini Nano and the AICore system service). The full text of the articles is processed entirely on your physical hardware. No article bodies, query parameters, or parsed logs are transmitted to any cloud servers for summarization.</li>
-                    <li><strong>Text-to-Speech (TTS):</strong> Article listening uses the built-in Android TextToSpeech engine on your device.</li>
-                </ul>
-
-                <h3>3. Third-Party Websites and Services</h3>
-                <p>When you click on an article to read the full story in Web View mode, the Application loads the publisher's public webpage within a standard Android WebView component. We do not control and are not responsible for the privacy practices, tracking cookies, or contents of third-party publisher websites. We recommend reviewing the privacy statements of those websites.</p>
-
-                <h3>4. Network Access and Operations</h3>
-                <p>The Application requests standard Internet permissions solely to download the XML feeds of publishers you select. We do not use proprietary tracking metrics or analytics engines (such as Google Analytics or Firebase Analytics) inside the client app.</p>
-
-                <h3>5. Policy Revisions</h3>
-                <p>We may update this Privacy Policy to reflect changes in local device capabilities. Continued use of the Application signifies your agreement to local-only processing principles.</p>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <h3>Download the App</h3>
+                    <p>Get the latest v1.2.0-beta.8 release directly from GitHub, or join our waitlist for the upcoming Google Play release.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <h3>Pick Your Topics</h3>
+                    <p>Select news regions (like Hong Kong or US) or add your favorite blog links. Easily drag and drop tabs to reorder your feeds.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <h3>Read & Listen Worry-Free</h3>
+                    <p>Enjoy clean, ad-free news with instant AI bullet summaries, offline saved articles, and background audio listening.</p>
+                </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section class="testimonials" id="testimonials">
+        <div class="container">
+            <div class="section-header">
+                <span class="badge">Community Reviews</span>
+                <h2 class="section-title">Loved by Readers</h2>
+                <p class="section-subtitle">See what daily readers love about StreamFolio.</p>
+            </div>
+
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="rating">★★★★★</div>
+                    <p class="testimonial-quote">"The new Hong Kong news coverage is awesome! And having the AI summary run directly on my phone without sending data to cloud servers gives me complete peace of mind."</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">AC</div>
+                        <div>
+                            <h4>Alex Chen</h4>
+                            <p>Daily News Reader & Tech Blogger</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="testimonial-card">
+                    <div class="rating">★★★★★</div>
+                    <p class="testimonial-quote">"The audio playlist feature is a game-changer for my commute. I can queue up 5 articles, get on the subway, and listen hands-free even when I lose signal!"</p>
+                    <div class="testimonial-author">
+                        <div class="author-avatar">ER</div>
+                        <div>
+                            <h4>Elena Rostova</h4>
+                            <p>Digital Journalist & Podcast Listener</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Waitlist CTA Callout Banner -->
+    <section class="cta-banner-section">
+        <div class="container">
+            <div class="cta-banner">
+                <div class="cta-banner-content">
+                    <h2>Ready for Better News Reading?</h2>
+                    <p>Download StreamFolio v1.2.0-beta.8 today or join our waitlist for the official Google Play launch.</p>
+                </div>
+                <div class="cta-banner-actions">
+                    <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary" target="_blank" rel="noopener">Download v1.2.0-beta.8 APK</a>
+                    <a href="#waitlist-card" class="btn-secondary waitlist-scroll-link">Join Play Waitlist</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Floating Sticky CTA Bar -->
+    <div class="mobile-sticky-bar" id="mobile-sticky-bar">
+        <div class="mobile-sticky-container">
+            <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sticky" target="_blank" rel="noopener">
+                <span>Download APK</span>
+            </a>
+            <a href="#waitlist-card" class="btn-secondary btn-sticky waitlist-scroll-link">
+                <span>Join Waitlist</span>
+            </a>
         </div>
     </div>
 
-    <!-- Legal ToS Modal -->
-    <div class="modal-overlay" id="tos-modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h2>Terms of Service</h2>
-                <button class="close-btn" onclick="closeModal('tos-modal')">&times;</button>
-            </div>
-            <div class="modal-body font-legal">
-                <p class="legal-date">Last Updated: June 29, 2026</p>
-
-                <h3>1. Acceptance of Terms</h3>
-                <p>By downloading, installing, or using StreamFolio ("the Application"), you agree to be bound by these Terms of Service. If you do not agree to these terms, do not install or use the Application.</p>
-
-                <h3>2. Permitted Use</h3>
-                <p>The Application is provided for personal, non-commercial use as an aggregator client. You are solely responsible for all RSS/Atom feed URLs you manually add to the Application. You agree not to use the Application for any unlawful activities or in a manner that disrupts publisher servers.</p>
-
-                <h3>3. Intellectual Property and Content Ownership</h3>
-                <p>StreamFolio does not own the text, images, or articles displayed within the RSS feeds. All headlines, summaries, and full articles parsed from RSS feeds are the intellectual property of their respective publishers. The Application merely renders public content feeds for convenient personal reading.</p>
-
-                <h3>4. Disclaimer of Warranties</h3>
-                <p>THE APPLICATION IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE DISCLAIM ALL WARRANTIES, INCLUDING MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE PARSING OF FEED ENDPOINTS WILL BE UNINTERRUPTED, ERROR-FREE, OR COMPATIBLE WITH ALL CUSTOM RSS FORMATS.</p>
-
-                <h3>5. Limitation of Liability</h3>
-                <p>IN NO EVENT SHALL THE DEVELOPERS, AUTHORS, OR CONTRIBUTING MAINTAINERS OF STREAMFOLIO BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF OR INABILITY TO USE THE APPLICATION, INCLUDING DATABASE LOSSES, DEVICE HARDWARE INCOMPATIBILITY WITH AICORE/GEMINI NANO, OR NETWORK FEES incurred while downloading model weights.</p>
-
-                <h3>6. Governing Law</h3>
-                <p>These terms shall be governed by and construed in accordance with the laws of your local jurisdiction, without regard to conflict of law provisions.</p>
-            </div>
-        </div>
-    </div>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toast-container"></div>
 
     <!-- Footer -->
     <footer class="footer">
         <div class="container footer-container">
-            <p>&copy; 2026 StreamFolio. All rights reserved. Built for absolute privacy.</p>
+            <div class="footer-brand">
+                <a href="#" class="logo">
+                    <img src="logo.png" alt="StreamFolio Logo" class="logo-img">
+                    <span>StreamFolio</span>
+                </a>
+                <p>&copy; 2026 StreamFolio. All rights reserved. Built for absolute privacy.</p>
+            </div>
             <div class="footer-links">
-                <button class="footer-btn" onclick="openModal('privacy-modal')">Privacy Policy</button>
+                <a href="changelog.html" class="footer-link">Changelog</a>
                 <span>&bull;</span>
-                <button class="footer-btn" onclick="openModal('tos-modal')">Terms of Service</button>
+                <a href="privacy.html" class="footer-link">Privacy Policy</a>
+                <span>&bull;</span>
+                <a href="terms.html" class="footer-link">Terms of Service</a>
+                <span>&bull;</span>
+                <a href="https://github.com/sm32d/streamfolio" target="_blank" rel="noopener" class="footer-link">GitHub</a>
             </div>
         </div>
     </footer>

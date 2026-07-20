@@ -1,36 +1,176 @@
-// Modal Navigation Logic
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden'; // Stop background scrolling
-    }
-}
+// StreamFolio Landing Page Interactive JS
 
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = ''; // Re-enable background scrolling
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Navbar Scroll Header Effect
+    const navbar = document.getElementById('navbar');
+    if (navbar) {
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
     }
-}
 
-// Close modal if user clicks outside of the modal dialog content box
-window.addEventListener('click', function(event) {
-    const modals = document.querySelectorAll('.modal-overlay');
-    modals.forEach(modal => {
-        if (event.target === modal) {
-            modal.classList.remove('active');
+    // 2. Mobile Slide-Out Drawer Navigation Toggle
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const drawerCloseBtn = document.getElementById('drawer-close-btn');
+    const mobileDrawer = document.getElementById('mobile-drawer');
+
+    function openDrawer() {
+        if (mobileDrawer) {
+            mobileDrawer.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeDrawer() {
+        if (mobileDrawer) {
+            mobileDrawer.classList.remove('active');
             document.body.style.overflow = '';
         }
+    }
+
+    if (hamburgerBtn) {
+        hamburgerBtn.addEventListener('click', openDrawer);
+    }
+
+    if (drawerCloseBtn) {
+        drawerCloseBtn.addEventListener('click', closeDrawer);
+    }
+
+    if (mobileDrawer) {
+        mobileDrawer.addEventListener('click', (e) => {
+            if (e.target === mobileDrawer) {
+                closeDrawer();
+            }
+        });
+
+        // Close drawer when clicking any nav link
+        const drawerLinks = mobileDrawer.querySelectorAll('.drawer-link');
+        drawerLinks.forEach(link => {
+            link.addEventListener('click', closeDrawer);
+        });
+    }
+
+    // 3. Mobile Floating Sticky CTA Bar (Appears when scrolling past hero)
+    const mobileStickyBar = document.getElementById('mobile-sticky-bar');
+    const heroSection = document.querySelector('.hero');
+
+    if (mobileStickyBar && heroSection) {
+        window.addEventListener('scroll', () => {
+            const heroBottom = heroSection.offsetTop + heroSection.offsetHeight - 200;
+            if (window.scrollY > heroBottom && window.innerWidth <= 768) {
+                mobileStickyBar.classList.add('visible');
+            } else {
+                mobileStickyBar.classList.remove('visible');
+            }
+        });
+    }
+
+    // 4. Smooth Scroll for "Join Play Waitlist" Links (Navbar offset + auto-focus)
+    const waitlistScrollLinks = document.querySelectorAll('.waitlist-scroll-link, a[href="#waitlist-card"]');
+    waitlistScrollLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const target = document.getElementById('waitlist-card');
+            if (target) {
+                const navbarHeight = document.getElementById('navbar')?.offsetHeight || 80;
+                const elementPosition = target.getBoundingClientRect().top + window.pageYOffset;
+                const offsetPosition = elementPosition - navbarHeight - 24;
+
+                window.scrollTo({
+                    top: Math.max(0, offsetPosition),
+                    behavior: 'smooth'
+                });
+
+                // Auto focus email input field after smooth scroll completes
+                setTimeout(() => {
+                    const emailInput = document.getElementById('waitlist-email');
+                    if (emailInput) {
+                        emailInput.focus();
+                    }
+                }, 550);
+            }
+        });
     });
+
+    // 5. Waitlist Form Submission Logic
+    const waitlistForm = document.getElementById('waitlist-form');
+    const waitlistEmail = document.getElementById('waitlist-email');
+    const waitlistBtn = document.getElementById('waitlist-btn');
+
+    if (waitlistForm && waitlistEmail) {
+        waitlistForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = waitlistEmail.value.trim();
+
+            if (!email || !validateEmail(email)) {
+                showToast('⚠️ Please enter a valid email address.', 'error');
+                return;
+            }
+
+            // Save to localStorage
+            const existingEmails = JSON.parse(localStorage.getItem('streamfolio_waitlist') || '[]');
+            if (!existingEmails.includes(email)) {
+                existingEmails.push(email);
+                localStorage.setItem('streamfolio_waitlist', JSON.stringify(existingEmails));
+            }
+
+            // UI Feedback
+            if (waitlistBtn) {
+                waitlistBtn.textContent = 'Joined!';
+                waitlistBtn.style.opacity = '0.8';
+            }
+            showToast('🎉 Thank you! You\'re on the StreamFolio Play Store waitlist.', 'success');
+
+            waitlistEmail.value = '';
+            setTimeout(() => {
+                if (waitlistBtn) {
+                    waitlistBtn.textContent = 'Join Waitlist';
+                    waitlistBtn.style.opacity = '1';
+                }
+            }, 3000);
+        });
+    }
+
+    // 6. Smooth Scroll for Logo
+    const logoLink = document.getElementById('logo-link');
+    if (logoLink) {
+        logoLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
 });
 
-// Smooth scroll implementation
-document.getElementById('logo-link').addEventListener('click', function(e) {
-    e.preventDefault();
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
-});
+// Email Regex Validation Helper
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+}
+
+// Toast Notification System
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = message;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px) scale(0.9)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, 4000);
+}
