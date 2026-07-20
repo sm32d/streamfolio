@@ -140,9 +140,9 @@
             <div class="hero-content">
                 <h1 id="hero-title">The RSS reader that runs on your phone, <span class="gradient-text">not in the
                         cloud.</span></h1>
-                <p class="hero-description">StreamFolio combines local news curation, on-device Gemini AI summaries*,
-                    and background audio listening into a clean, ad-free Android app. Zero tracking, zero accounts, zero
-                    cloud servers.</p>
+                <p class="hero-description">StreamFolio combines local news curation, on-device Gemini AI
+                    summaries<sup>*</sup>, and background audio listening into a clean, ad-free Android app. Zero
+                    tracking, zero accounts, zero cloud servers.</p>
 
                 <!-- Live Feature Micro-Badges Row -->
                 <div class="hero-ticker-group">
@@ -151,7 +151,7 @@
                             stroke-width="2">
                             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                         </svg>
-                        100% On-Device AI*
+                        100% On-Device AI<sup>*</sup>
                     </span>
                     <span class="ticker-badge">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -239,7 +239,7 @@
                                     points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                                 </polygon>
                             </svg>
-                            Built-In On-Device AI Active*
+                            Built-In On-Device AI Active<sup>*</sup>
                         </span>
                     </div>
                 </div>
@@ -275,12 +275,12 @@
                     Features You'll Love
                 </span>
                 <h2 class="section-title">Designed for Effortless Daily Reading</h2>
-                <p class="section-subtitle">Custom RSS feeds, smart AI summarization*, audio listening, Material You
-                    theming, and zero vendor lock-in.</p>
+                <p class="section-subtitle">Custom RSS feeds, smart AI summarization<sup>*</sup>, audio listening,
+                    Material You theming, and zero vendor lock-in.</p>
             </div>
 
             <div class="bento-grid">
-                <!-- ROW 1: Card 1 (Spans 2 cols) + Card 2 (Spans 1 col) -->
+                <!-- GROUPED AI FEATURES ROW 1: Card 1 (Spans 2 cols) + Card 2 (Spans 1 col) -->
                 <div class="bento-card bento-span-2 bento-hero-card">
                     <div class="bento-card-bg"></div>
                     <div class="bento-card-content">
@@ -295,7 +295,7 @@
                             </div>
                             <span class="feature-tag ai-tag">Active in v1.2</span>
                         </div>
-                        <h3>Smart AI Summaries (On Your Phone)*</h3>
+                        <h3>Smart AI Summaries (On Your Phone)<sup>*</sup></h3>
                         <p>Get quick bullet-point takeaways for long stories in seconds. Powered by AI that runs
                             directly on your phone, so your reading habits remain 100% private, work offline, and cost
                             nothing.</p>
@@ -317,8 +317,67 @@
                                     or cloud AI.</li>
                             </ul>
                         </div>
-                        <p class="ai-disclaimer-note">* On-device AI features require a compatible Android device
-                            supporting Google AICore / Gemini Nano or NPU hardware acceleration.</p>
+                    </div>
+                </div>
+
+                <div class="bento-card">
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="m5 8 6 6"></path>
+                                    <path d="m4 14 6-6 2-3"></path>
+                                    <path d="M2 5h12"></path>
+                                    <path d="M7 2h1"></path>
+                                    <path d="m22 22-5-10-5 10"></path>
+                                    <path d="M14 18h6"></path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Offline ML Kit</span>
+                        </div>
+                        <h3>Offline Translation<sup>**</sup></h3>
+                        <p>Translate articles into 50+ languages with zero latency. Processes 100% locally on your phone
+                            using Google's on-device translation model.</p>
+
+                        <div class="bento-preview-box translation-demo-box">
+                            <div class="translation-langs">
+                                <span class="translation-lang">English</span>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M5 12h14"></path>
+                                    <path d="m12 5 7 7-7 7"></path>
+                                </svg>
+                                <span class="translation-lang">日本語</span>
+                            </div>
+                            <span class="translation-status">6 Languages Supported</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GROUPED AI FEATURES ROW 2: Card 3 (Spans 1 col) + Remaining Customization Cards -->
+                <div class="bento-card">
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path
+                                        d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82zM7 7h.01">
+                                    </path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag tag-beta">Beta</span>
+                        </div>
+                        <h3>Smart Categories & Tags</h3>
+                        <p>Let local processing automatically tag and categorize incoming news by topics, keywords, and
+                            relevance without sending reading behavior to cloud metrics.</p>
+
+                        <div class="bento-preview-box tags-demo-box">
+                            <span class="tag-chip">Technology</span>
+                            <span class="tag-chip">Science</span>
+                            <span class="tag-chip">Business</span>
+                        </div>
                     </div>
                 </div>
 
@@ -354,7 +413,6 @@
                     </div>
                 </div>
 
-                <!-- ROW 2: 3 Equal Columns (1 col each) -->
                 <div class="bento-card">
                     <div class="bento-card-content">
                         <div class="feature-header">
@@ -448,7 +506,32 @@
                     </div>
                 </div>
 
-                <!-- ROW 3: Card 6 (Spans 1 col) + Card 7 (Spans 2 cols - Wider Right!) -->
+                <!-- ROW 4: OPML & Zero Tracking -->
+                <div class="bento-card">
+                    <div class="bento-card-content">
+                        <div class="feature-header">
+                            <div class="feature-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                            </div>
+                            <span class="feature-tag active">Offline Ready</span>
+                        </div>
+                        <h3>Offline Bookmarks</h3>
+                        <p>Save articles directly to your phone for later. Read anytime, even without an internet
+                            connection — perfect for commutes and travel.</p>
+
+                        <div class="bento-preview-box bookmark-demo-box">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span class="bookmark-status">12 Articles Saved</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="bento-card">
                     <div class="bento-card-content">
                         <div class="feature-header">
@@ -556,7 +639,7 @@
                 <!-- Phone 2: Material You Dark & On-Device AI Summaries -->
                 <div class="showcase-card theme-card-ai">
                     <div class="theme-pill-badge pill-ai">
-                        <span class="pill-dot"></span> Material You Dark
+                        <span class="pill-dot"></span> Material You Dark<sup>#</sup>
                     </div>
                     <div class="showcase-phone-frame frame-ai">
                         <div class="phone-top-bar">
@@ -569,9 +652,9 @@
                         </div>
                         <div class="phone-glare"></div>
                     </div>
-                    <h3 class="showcase-caption">On-Device AI Summaries*</h3>
-                    <p class="showcase-subcaption">Dynamic dark palette auto-synced to your wallpaper. Generate instant
-                        3-bullet takeaways processed 100% on your phone.</p>
+                    <h3 class="showcase-caption">On-Device AI Summaries<sup>*</sup></h3>
+                    <p class="showcase-subcaption">Dynamic dark palette auto-synced to your wallpaper<sup>#</sup>.
+                        Generate instant 3-bullet takeaways processed 100% on your phone.</p>
                 </div>
 
                 <!-- Phone 3: Default Light Theme & Instant Search -->
@@ -597,7 +680,7 @@
                 <!-- Phone 4: Material You Light & Offline Bookmarks -->
                 <div class="showcase-card theme-card-my-light">
                     <div class="theme-pill-badge pill-my-light">
-                        <span class="pill-dot"></span> Material You Light
+                        <span class="pill-dot"></span> Material You Light<sup>#</sup>
                     </div>
                     <div class="showcase-phone-frame frame-my-light">
                         <div class="phone-top-bar">
@@ -611,8 +694,8 @@
                         <div class="phone-glare"></div>
                     </div>
                     <h3 class="showcase-caption">Offline Bookmarks</h3>
-                    <p class="showcase-subcaption">Warm daytime theme adapted to system accent colors. Save important
-                        stories to Android SQLite for offline reading.</p>
+                    <p class="showcase-subcaption">Warm daytime theme adapted to system accent colors<sup>#</sup>. Save
+                        important stories to Android SQLite for offline reading.</p>
                 </div>
             </div>
         </div>
@@ -649,8 +732,8 @@
                 <div class="step-card">
                     <div class="step-number">03</div>
                     <h3>Read & Listen Worry-Free</h3>
-                    <p>Enjoy clean, ad-free news with instant AI bullet summaries*, offline saved articles, and
-                        background audio listening.</p>
+                    <p>Enjoy clean, ad-free news with instant AI bullet summaries<sup>*</sup>, offline saved articles,
+                        and background audio listening.</p>
                 </div>
             </div>
         </div>
@@ -771,7 +854,7 @@
                             <path
                                 d="M17.523 15.3414C17.06 15.3414 16.687 14.9684 16.687 14.507C16.687 14.0456 17.06 13.6726 17.523 13.6726C17.984 13.6726 18.357 14.0456 18.357 14.507C18.357 14.9684 17.984 15.3414 17.523 15.3414ZM6.477 15.3414C6.015 15.3414 5.642 14.9684 5.642 14.507C5.642 14.0456 6.015 13.6726 6.477 13.6726C6.938 13.6726 7.311 14.0456 7.311 14.507C7.311 14.9684 6.938 15.3414 6.477 15.3414ZM17.886 10.457L19.467 7.719C19.605 7.48 19.525 7.174 19.286 7.036C19.047 6.898 18.74 6.978 18.603 7.217L17.001 9.992C15.525 9.317 13.84 8.932 12 8.932C10.16 8.932 8.475 9.317 6.999 9.992L5.397 7.217C5.259 6.978 4.953 6.898 4.714 7.036C4.475 7.174 4.395 7.48 4.533 7.719L6.114 10.457C2.695 12.316 0.358 15.807 0 19.932H24C23.642 15.807 21.305 12.316 17.886 10.457Z" />
                         </svg>
-                        <span>Download for Android (APK)</span>
+                        <span>Download for Android (v1.2.0-beta.8)</span>
                     </a>
                     <a href="#waitlist-card" class="btn-secondary waitlist-scroll-link">Join Play Waitlist</a>
                 </div>
@@ -801,6 +884,23 @@
 
     <!-- Footer -->
     <footer class="footer">
+        <div class="container footer-disclaimers-container">
+            <div class="footer-disclaimers">
+                <p class="disclaimer-item"><sup>*</sup> On-device AI summaries require a compatible Android device
+                    supporting Google AICore / Gemini Nano or NPU hardware acceleration (see <a
+                        href="https://developer.android.com/ai/gemini-nano" target="_blank" rel="noopener"
+                        class="disclaimer-link">Google Gemini Nano documentation</a>). Initial on-device model file
+                    download required.</p>
+                <p class="disclaimer-item"><sup>**</sup> Offline language translation requires a one-time download of
+                    local language translation model files (see <a
+                        href="https://developers.google.com/ml-kit/language/translation/android" target="_blank"
+                        rel="noopener" class="disclaimer-link">Google ML Kit Translation documentation</a>).</p>
+                <p class="disclaimer-item"><sup>#</sup> Material You theme colors dynamically adapt to match each user's
+                    individual Android system wallpaper palette (see <a
+                        href="https://source.android.com/docs/core/display/material" target="_blank" rel="noopener"
+                        class="disclaimer-link">Android Material Dynamic Color documentation</a>).</p>
+            </div>
+        </div>
         <div class="container footer-container">
             <div class="footer-brand">
                 <a href="#" class="logo">
