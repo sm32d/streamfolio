@@ -2023,10 +2023,34 @@ h1, h2, h3, h4 {
 
 /* Mobile Responsiveness */
 @media (max-width: 1024px) {
+    .hero {
+        padding-top: 0;
+        padding-bottom: 60px;
+    }
+
     .hero-container {
-        grid-template-columns: 1fr;
+        display: flex;
+        flex-direction: column;
         gap: 50px;
         text-align: center;
+        padding-top: 0;
+    }
+
+    .hero-preview {
+        order: -1;
+        height: 100svh;
+        min-height: 100svh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        box-sizing: border-box;
+        padding-top: 76px;
+    }
+
+    .hero-phone-showcase {
+        max-width: 290px;
+        margin: 0 auto;
     }
 
     .hero-description {
@@ -2101,16 +2125,29 @@ h1, h2, h3, h4 {
     }
 
     .hero-content h1 {
-        font-size: 38px;
-    }
-
-    .phone-frame-wrapper {
-        max-width: 260px;
+        font-size: 36px;
     }
 
     .showcase-grid {
-        grid-template-columns: 1fr;
-        gap: 32px;
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        gap: 20px;
+        padding: 10px 20px 24px 20px;
+        margin-left: -20px;
+        margin-right: -20px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .showcase-grid::-webkit-scrollbar {
+        display: none;
+    }
+
+    .showcase-card {
+        flex: 0 0 84%;
+        max-width: 310px;
+        scroll-snap-align: center;
     }
 
     .footer-container {
