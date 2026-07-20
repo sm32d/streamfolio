@@ -25,6 +25,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    
+    <!-- Instant Theme Persistence Script (Supports HTTP domain & local file:// protocol) -->
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var urlTheme = params.get('theme');
+            var savedTheme = localStorage.getItem('streamfolio_landing_theme');
+            var theme = urlTheme || savedTheme;
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
 </head>
 <body>
     <!-- Navbar -->
@@ -36,10 +49,12 @@
             </a>
             <nav class="nav-links">
                 <a href="#features">Features</a>
+                <a href="#showcase">Screenshots</a>
                 <a href="#how-it-works">How It Works</a>
                 <a href="#testimonials">Reviews</a>
                 <a href="changelog.html">Changelog</a>
                 <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+                <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Switch Theme" title="Switch Theme">☀️</button>
             </nav>
             <button class="hamburger-btn" id="hamburger-btn" aria-label="Open Navigation Menu">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -63,6 +78,7 @@
             </div>
             <div class="mobile-drawer-body">
                 <a href="#features" class="drawer-link">Features</a>
+                <a href="#showcase" class="drawer-link">Screenshots</a>
                 <a href="#how-it-works" class="drawer-link">How It Works</a>
                 <a href="#testimonials" class="drawer-link">Reviews</a>
                 <a href="changelog.html" class="drawer-link">Changelog</a>
@@ -224,15 +240,15 @@
                                     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                                 </svg>
                             </div>
-                            <span class="feature-tag active">Hong Kong Added</span>
+                            <span class="feature-tag active">Global News</span>
                         </div>
                         <h3>Global & Local News</h3>
-                        <p>Switch seamlessly between top publishers in Hong Kong, US, UK, Singapore, India, Canada, and Australia with a single tap.</p>
+                        <p>Switch seamlessly between top publishers across the US, UK, Hong Kong, Singapore, India, Canada, and Australia with a single tap.</p>
                         
                         <div class="bento-preview-box region-chips">
-                            <span class="chip chip-new">🇭🇰 HK (New)</span>
                             <span class="chip">🇺🇸 US</span>
                             <span class="chip">🇬🇧 UK</span>
+                            <span class="chip chip-new">🇭🇰 HK</span>
                             <span class="chip">🇸🇬 SG</span>
                             <span class="chip">🇮🇳 IN</span>
                             <span class="chip">🇨🇦 CA</span>
@@ -337,6 +353,95 @@
         </div>
     </section>
 
+    <!-- App Interface Showcase Section -->
+    <section class="showcase-section" id="showcase">
+        <div class="container">
+            <div class="section-header">
+                <span class="badge">🎨 4 Flexible Theme Styles</span>
+                <h2 class="section-title">Designed for Every Reading Style</h2>
+                <p class="section-subtitle">StreamFolio adapts to your preference. Switch seamlessly between dark mode, light mode, and dynamic Material You theme matching.</p>
+            </div>
+
+            <div class="showcase-grid">
+                <!-- Phone 1: Default Dark Theme -->
+                <div class="showcase-card theme-card-dark">
+                    <div class="theme-pill-badge pill-dark">
+                        <span class="pill-dot"></span> 🌙 Default Dark Theme
+                    </div>
+                    <div class="showcase-phone-frame frame-dark">
+                        <div class="phone-top-bar">
+                            <div class="phone-speaker"></div>
+                            <div class="phone-camera"></div>
+                        </div>
+                        <div class="showcase-phone-screen">
+                            <img src="feed_screenshot.png" alt="StreamFolio Dark Feed Screenshot" class="showcase-img">
+                        </div>
+                        <div class="phone-glare"></div>
+                    </div>
+                    <h3 class="showcase-caption">Dark Mode Feed</h3>
+                    <p class="showcase-subcaption">Browse your favorite top publishers and global curated news in crisp, high-contrast dark mode.</p>
+                </div>
+
+                <!-- Phone 2: Material You Dark Theme -->
+                <div class="showcase-card theme-card-ai">
+                    <div class="theme-pill-badge pill-ai">
+                        <span class="pill-dot"></span> ✨ Material You Dark
+                    </div>
+                    <div class="showcase-phone-frame frame-ai">
+                        <div class="phone-top-bar">
+                            <div class="phone-speaker"></div>
+                            <div class="phone-camera"></div>
+                        </div>
+                        <div class="showcase-phone-screen">
+                            <img src="material_you_ai_summary.jpg" alt="StreamFolio Gemini AI Summary Screenshot" class="showcase-img">
+                        </div>
+                        <div class="phone-glare"></div>
+                    </div>
+                    <h3 class="showcase-caption">On-Device Gemini AI</h3>
+                    <p class="showcase-subcaption">Get 3-bullet instant takeaways with local AI & wallpaper-matched plum accent colors.</p>
+                </div>
+
+                <!-- Phone 3: Default Light Theme -->
+                <div class="showcase-card theme-card-light">
+                    <div class="theme-pill-badge pill-light">
+                        <span class="pill-dot"></span> ☀️ Default Light Theme
+                    </div>
+                    <div class="showcase-phone-frame frame-light">
+                        <div class="phone-top-bar">
+                            <div class="phone-speaker"></div>
+                            <div class="phone-camera"></div>
+                        </div>
+                        <div class="showcase-phone-screen">
+                            <img src="light_search.jpg" alt="StreamFolio Light Search Screenshot" class="showcase-img">
+                        </div>
+                        <div class="phone-glare"></div>
+                    </div>
+                    <h3 class="showcase-caption">Instant Search</h3>
+                    <p class="showcase-subcaption">Clean daytime reading view with instant article & topic keyword search.</p>
+                </div>
+
+                <!-- Phone 4: Material You Light Theme -->
+                <div class="showcase-card theme-card-my-light">
+                    <div class="theme-pill-badge pill-my-light">
+                        <span class="pill-dot"></span> 🎨 Material You Light
+                    </div>
+                    <div class="showcase-phone-frame frame-my-light">
+                        <div class="phone-top-bar">
+                            <div class="phone-speaker"></div>
+                            <div class="phone-camera"></div>
+                        </div>
+                        <div class="showcase-phone-screen">
+                            <img src="light_bookmarks.jpg" alt="StreamFolio Light Theme Bookmarks Screenshot" class="showcase-img">
+                        </div>
+                        <div class="phone-glare"></div>
+                    </div>
+                    <h3 class="showcase-caption">Material You Bookmarks</h3>
+                    <p class="showcase-subcaption">Warm daytime theme that matches your phone's wallpaper accent palette.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- How It Works Section -->
     <section class="how-it-works" id="how-it-works">
         <div class="container">
@@ -355,7 +460,7 @@
                 <div class="step-card">
                     <div class="step-number">02</div>
                     <h3>Pick Your Topics</h3>
-                    <p>Select news regions (like Hong Kong or US) or add your favorite blog links. Easily drag and drop tabs to reorder your feeds.</p>
+                    <p>Select news regions (like US, UK, or HK) or add your favorite blog links. Easily drag and drop tabs to reorder your feeds.</p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">03</div>
@@ -378,7 +483,7 @@
             <div class="testimonials-grid">
                 <div class="testimonial-card">
                     <div class="rating">★★★★★</div>
-                    <p class="testimonial-quote">"The new Hong Kong news coverage is awesome! And having the AI summary run directly on my phone without sending data to cloud servers gives me complete peace of mind."</p>
+                    <p class="testimonial-quote">"The multi-region news coverage is awesome! And having the AI summary run directly on my phone without sending data to cloud servers gives me complete peace of mind."</p>
                     <div class="testimonial-author">
                         <div class="author-avatar">AC</div>
                         <div>

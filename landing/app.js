@@ -4,7 +4,7 @@
 // WAITLIST GOOGLE SHEETS ENDPOINT CONFIGURATION
 // Paste your Google Apps Script Web App URL below after completing setup
 // ----------------------------------------------------------------------
-const WAITLIST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzRdvpbEaRghnUtiW9-0j7L_BABCVRLvVFdQhILOqp6A_yG6DgEJai55NJCl4H971rJ/exec';
+const WAITLIST_ENDPOINT = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Navbar Scroll Header Effect
@@ -176,6 +176,60 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+    // 7. Site Theme Switcher (Supports HTTP Domain & Local file:// Protocol Fallback)
+    const themeToggleBtns = document.querySelectorAll('#theme-toggle-btn, .theme-toggle-btn');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTheme = urlParams.get('theme');
+    const savedTheme = urlTheme || localStorage.getItem('streamfolio_landing_theme') || 'dark';
+
+    function updatePageLinks(theme) {
+        // Update all HTML page links so local file:// protocol testing carries ?theme= parameter
+        const internalLinks = document.querySelectorAll('a[href$=".html"], a[href^="privacy"], a[href^="terms"], a[href^="changelog"], a[href^="index"]');
+        internalLinks.forEach(link => {
+            try {
+                const url = new URL(link.href, window.location.href);
+                if (theme === 'light') {
+                    url.searchParams.set('theme', 'light');
+                } else {
+                    url.searchParams.delete('theme');
+                }
+                link.href = url.pathname + url.search + url.hash;
+            } catch (err) {}
+        });
+    }
+
+    function applyTheme(theme) {
+        if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            themeToggleBtns.forEach(btn => {
+                btn.innerHTML = '🌙';
+                btn.setAttribute('aria-label', 'Switch to Dark Mode');
+                btn.title = 'Switch to Dark Mode';
+            });
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            themeToggleBtns.forEach(btn => {
+                btn.innerHTML = '☀️';
+                btn.setAttribute('aria-label', 'Switch to Light Mode');
+                btn.title = 'Switch to Light Mode';
+            });
+        }
+        updatePageLinks(theme);
+    }
+
+    applyTheme(savedTheme);
+
+    themeToggleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            try {
+                localStorage.setItem('streamfolio_landing_theme', newTheme);
+            } catch (err) {}
+            applyTheme(newTheme);
+        });
+    });
 });
 
 // Email Regex Validation Helper

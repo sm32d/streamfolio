@@ -10,6 +10,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="index.css">
+    
+    <!-- Instant Theme Persistence Script (Supports HTTP domain & local file:// protocol) -->
+    <script>
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var urlTheme = params.get('theme');
+            var savedTheme = localStorage.getItem('streamfolio_landing_theme');
+            var theme = urlTheme || savedTheme;
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
 </head>
 <body class="legal-page">
     <!-- Navbar -->
@@ -24,6 +37,7 @@
                 <a href="index.html#how-it-works">How It Works</a>
                 <a href="changelog.html">Changelog</a>
                 <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-sm" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+                <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Switch Theme" title="Switch Theme">☀️</button>
             </nav>
         </div>
     </header>
