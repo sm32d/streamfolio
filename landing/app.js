@@ -177,14 +177,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 7. Site Theme Switcher (Supports HTTP Domain & Local file:// Protocol Fallback)
+    // 7. Interactive Hero Phone Screenshot Tabs
+    const heroTabBtns = document.querySelectorAll('#hero-phone-tabs .hero-tab-btn');
+    const heroPhoneImg = document.getElementById('hero-phone-img');
+
+    if (heroTabBtns.length > 0 && heroPhoneImg) {
+        heroTabBtns.forEach(tabBtn => {
+            tabBtn.addEventListener('click', () => {
+                const targetImg = tabBtn.getAttribute('data-img');
+                if (!targetImg) return;
+
+                // Update active tab styling
+                heroTabBtns.forEach(btn => btn.classList.remove('active'));
+                tabBtn.classList.add('active');
+
+                // Cross-fade image transition
+                heroPhoneImg.style.opacity = '0';
+                heroPhoneImg.style.transform = 'scale(0.98)';
+                heroPhoneImg.style.transition = 'all 0.2s ease';
+
+                setTimeout(() => {
+                    heroPhoneImg.src = targetImg;
+                    heroPhoneImg.style.opacity = '1';
+                    heroPhoneImg.style.transform = 'scale(1)';
+                }, 200);
+            });
+        });
+    }
+
+    // 8. Site Theme Switcher (Supports HTTP Domain & Local file:// Protocol Fallback)
     const themeToggleBtns = document.querySelectorAll('#theme-toggle-btn, .theme-toggle-btn');
     const urlParams = new URLSearchParams(window.location.search);
     const urlTheme = urlParams.get('theme');
     const savedTheme = urlTheme || localStorage.getItem('streamfolio_landing_theme') || 'dark';
 
+    const sunSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`;
+    const moonSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`;
+
     function updatePageLinks(theme) {
-        // Update all HTML page links so local file:// protocol testing carries ?theme= parameter
         const internalLinks = document.querySelectorAll('a[href$=".html"], a[href^="privacy"], a[href^="terms"], a[href^="changelog"], a[href^="index"]');
         internalLinks.forEach(link => {
             try {
@@ -203,14 +233,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (theme === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
             themeToggleBtns.forEach(btn => {
-                btn.innerHTML = '🌙';
+                btn.innerHTML = moonSvg;
                 btn.setAttribute('aria-label', 'Switch to Dark Mode');
                 btn.title = 'Switch to Dark Mode';
             });
         } else {
             document.documentElement.removeAttribute('data-theme');
             themeToggleBtns.forEach(btn => {
-                btn.innerHTML = '☀️';
+                btn.innerHTML = sunSvg;
                 btn.setAttribute('aria-label', 'Switch to Light Mode');
                 btn.title = 'Switch to Light Mode';
             });
