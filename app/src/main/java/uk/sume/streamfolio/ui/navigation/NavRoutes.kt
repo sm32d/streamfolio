@@ -364,28 +364,16 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 route = "detail_screen/{url}",
                 arguments = listOf(navArgument("url") { type = NavType.StringType }),
                 enterTransition = {
-                    slideIntoContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    )
+                    fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing))
                 },
                 exitTransition = {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    )
+                    fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
                 },
                 popEnterTransition = {
-                    slideIntoContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    )
+                    fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing))
                 },
                 popExitTransition = {
-                    slideOutOfContainer(
-                        AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    )
+                    fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
                 }
             ) { backStackEntry ->
                 val encodedUrl = backStackEntry.arguments?.getString("url") ?: ""

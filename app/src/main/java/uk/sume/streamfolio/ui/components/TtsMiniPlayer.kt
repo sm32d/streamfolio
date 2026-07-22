@@ -454,6 +454,7 @@ fun TtsLyricsVisualizer(
                         .weight(1f)
                         .clickable {
                             onDismiss()
+                            viewModel.selectArticleForDetail(article)
                             val encodedUrl = java.net.URLEncoder.encode(article.link, "UTF-8")
                             navController.navigate("detail_screen/$encodedUrl")
                         }

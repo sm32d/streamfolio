@@ -118,6 +118,7 @@ fun BookmarkScreen(
                     ) { article ->
                         val onTap = remember(article.link) {
                             {
+                                viewModel.selectArticleForDetail(article)
                                 val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                 navController.navigate("detail_screen/$encodedUrl")
                             }

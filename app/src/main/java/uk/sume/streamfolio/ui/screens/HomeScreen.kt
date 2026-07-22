@@ -554,6 +554,7 @@ fun HomeScreen(
                                                         Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
                                                     },
                                                     onTap = {
+                                                        viewModel.selectArticleForDetail(article)
                                                         val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                                         navController.navigate("detail_screen/$encodedUrl")
                                                     }
@@ -670,6 +671,7 @@ fun HomeScreen(
                                     val article = group.primary
                                     val onTap = remember(article.link) {
                                         {
+                                            viewModel.selectArticleForDetail(article)
                                             val encodedUrl = URLEncoder.encode(article.link, "UTF-8")
                                             navController.navigate("detail_screen/$encodedUrl")
                                         }
@@ -691,6 +693,7 @@ fun HomeScreen(
                                     }
                                     val onSecondaryTap = remember(navController) {
                                         { secArticle: Article ->
+                                            viewModel.selectArticleForDetail(secArticle)
                                             val encodedUrl = URLEncoder.encode(secArticle.link, "UTF-8")
                                             navController.navigate("detail_screen/$encodedUrl")
                                         }

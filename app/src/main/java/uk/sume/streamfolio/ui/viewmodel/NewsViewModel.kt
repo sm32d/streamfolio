@@ -511,11 +511,19 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun selectArticleForDetail(article: Article) {
+        _currentArticleDetail.value = article
+    }
+
     fun loadArticleBody(url: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _similarArticlesForDetail.value = emptyList()
-            val art = repository.getArticleByLink(url)
-            _currentArticleDetail.value = art
+            
+            var art = _currentArticleDetail.value
+            if (art == null || art.link != url) {
+                art = repository.getArticleByLink(url)
+                _currentArticleDetail.value = art
+            }
 
             if (art != null) {
                 try {
@@ -543,7 +551,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             _isLoadingBody.value = true
             _articleBody.value = ""
             _articleLanguage.value = null
-            resetAiSummary()
+            withContext(Dispatchers.Main) {
+                resetAiSummary()
+            }
             if (art?.aiSummary != null) {
                 if (art.aiSummary == "blocked_by_safety_policy") {
                     _aiSummaryState.value = AiSummaryState.Error("This article touches upon sensitive topics that trigger Gemini Nano's built-in local safety policies.")
@@ -551,7 +561,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     _aiSummaryState.value = AiSummaryState.Success(art.aiSummary)
                 }
             }
-            ttsHelper.stop() // Stop playing previous article
+            withContext(Dispatchers.Main) {
+                ttsHelper.stop() // Stop playing previous article
+            }
             
             var cachedArticle = art
             if (cachedArticle != null) {
@@ -572,9 +584,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 // Scrape page metadata dynamically to build transient article
                 try {
-                    val transientArticle = withContext(Dispatchers.IO) {
-                        repository.scrapeTransientArticle(url)
-                    }
+                    val transientArticle = repository.scrapeTransientArticle(url)
                     _currentArticleDetail.value = transientArticle
 
                     val body = repository.fetchArticleBody(url)

@@ -377,6 +377,7 @@ fun DetailScreen(
                                             .fillMaxWidth()
                                             .clickable {
                                                 isExpanded = false
+                                                viewModel.selectArticleForDetail(secArticle)
                                                 val encodedUrl = java.net.URLEncoder.encode(secArticle.link, "UTF-8")
                                                 navController.navigate("detail_screen/$encodedUrl") {
                                                     popUpTo("detail_screen/{url}") { inclusive = true }
