@@ -2,6 +2,7 @@ package uk.sume.streamfolio.ui.screens
 
 import android.net.Uri
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -373,14 +374,15 @@ fun HomeScreen(
                         title = "No feeds active",
                         description = "Please enable default feeds or add a custom RSS feed in Settings to start reading."
                     )
-                } else if (currentCategoryArticles.isEmpty() && (isRefreshing || categoryArticlesState.category != targetCategory)) {
+                } else if (currentCategoryArticles.isEmpty() && isRefreshing) {
                     SkeletonLoader(modifier = Modifier.fillMaxSize())
                 } else {
-                    PullToRefreshBox(
-                        isRefreshing = isRefreshing,
-                        onRefresh = { viewModel.refreshCurrentFeed() },
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        PullToRefreshBox(
+                            isRefreshing = isRefreshing,
+                            onRefresh = { viewModel.refreshCurrentFeed() },
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                         LazyColumn(
                             state = currentScrollState,
                             modifier = Modifier.fillMaxSize(),
@@ -603,7 +605,7 @@ fun HomeScreen(
                                 )
                             }
 
-                            if (currentListArticles.isEmpty() && currentTrendingArticles.isEmpty()) {
+                            if (categoryArticlesState.category == targetCategory && !isRefreshing && currentListArticles.isEmpty() && currentTrendingArticles.isEmpty()) {
                                 item {
                                     EmptyState(
                                         modifier = Modifier
@@ -733,10 +735,28 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isRefreshing && currentCategoryArticles.isNotEmpty(),
+                        enter = fadeIn(animationSpec = tween(200)) + expandVertically(animationSpec = tween(200)),
+                        exit = fadeOut(animationSpec = tween(200)) + shrinkVertically(animationSpec = tween(200)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                    ) {
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = Color.Transparent
+                        )
+                    }
                 }
             }
         }
     }
+}
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)

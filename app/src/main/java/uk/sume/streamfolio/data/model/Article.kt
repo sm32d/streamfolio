@@ -23,7 +23,8 @@ data class Article(
     val translatedBody: String? = null,
     val translatedLanguage: String? = null,
     val detectedLanguage: String? = null,
-    val isRead: Boolean = false
+    val isRead: Boolean = false,
+    val groupId: String? = null
 )
 
 data class ArticleGroup(

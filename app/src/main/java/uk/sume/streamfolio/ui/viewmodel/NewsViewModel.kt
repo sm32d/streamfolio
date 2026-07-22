@@ -231,7 +231,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         .flowOn(Dispatchers.Default)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CategoryArticlesState())
+        .stateIn(viewModelScope, SharingStarted.Lazily, CategoryArticlesState())
 
     val articles: StateFlow<List<Article>> = categoryArticlesState
         .map { state -> state.groups.map { it.primary } }
@@ -398,9 +398,8 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         val lastRefreshed = categoryLastRefreshedMap[category] ?: 0L
         val now = System.currentTimeMillis()
         val isStale = (now - lastRefreshed) > 15 * 60 * 1000L
-        val isLoadedForCategory = categoryArticlesState.value.category == category && categoryArticlesState.value.groups.isNotEmpty()
 
-        if (isStale || !isLoadedForCategory) {
+        if (isStale) {
             refreshCurrentFeed(silent = true)
         }
     }
@@ -1061,19 +1060,26 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _prefsChangedSignal.value = _prefsChangedSignal.value + 1
     }
 
+    private val punctuationRegex = Regex("[^\\p{L}\\p{N}\\s]")
+    private val whitespaceRegex = Regex("\\s+")
+    private val stopwordsSet = setOf(
+        "a", "an", "the", "in", "on", "at", "by", "of", "to", "for", "with", 
+        "and", "but", "or", "is", "are", "was", "were", "has", "have", "had", 
+        "that", "this", "these", "those", "will", "would", "could", "should",
+        "after", "before", "about", "from", "into", "over", "under", "been",
+        "says", "said", "reporting", "reports", "latest", "update", "live", "news"
+    )
+    private val sourceSuffixesList = listOf(
+        "bbc news", "bbc", "reuters", "cnn", "ap", "ap news", "the guardian", 
+        "new york times", "nytimes", "washington post", "wapo", "fox news",
+        "cna", "the straits times", "straits times", "bloomberg"
+    )
+
     fun cleanTitle(title: String): String {
         var cleaned = title.lowercase().trim()
+        cleaned = punctuationRegex.replace(cleaned, " ")
         
-        // Remove punctuation
-        cleaned = cleaned.replace(Regex("[^\\p{L}\\p{N}\\s]"), " ")
-        
-        // Clean common source suffixes and prefixes
-        val sourceSuffixes = listOf(
-            "bbc news", "bbc", "reuters", "cnn", "ap", "ap news", "the guardian", 
-            "new york times", "nytimes", "washington post", "wapo", "fox news",
-            "cna", "the straits times", "straits times", "bloomberg"
-        )
-        for (suffix in sourceSuffixes) {
+        for (suffix in sourceSuffixesList) {
             if (cleaned.endsWith(suffix)) {
                 cleaned = cleaned.removeSuffix(suffix).trim()
             }
@@ -1082,25 +1088,14 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         
-        // Remove standard stopwords and very short words (length <= 2)
-        val stopwords = setOf(
-            "a", "an", "the", "in", "on", "at", "by", "of", "to", "for", "with", 
-            "and", "but", "or", "is", "are", "was", "were", "has", "have", "had", 
-            "that", "this", "these", "those", "will", "would", "could", "should",
-            "after", "before", "about", "from", "into", "over", "under", "been",
-            "says", "said", "reporting", "reports", "latest", "update", "live", "news"
-        )
-        
-        val words = cleaned.split(Regex("\\s+"))
+        val words = whitespaceRegex.split(cleaned)
             .map { it.trim() }
-            .filter { it.length > 2 && !stopwords.contains(it) }
+            .filter { it.length > 2 && !stopwordsSet.contains(it) }
         
         return words.joinToString(" ")
     }
 
-    fun calculateJaccardSimilarity(title1: String, title2: String): Float {
-        val words1 = cleanTitle(title1).split(" ").filter { it.isNotBlank() }.toSet()
-        val words2 = cleanTitle(title2).split(" ").filter { it.isNotBlank() }.toSet()
+    fun calculateJaccardSimilarityFromSets(words1: Set<String>, words2: Set<String>): Float {
         if (words1.isEmpty() && words2.isEmpty()) return 1.0f
         if (words1.isEmpty() || words2.isEmpty()) return 0.0f
         
@@ -1109,27 +1104,58 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         return intersectionSize.toFloat() / unionSize.toFloat()
     }
 
+    fun calculateJaccardSimilarity(title1: String, title2: String): Float {
+        val words1 = cleanTitle(title1).split(" ").filter { it.isNotBlank() }.toSet()
+        val words2 = cleanTitle(title2).split(" ").filter { it.isNotBlank() }.toSet()
+        return calculateJaccardSimilarityFromSets(words1, words2)
+    }
+
     fun groupSimilarArticles(articles: List<Article>, threshold: Float = 0.35f): List<uk.sume.streamfolio.data.model.ArticleGroup> {
-        val groups = mutableListOf<MutableList<Article>>()
+        if (articles.isEmpty()) return emptyList()
+
+        // Fast path O(N): Check if articles have pre-computed persistent groupId assigned
+        val hasGroupIds = articles.any { !it.groupId.isNullOrBlank() }
+        if (hasGroupIds) {
+            val groupedMap = articles.groupBy { it.groupId ?: it.link }
+            return groupedMap.values.map { articleList ->
+                val sortedGroup = articleList.sortedWith(
+                    compareByDescending<Article> { it.thumbnailUrl != null && it.thumbnailUrl.isNotBlank() && it.thumbnailUrl != "failed" }
+                        .thenByDescending { it.description.length }
+                        .thenByDescending { it.pubDate }
+                )
+                uk.sume.streamfolio.data.model.ArticleGroup(
+                    primary = sortedGroup[0],
+                    secondary = sortedGroup.drop(1)
+                )
+            }.sortedByDescending { it.primary.pubDate }
+        }
+
+        val wordSets = articles.map { article ->
+            cleanTitle(article.title).split(" ").filter { it.isNotBlank() }.toSet()
+        }
+
+        val groups = mutableListOf<MutableList<Int>>()
         
-        for (article in articles) {
+        for (i in articles.indices) {
             var placed = false
+            val wordSet = wordSets[i]
             for (group in groups) {
-                val primary = group[0]
-                val similarity = calculateJaccardSimilarity(primary.title, article.title)
+                val primaryIndex = group[0]
+                val similarity = calculateJaccardSimilarityFromSets(wordSets[primaryIndex], wordSet)
                 if (similarity >= threshold) {
-                    group.add(article)
+                    group.add(i)
                     placed = true
                     break
                 }
             }
             if (!placed) {
-                groups.add(mutableListOf(article))
+                groups.add(mutableListOf(i))
             }
         }
         
-        return groups.map { group ->
-            val sortedGroup = group.sortedWith(
+        return groups.map { indexGroup ->
+            val articleList = indexGroup.map { articles[it] }
+            val sortedGroup = articleList.sortedWith(
                 compareByDescending<Article> { it.thumbnailUrl != null && it.thumbnailUrl.isNotBlank() && it.thumbnailUrl != "failed" }
                     .thenByDescending { it.description.length }
                     .thenByDescending { it.pubDate }

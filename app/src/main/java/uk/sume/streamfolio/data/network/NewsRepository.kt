@@ -169,7 +169,8 @@ class NewsRepository(private val context: Context) {
     }
 
     private suspend fun insertAndPruneArticles(allArticles: List<Article>, category: String) {
-        articleDao.insertOrUpdateArticles(allArticles)
+        val groupedArticles = assignGroupIds(allArticles, category)
+        articleDao.insertOrUpdateArticles(groupedArticles)
         val historyDays = prefs.cacheHistoryDays
         if (historyDays < 36500) {
             val cal = java.util.Calendar.getInstance()
@@ -906,5 +907,93 @@ class NewsRepository(private val context: Context) {
 
     suspend fun updateReadStatus(link: String, isRead: Boolean) = withContext(Dispatchers.IO) {
         articleDao.updateReadStatus(link, isRead)
+    }
+
+    private val punctuationRegex = Regex("[^\\p{L}\\p{N}\\s]")
+    private val whitespaceRegex = Regex("\\s+")
+    private val stopwordsSet = setOf(
+        "a", "an", "the", "in", "on", "at", "by", "of", "to", "for", "with", 
+        "and", "but", "or", "is", "are", "was", "were", "has", "have", "had", 
+        "that", "this", "these", "those", "will", "would", "could", "should",
+        "after", "before", "about", "from", "into", "over", "under", "been",
+        "says", "said", "reporting", "reports", "latest", "update", "live", "news"
+    )
+    private val sourceSuffixesList = listOf(
+        "bbc news", "bbc", "reuters", "cnn", "ap", "ap news", "the guardian", 
+        "new york times", "nytimes", "washington post", "wapo", "fox news",
+        "cna", "the straits times", "straits times", "bloomberg"
+    )
+
+    private fun cleanTitle(title: String): String {
+        var cleaned = title.lowercase().trim()
+        cleaned = punctuationRegex.replace(cleaned, " ")
+        for (suffix in sourceSuffixesList) {
+            if (cleaned.endsWith(suffix)) cleaned = cleaned.removeSuffix(suffix).trim()
+            if (cleaned.startsWith(suffix)) cleaned = cleaned.removePrefix(suffix).trim()
+        }
+        val words = whitespaceRegex.split(cleaned)
+            .map { it.trim() }
+            .filter { it.length > 2 && !stopwordsSet.contains(it) }
+        return words.joinToString(" ")
+    }
+
+    private fun calculateJaccardSimilarityFromSets(words1: Set<String>, words2: Set<String>): Float {
+        if (words1.isEmpty() && words2.isEmpty()) return 1.0f
+        if (words1.isEmpty() || words2.isEmpty()) return 0.0f
+        val intersectionSize = words1.intersect(words2).size
+        val unionSize = words1.union(words2).size
+        return intersectionSize.toFloat() / unionSize.toFloat()
+    }
+
+    private suspend fun assignGroupIds(articles: List<Article>, category: String): List<Article> {
+        if (articles.isEmpty()) return articles
+        val existingArticles = try {
+            articleDao.getArticlesByCategorySync(category)
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val existingGroups = mutableListOf<MutableList<Article>>()
+        val existingWordSets = mutableListOf<Set<String>>()
+
+        for (existing in existingArticles) {
+            val wordSet = cleanTitle(existing.title).split(" ").filter { it.isNotBlank() }.toSet()
+            var placed = false
+            for (i in existingGroups.indices) {
+                if (calculateJaccardSimilarityFromSets(existingWordSets[i], wordSet) >= 0.35f) {
+                    existingGroups[i].add(existing)
+                    placed = true
+                    break
+                }
+            }
+            if (!placed) {
+                existingGroups.add(mutableListOf(existing))
+                existingWordSets.add(wordSet)
+            }
+        }
+
+        return articles.map { article ->
+            val wordSet = cleanTitle(article.title).split(" ").filter { it.isNotBlank() }.toSet()
+            var matchedGroupId: String? = article.groupId
+
+            if (matchedGroupId == null) {
+                for (i in existingGroups.indices) {
+                    if (calculateJaccardSimilarityFromSets(existingWordSets[i], wordSet) >= 0.35f) {
+                        val groupLeader = existingGroups[i][0]
+                        matchedGroupId = groupLeader.groupId ?: groupLeader.link
+                        existingGroups[i].add(article)
+                        break
+                    }
+                }
+            }
+
+            if (matchedGroupId == null) {
+                matchedGroupId = article.link
+                existingGroups.add(mutableListOf(article))
+                existingWordSets.add(wordSet)
+            }
+
+            article.copy(groupId = matchedGroupId)
+        }
     }
 }

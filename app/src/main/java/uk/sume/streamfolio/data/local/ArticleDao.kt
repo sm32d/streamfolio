@@ -30,7 +30,8 @@ interface ArticleDao {
                     translatedTitle = existing.translatedTitle,
                     translatedBody = existing.translatedBody,
                     translatedLanguage = existing.translatedLanguage,
-                    detectedLanguage = existing.detectedLanguage
+                    detectedLanguage = existing.detectedLanguage,
+                    groupId = article.groupId ?: existing.groupId
                 )
                 updateArticle(updated)
             } else {
