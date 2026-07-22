@@ -79,7 +79,6 @@ object DefaultFeedsConfig {
             "Top Stories" to listOf(
                 "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416",
                 "https://www.straitstimes.com/news/singapore/rss.xml",
-                "https://www.independent.sg/feed/",
                 "https://mothership.sg/feed/"
             ),
             "World" to listOf(
@@ -149,7 +148,7 @@ object DefaultFeedsConfig {
                 "https://www.cbc.ca/webfeed/rss/rss-technology"
             ),
             "Science" to listOf(
-                "https://www.cbc.ca/webfeed/rss/rss-discovery"
+                "https://www.cbc.ca/webfeed/rss/rss-technology"
             ),
             "Sports" to listOf(
                 "https://www.cbc.ca/webfeed/rss/rss-sports"
@@ -187,7 +186,7 @@ object DefaultFeedsConfig {
                 "https://www.abc.net.au/news/feed/51120/rss.xml"
             ),
             "Entertainment" to listOf(
-                "https://www.smh.com.au/rss/entertainment.xml"
+                "https://www.smh.com.au/rss/culture.xml"
             )
         ),
         "FR" to mapOf(
@@ -231,16 +230,16 @@ object DefaultFeedsConfig {
                 "https://www.heise.de/rss/heise.rdf"
             ),
             "Science" to listOf(
-                "https://www.dw.com/de/rss"
+                "https://rss.dw.com/xml/rss-de-wissenschaft"
             ),
             "Sports" to listOf(
-                "https://www.dw.com/de/rss"
+                "https://rss.dw.com/xml/rss-de-sport"
             ),
             "Health" to listOf(
-                "https://www.dw.com/de/rss"
+                "https://rss.dw.com/xml/rss-de-all"
             ),
             "Entertainment" to listOf(
-                "https://www.dw.com/de/rss"
+                "https://rss.dw.com/xml/rss-de-all"
             )
         ),
         "HK" to mapOf(
@@ -361,11 +360,11 @@ object DefaultFeedsConfig {
             url.contains("variety.com") -> "Variety"
             url.contains("channelnewsasia.com") -> "CNA"
             url.contains("8days.sg") -> "8 Days"
-            url.contains("independent.sg") -> "The Independent SG"
             url.contains("mothership.sg") -> "Mothership"
             url.contains("businesstimes.com.sg") -> "The Business Times"
             url.contains("straitstimes.com") -> "The Straits Times"
             url.contains("techinasia.com") -> "Tech in Asia"
+            url.contains("techradar.com") -> "TechRadar"
             url.contains("timesofindia") -> "Times of India"
             url.contains("hindustantimes.com") -> "Hindustan Times"
             url.contains("moneycontrol.com") -> "Moneycontrol"

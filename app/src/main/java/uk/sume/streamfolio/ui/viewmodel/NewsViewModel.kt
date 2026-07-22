@@ -759,9 +759,18 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updatePreferences(language: String, region: String) {
+        val regionChanged = prefs.region != region
+        val langChanged = prefs.language != language
+
         prefs.language = language
         prefs.region = region
-        refreshCurrentFeed()
+
+        if (regionChanged || langChanged) {
+            categoryLastRefreshedMap.clear()
+            triggerPrefsChanged()
+            refreshCurrentFeed()
+            syncAllCategoriesInBackground()
+        }
     }
 
     // AI Toggle States

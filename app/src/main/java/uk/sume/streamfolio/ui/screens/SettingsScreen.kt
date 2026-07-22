@@ -361,7 +361,12 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
         "IN" to "India",
         "AU" to "Australia",
         "SG" to "Singapore",
-        "HK" to "Hong Kong"
+        "HK" to "Hong Kong",
+        "KR" to "South Korea",
+        "JP" to "Japan",
+        "BR" to "Brazil",
+        "ZA" to "South Africa",
+        "AE" to "UAE"
     )
     val cacheOptions = mapOf(
         "1" to "1 Day",
@@ -1110,6 +1115,11 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                 "AU" -> "🇦🇺 Australia"
                                 "FR" -> "🇫🇷 France"
                                 "DE" -> "🇩🇪 Germany"
+                                "KR" -> "🇰🇷 South Korea"
+                                "JP" -> "🇯🇵 Japan"
+                                "BR" -> "🇧🇷 Brazil"
+                                "ZA" -> "🇿🇦 South Africa"
+                                "AE" -> "🇦🇪 UAE"
                                 else -> regionCode
                             }
                             
@@ -1304,6 +1314,11 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                     "AU" -> "🇦🇺 Australia"
                                     "FR" -> "🇫🇷 France"
                                     "DE" -> "🇩🇪 Germany"
+                                    "KR" -> "🇰🇷 South Korea"
+                                    "JP" -> "🇯🇵 Japan"
+                                    "BR" -> "🇧🇷 Brazil"
+                                    "ZA" -> "🇿🇦 South Africa"
+                                    "AE" -> "🇦🇪 UAE"
                                     else -> provider.region
                                 }
 

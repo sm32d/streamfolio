@@ -5,5 +5,9 @@
         <domain includeSubdomains="true">scmp.com</domain>
         <domain includeSubdomains="true">rthk.hk</domain>
         <domain includeSubdomains="true">rthk9.rthk.hk</domain>
+        <domain includeSubdomains="true">www.techradar.com</domain>
+        <domain includeSubdomains="true">www.nhk.or.jp</domain>
+        <domain includeSubdomains="true">www.dailymaverick.co.za</domain>
+        <domain includeSubdomains="true">www.iol.co.za</domain>
     </domain-config>
 </network-security-config>
