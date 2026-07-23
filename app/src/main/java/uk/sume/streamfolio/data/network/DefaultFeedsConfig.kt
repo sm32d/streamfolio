@@ -111,7 +111,9 @@ object DefaultFeedsConfig {
         "IN" to mapOf(
             "Top Stories" to listOf(
                 "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
-                "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"
+                "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml",
+                "https://www.thehindu.com/feeder/default.rss",
+                "https://www.timesnownews.com/feeds/gns-en-latest.xml"
             ),
             "World" to listOf(
                 "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
@@ -374,6 +376,7 @@ object DefaultFeedsConfig {
             url.contains("gadgets360") -> "Gadgets360"
             url.contains("ndtv.com") || url.contains("ndtvnews") -> "NDTV"
             url.contains("thehindu.com") -> "The Hindu"
+            url.contains("timesnownews.com") -> "Times Now"
             url.contains("economictimes.indiatimes.com") -> "The Economic Times"
             url.contains("cbc.ca") -> "CBC News"
             url.contains("thestar.com") -> "Toronto Star"
