@@ -512,9 +512,29 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectArticleForDetail(article: Article) {
         _currentArticleDetail.value = article
+        _articleBody.value = article.fullText ?: ""
+        _isLoadingBody.value = article.fullText == null
+        _similarArticlesForDetail.value = emptyList()
+        resetAiSummary()
+        clearTranslation()
+        if (article.aiSummary != null) {
+            if (article.aiSummary == "blocked_by_safety_policy") {
+                _aiSummaryState.value = AiSummaryState.Error("This article touches upon sensitive topics that trigger Gemini Nano's built-in local safety policies.")
+            } else {
+                _aiSummaryState.value = AiSummaryState.Success(article.aiSummary)
+            }
+        }
     }
 
     fun loadArticleBody(url: String) {
+        if (_currentArticleDetail.value?.link != url) {
+            _currentArticleDetail.value = null
+            _articleBody.value = ""
+            _isLoadingBody.value = true
+            _similarArticlesForDetail.value = emptyList()
+            resetAiSummary()
+            clearTranslation()
+        }
         viewModelScope.launch(Dispatchers.IO) {
             _similarArticlesForDetail.value = emptyList()
             

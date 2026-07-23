@@ -48,7 +48,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -377,10 +377,13 @@ fun HomeScreen(
                 } else if (currentCategoryArticles.isEmpty() && isRefreshing) {
                     SkeletonLoader(modifier = Modifier.fillMaxSize())
                 } else {
+                    val pullToRefreshState = rememberPullToRefreshState()
                     Box(modifier = Modifier.fillMaxSize()) {
                         PullToRefreshBox(
                             isRefreshing = isRefreshing,
                             onRefresh = { viewModel.refreshCurrentFeed() },
+                            state = pullToRefreshState,
+                            indicator = {},
                             modifier = Modifier.fillMaxSize()
                         ) {
                         LazyColumn(
@@ -736,21 +739,33 @@ fun HomeScreen(
                         }
                     }
 
+                    val showLinearIndicator = (isRefreshing || pullToRefreshState.distanceFraction > 0f) && currentCategoryArticles.isNotEmpty()
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = isRefreshing && currentCategoryArticles.isNotEmpty(),
+                        visible = showLinearIndicator,
                         enter = fadeIn(animationSpec = tween(200)) + expandVertically(animationSpec = tween(200)),
                         exit = fadeOut(animationSpec = tween(200)) + shrinkVertically(animationSpec = tween(200)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.TopCenter)
                     ) {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = Color.Transparent
-                        )
+                        if (isRefreshing) {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                progress = { pullToRefreshState.distanceFraction.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            )
+                        }
                     }
                 }
             }

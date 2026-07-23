@@ -66,8 +66,10 @@ fun DetailScreen(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope
 ) {
-    val articleState = viewModel.currentArticleDetail.collectAsState()
-    val article = articleState.value
+    val rawArticleState = viewModel.currentArticleDetail.collectAsState()
+    val article = remember(rawArticleState.value, url) {
+        if (rawArticleState.value?.link == url) rawArticleState.value else null
+    }
 
     val isAiEnabled by viewModel.isAiEnabled.collectAsState()
     val isTranslationEnabled by viewModel.isTranslationEnabled.collectAsState()
@@ -103,8 +105,14 @@ fun DetailScreen(
     
 
 
-    val articleBody by viewModel.articleBody.collectAsState()
-    val isLoadingBody by viewModel.isLoadingBody.collectAsState()
+    val rawArticleBody by viewModel.articleBody.collectAsState()
+    val articleBody = remember(rawArticleBody, rawArticleState.value, url) {
+        if (rawArticleState.value?.link == url) rawArticleBody else ""
+    }
+    val rawIsLoadingBody by viewModel.isLoadingBody.collectAsState()
+    val isLoadingBody = remember(rawIsLoadingBody, rawArticleState.value, url) {
+        if (rawArticleState.value?.link == url) rawIsLoadingBody else true
+    }
     val isTtsPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
     val ttsParagraphIndex by viewModel.ttsHelper.currentParagraphIndex.collectAsState()
 
@@ -418,8 +426,12 @@ fun DetailScreen(
             // Article Content Shell
             if (currentTab == "Reader") {
                 if (article == null) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "Article details not found.", color = MaterialTheme.colorScheme.onSurface)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                    ) {
+                        TextSkeletonLoader()
                     }
                 } else {
                     Column(
