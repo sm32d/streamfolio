@@ -2,6 +2,7 @@ package uk.sume.streamfolio.ui.screens
 
 import uk.sume.streamfolio.ui.components.RegionPickerModal
 import uk.sume.streamfolio.ui.components.RegionUtils
+import uk.sume.streamfolio.ui.components.StreamFolioRadioCard
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -9,6 +10,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -38,6 +42,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -79,8 +84,45 @@ import uk.sume.streamfolio.data.model.CustomFeed
 @Composable
 fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
+
+    var versionTapCount by remember { mutableIntStateOf(0) }
+    var lastVersionTapTime by remember { mutableLongStateOf(0L) }
+    var showDjEasterEgg by remember { mutableStateOf(false) }
+    var djBroadcastText by remember { mutableStateOf("") }
+    val articles by viewModel.articles.collectAsState()
+    val isTtsPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
+
+    val spinNextDjHeadline = remember(articles) {
+        {
+            val validArticles = articles.filter { it.title.isNotBlank() }
+            if (validArticles.isNotEmpty()) {
+                val randomArt = validArticles.random()
+                val textToSay = "Now spinning on 99.9 FM: ${randomArt.title}. From ${randomArt.sourceName}."
+                djBroadcastText = textToSay
+                viewModel.ttsHelper.speakDjBroadcast(textToSay)
+            } else {
+                val fallbackText = "Spinning hot news tracks! StreamFolio 1.2.0 is operating at peak frequency!"
+                djBroadcastText = fallbackText
+                viewModel.ttsHelper.speakDjBroadcast(fallbackText)
+            }
+        }
+    }
+
+    DisposableEffect(showDjEasterEgg) {
+        if (showDjEasterEgg) {
+            viewModel.ttsHelper.onDjUtteranceCompleted = {
+                spinNextDjHeadline()
+            }
+        } else {
+            viewModel.ttsHelper.onDjUtteranceCompleted = null
+        }
+        onDispose {
+            viewModel.ttsHelper.onDjUtteranceCompleted = null
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -94,6 +136,13 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 120.dp)
+                .then(
+                    if (showDjEasterEgg && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        Modifier.blur(16.dp)
+                    } else {
+                        Modifier
+                    }
+                )
         ) {
             // Header
             Text(
@@ -187,6 +236,29 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable {
+                            val now = System.currentTimeMillis()
+                            if (now - lastVersionTapTime < 600) {
+                                versionTapCount++
+                            } else {
+                                versionTapCount = 1
+                            }
+                            lastVersionTapTime = now
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                            if (versionTapCount == 3) {
+                                Toast.makeText(context, "2 more taps for StreamFolio FM...", Toast.LENGTH_SHORT).show()
+                            } else if (versionTapCount == 4) {
+                                Toast.makeText(context, "1 more tap for StreamFolio FM!", Toast.LENGTH_SHORT).show()
+                            } else if (versionTapCount >= 5) {
+                                versionTapCount = 0
+                                showDjEasterEgg = true
+                                val introLine = "Yo! You're locked into StreamFolio FM 99.9! All the top headlines, zero noise. Stay tuned!"
+                                djBroadcastText = introLine
+                                viewModel.ttsHelper.speakDjBroadcast(introLine)
+                            }
+                        }
                         .padding(horizontal = 18.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -215,7 +287,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Version 1.2.0-beta.9 · Free forever",
+                            text = "Version 1.2.0 · Free forever",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )
@@ -334,6 +406,54 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                     )
                 }
             }
+        }
+
+        // Dim Scrim Backdrop with Tap-to-Dismiss
+        AnimatedVisibility(
+            visible = showDjEasterEgg,
+            enter = fadeIn(animationSpec = tween(300)),
+            exit = fadeOut(animationSpec = tween(300)),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        viewModel.ttsHelper.onDjUtteranceCompleted = null
+                        viewModel.ttsHelper.stop()
+                        showDjEasterEgg = false
+                    }
+            )
+        }
+
+        AnimatedVisibility(
+            visible = showDjEasterEgg,
+            enter = fadeIn(animationSpec = tween(300)) + slideInVertically(
+                initialOffsetY = { it },
+                animationSpec = tween(400)
+            ),
+            exit = fadeOut(animationSpec = tween(300)) + slideOutVertically(
+                targetOffsetY = { it },
+                animationSpec = tween(400)
+            ),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = 92.dp)
+        ) {
+            StreamFolioRadioCard(
+                activeBroadcastText = djBroadcastText,
+                isPlaying = isTtsPlaying,
+                onTuneOff = {
+                    viewModel.ttsHelper.onDjUtteranceCompleted = null
+                    viewModel.ttsHelper.stop()
+                    showDjEasterEgg = false
+                }
+            )
         }
     }
 }

@@ -35,6 +35,7 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         get() = paragraphsList.size
 
     var onArticleCompleted: (() -> Unit)? = null
+    var onDjUtteranceCompleted: (() -> Unit)? = null
 
     init {
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -54,14 +55,19 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
                 _currentWordRange.value = null
                 activeParagraphOffset = 0
                 lastPausedCharOffset = 0
-                utteranceId?.toIntOrNull()?.let { index ->
-                    val nextIndex = index + 1
-                    if (nextIndex < paragraphsList.size) {
-                        speakParagraph(nextIndex)
-                    } else {
-                        _isPlaying.value = false
-                        _currentParagraphIndex.value = 0
-                        onArticleCompleted?.invoke()
+                if (utteranceId == "dj_broadcast") {
+                    _isPlaying.value = false
+                    onDjUtteranceCompleted?.invoke()
+                } else {
+                    utteranceId?.toIntOrNull()?.let { index ->
+                        val nextIndex = index + 1
+                        if (nextIndex < paragraphsList.size) {
+                            speakParagraph(nextIndex)
+                        } else {
+                            _isPlaying.value = false
+                            _currentParagraphIndex.value = 0
+                            onArticleCompleted?.invoke()
+                        }
                     }
                 }
             }
@@ -181,10 +187,23 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
     fun stop() {
         if (!isInitialized) return
         tts?.stop()
+        tts?.setPitch(0.98f)
+        tts?.setSpeechRate(_speechRate.value)
         _isPlaying.value = false
         _currentParagraphIndex.value = 0
         activeParagraphOffset = 0
         lastPausedCharOffset = 0
+    }
+
+    fun speakDjBroadcast(text: String) {
+        if (!isInitialized) return
+        stop()
+        tts?.setPitch(1.35f)
+        tts?.setSpeechRate(1.22f)
+        _isPlaying.value = true
+        val params = android.os.Bundle()
+        params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "dj_broadcast")
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, "dj_broadcast")
     }
 
     fun seekToParagraph(index: Int) {
@@ -199,6 +218,8 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         if (index < 0 || index >= paragraphsList.size) return
         _currentParagraphIndex.value = index
         _isPlaying.value = true
+        tts?.setPitch(0.98f)
+        tts?.setSpeechRate(_speechRate.value)
         
         val fullText = paragraphsList[index]
         val textToSpeak = if (activeParagraphOffset > 0 && activeParagraphOffset < fullText.length) {
