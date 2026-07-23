@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
+
 enum class BottomTab(val route: String, val icon: ImageVector, val label: String) {
     HOME("home_screen", Icons.Default.Home, "Home"),
     SEARCH("search_screen", Icons.Default.Search, "Search"),
@@ -48,6 +51,10 @@ fun GlassmorphicNavBar(
             .clip(RoundedCornerShape(32.dp))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.98f))
             .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(32.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* Consume touches on navbar pill surface to prevent pass-through */ }
             .padding(vertical = 8.dp, horizontal = 12.dp)
     ) {
         Row(
@@ -62,12 +69,13 @@ fun GlassmorphicNavBar(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
+                        .weight(1f)
                         .clip(RoundedCornerShape(16.dp))
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onTabSelected(tab)
                         }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = tab.icon,
