@@ -84,7 +84,7 @@
                 </button>
             </div>
             <div class="mobile-drawer-footer">
-                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-full" target="_blank" rel="noopener">Download v1.2.0-beta.8</a>
+                <a href="https://github.com/sm32d/streamfolio/releases" class="btn-primary btn-full" target="_blank" rel="noopener">Download v1.2.0-beta.9</a>
             </div>
         </div>
     </div>
@@ -108,11 +108,36 @@
                 </div>
 
                 <div class="changelog-list">
+                    <!-- Version 1.2.0-beta.9 -->
+                    <div class="changelog-entry">
+                        <div class="changelog-meta">
+                            <span class="version-tag current">v1.2.0-beta.9</span>
+                            <span class="changelog-date">Latest Release</span>
+                        </div>
+                        <h2>5 New Regions, 30+ New Sources, Article Grouping & Feed Health Tests</h2>
+                        <ul class="changelog-features">
+                            <li><strong>🌍 5 New Regions:</strong> South Korea (Yonhap News), Japan (NHK World, Japan Times), Brazil (Folha de S.Paulo), South Africa (Daily Maverick, IOL), UAE (Arab News).</li>
+                            <li><strong>📰 30+ New Curated Sources:</strong> Expanded all existing regions with high-quality publishers — Le Monde & Futura Sciences (France), Heise, Spiegel & FAZ (Germany), New Scientist (UK), The Hindu, NDTV & Economic Times (India), Guardian Australia & SMH (Australia), Mothership & Business Times (Singapore), and more.</li>
+                            <li><strong>📚 Article Grouping:</strong> Similar stories from multiple sources are now grouped together so you can see different perspectives on the same topic at a glance.</li>
+                            <li><strong>🔄 Silent Background Refresh:</strong> Feed updates now happen silently in the background without blocking the UI or resetting your scroll position.</li>
+                            <li><strong>🧪 Automated Feed Health Tests:</strong> New unit test suite that validates every default feed returns articles, detects HTTP redirect issues, and checks publisher name coverage — catches broken feeds before they reach users.</li>
+                            <li><strong>🔧 Network Security Fix:</strong> Fixed SCMP, RTHK, TechRadar, NHK, and other feeds blocked by Android's cleartext HTTP policy.</li>
+                            <li><strong>🗑️ Removed Low-Quality Sources:</strong> Dropped MarketWatch (no article bodies) and independent.sg (bot-protected, returns no content).</li>
+                            <li><strong>🔒 SSRF Protection:</strong> Added security interceptor to block requests to private/internal network addresses from custom RSS feeds.</li>
+                            <li><strong>📶 Offline Indicator:</strong> Clear visual banner when your phone loses internet connection.</li>
+                            <li><strong>🦦 Eddy the Otter:</strong> Friendly mascot appears on empty states to guide you when no articles are available.</li>
+                            <li><strong>🔍 Improved Search:</strong> Search suggestions and better result formatting.</li>
+                            <li><strong>👆 Long Press Actions:</strong> Long press articles for quick actions.</li>
+                            <li><strong>✨ Page Transitions:</strong> Smoother animations between main screens.</li>
+                            <li><strong>📳 Expanded Haptics:</strong> Tactile feedback added to more interactions throughout the app.</li>
+                        </ul>
+                    </div>
+
                     <!-- Version 1.2.0-beta.8 -->
                     <div class="changelog-entry">
                         <div class="changelog-meta">
-                            <span class="version-tag current">v1.2.0-beta.8</span>
-                            <span class="changelog-date">Latest Release</span>
+                            <span class="version-tag">v1.2.0-beta.8</span>
+                            <span class="changelog-date">Previous Release</span>
                         </div>
                         <h2>Audio Memory, Security Hardening & Offline Banner</h2>
                         <ul class="changelog-features">

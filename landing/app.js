@@ -7,16 +7,35 @@
 const WAITLIST_ENDPOINT = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Navbar Scroll Header Effect
+    // 1. Navbar Scroll Header Effect & Dynamic Navbar CTA Visibility
     const navbar = document.getElementById('navbar');
-    if (navbar) {
-        window.addEventListener('scroll', () => {
+    const navCtaBtn = document.getElementById('nav-cta-btn');
+    const heroActions = document.querySelector('.hero-actions');
+
+    function handleNavbarScroll() {
+        if (navbar) {
             if (window.scrollY > 20) {
                 navbar.classList.add('scrolled');
             } else {
                 navbar.classList.remove('scrolled');
             }
-        });
+        }
+
+        if (navCtaBtn && heroActions) {
+            const heroActionsBottom = heroActions.getBoundingClientRect().bottom;
+            const navbarHeight = navbar ? navbar.offsetHeight : 80;
+            // Hide navbar CTA button while hero buttons are on screen; show when scrolled past hero buttons
+            if (heroActionsBottom <= navbarHeight) {
+                navCtaBtn.classList.add('visible');
+            } else {
+                navCtaBtn.classList.remove('visible');
+            }
+        }
+    }
+
+    if (navbar || navCtaBtn) {
+        window.addEventListener('scroll', handleNavbarScroll, { passive: true });
+        handleNavbarScroll();
     }
 
     // 2. Mobile Slide-Out Drawer Navigation Toggle

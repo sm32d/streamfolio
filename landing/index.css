@@ -397,10 +397,33 @@ h1, h2, h3, h4 {
     min-height: 40px;
 }
 
+.nav-cta-btn {
+    display: none;
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+}
+
+.nav-cta-btn.visible {
+    display: inline-flex;
+    animation: navCtaFadeIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes navCtaFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92) translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
 .btn-secondary {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 10px;
     background: rgba(255, 255, 255, 0.05);
     color: var(--text-main);
     padding: 14px 28px;
@@ -984,6 +1007,81 @@ h1, h2, h3, h4 {
     padding: 6px 14px;
     border-radius: 20px;
     border: 1px solid var(--border-color);
+}
+
+.store-live-card {
+    border-color: rgba(56, 189, 248, 0.4);
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.store-badge-icon {
+    background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+    color: #FFFFFF !important;
+}
+
+.store-card-action {
+    margin-top: 16px;
+}
+
+.btn-play-direct {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    text-decoration: none;
+}
+
+.store-badge-live {
+    text-decoration: none;
+    color: #38BDF8;
+    background: rgba(2, 132, 199, 0.1);
+    border-color: rgba(56, 189, 248, 0.3);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.store-badge-live:hover {
+    background: rgba(2, 132, 199, 0.2);
+    border-color: rgba(56, 189, 248, 0.6);
+    color: #7DD3FC;
+}
+
+.live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10B981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: livePulse 2s infinite;
+}
+
+@keyframes livePulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.text-link {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.text-link:hover {
+    color: #38BDF8;
 }
 
 /* Pure CSS Android Phone Mockup Frame (Responsive - Zero Clipping) */

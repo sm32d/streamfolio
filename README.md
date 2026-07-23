@@ -15,9 +15,7 @@
 
 **A modern, intuitive news-reading RSS application designed for Android devices.**
 
-<!-- TODO: Add live demo or Google Play Store link -->
-<!-- [Live Demo](https://play.google.com/store/apps/details?id=com.streamfolio) | -->
-<!-- [Documentation](https://docs.streamfolio.com) -->
+[![Get it on Google Play](https://img.shields.io/badge/Google_Play-StreamFolio-green?style=for-the-badge&logo=google-play)](https://play.google.com/store/apps/details?id=uk.sume.streamfolio&pli=1)
 
 </div>
 
