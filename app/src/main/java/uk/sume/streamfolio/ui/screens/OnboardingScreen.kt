@@ -1,5 +1,8 @@
 package uk.sume.streamfolio.ui.screens
 
+import uk.sume.streamfolio.ui.components.RegionPickerModal
+import uk.sume.streamfolio.ui.components.RegionUtils
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -1115,6 +1118,16 @@ private fun TranslationRegionStep(
     selectedRegion: String,
     onRegionSelected: (String) -> Unit
 ) {
+    var showRegionModal by remember { mutableStateOf(false) }
+
+    if (showRegionModal) {
+        RegionPickerModal(
+            selectedRegionCode = selectedRegion,
+            onRegionSelected = onRegionSelected,
+            onDismissRequest = { showRegionModal = false }
+        )
+    }
+
     val languages = mapOf(
         "en" to "English",
         "es" to "Español",
@@ -1122,22 +1135,6 @@ private fun TranslationRegionStep(
         "de" to "Deutsch",
         "hi" to "हिन्दी",
         "zh" to "中文"
-    )
-    val regions = mapOf(
-        "US" to "United States",
-        "GB" to "United Kingdom",
-        "CA" to "Canada",
-        "FR" to "France",
-        "DE" to "Germany",
-        "IN" to "India",
-        "AU" to "Australia",
-        "SG" to "Singapore",
-        "HK" to "Hong Kong",
-        "KR" to "South Korea",
-        "JP" to "Japan",
-        "BR" to "Brazil",
-        "ZA" to "South Africa",
-        "AE" to "UAE"
     )
 
     val headerText = when {
@@ -1176,13 +1173,53 @@ private fun TranslationRegionStep(
         Spacer(modifier = Modifier.height(36.dp))
 
         if (showRegion) {
-            SelectorField(
-                label = "Region / Country",
-                icon = Icons.Default.Place,
-                value = regions[selectedRegion] ?: "United States",
-                options = regions,
-                onSelected = onRegionSelected
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "REGION / COUNTRY",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable { showRegionModal = true }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Place,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = RegionUtils.getFormattedRegionName(selectedRegion),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
+                }
+            }
         }
 
         if (showLang && showRegion) {

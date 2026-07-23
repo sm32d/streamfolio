@@ -79,7 +79,8 @@ object DefaultFeedsConfig {
             "Top Stories" to listOf(
                 "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=10416",
                 "https://www.straitstimes.com/news/singapore/rss.xml",
-                "https://mothership.sg/feed/"
+                "https://mothership.sg/feed/",
+                "https://www.theindependent.sg/feed/"
             ),
             "World" to listOf(
                 "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6311",
@@ -361,6 +362,7 @@ object DefaultFeedsConfig {
             url.contains("channelnewsasia.com") -> "CNA"
             url.contains("8days.sg") -> "8 Days"
             url.contains("mothership.sg") -> "Mothership"
+            url.contains("theindependent.sg") -> "The Independent SG"
             url.contains("businesstimes.com.sg") -> "The Business Times"
             url.contains("straitstimes.com") -> "The Straits Times"
             url.contains("techinasia.com") -> "Tech in Asia"

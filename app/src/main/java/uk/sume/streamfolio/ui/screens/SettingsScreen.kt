@@ -1,5 +1,8 @@
 package uk.sume.streamfolio.ui.screens
 
+import uk.sume.streamfolio.ui.components.RegionPickerModal
+import uk.sume.streamfolio.ui.components.RegionUtils
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -381,6 +384,19 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
 
+    var showRegionModal by remember { mutableStateOf(false) }
+
+    if (showRegionModal) {
+        RegionPickerModal(
+            selectedRegionCode = selectedRegion,
+            onRegionSelected = { newRegion ->
+                selectedRegion = newRegion
+                viewModel.updatePreferences(viewModel.prefs.language, newRegion)
+            },
+            onDismissRequest = { showRegionModal = false }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -402,16 +418,53 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                 icon = Icons.Default.Tune
             )
 
-            SettingsSelectorField(
-                label = "Region / Country",
-                icon = Icons.Default.Place,
-                value = regions[selectedRegion] ?: "United States",
-                options = regions.mapValues { it.value to null },
-                onSelected = {
-                    selectedRegion = it
-                    viewModel.updatePreferences(viewModel.prefs.language, it)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "REGION / COUNTRY",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable { showRegionModal = true }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Place,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = RegionUtils.getFormattedRegionName(selectedRegion),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                    )
                 }
-            )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -967,7 +1020,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                 r1 == activeRegion && r2 == activeRegion -> 0
                 r1 == activeRegion -> -1
                 r2 == activeRegion -> 1
-                else -> r1.compareTo(r2)
+                else -> RegionUtils.getRegionInfo(r1).name.compareTo(RegionUtils.getRegionInfo(r2).name)
             }
         })
     }
@@ -1105,23 +1158,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         val isActiveRegion = regionCode == activeRegion
                         
                         if (providersInRegion.isNotEmpty()) {
-                            val regionName = when (regionCode) {
-                                "US" -> "🇺🇸 United States"
-                                "GB" -> "🇬🇧 United Kingdom"
-                                "SG" -> "🇸🇬 Singapore"
-                                "HK" -> "🇭🇰 Hong Kong"
-                                "IN" -> "🇮🇳 India"
-                                "CA" -> "🇨🇦 Canada"
-                                "AU" -> "🇦🇺 Australia"
-                                "FR" -> "🇫🇷 France"
-                                "DE" -> "🇩🇪 Germany"
-                                "KR" -> "🇰🇷 South Korea"
-                                "JP" -> "🇯🇵 Japan"
-                                "BR" -> "🇧🇷 Brazil"
-                                "ZA" -> "🇿🇦 South Africa"
-                                "AE" -> "🇦🇪 UAE"
-                                else -> regionCode
-                            }
+                            val regionName = RegionUtils.getFormattedRegionName(regionCode)
                             
                             Row(
                                 modifier = Modifier
@@ -1304,23 +1341,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                     enabledCrossRegion.contains(compositeKey)
                                 }
                                 
-                                val regionNameText = when (provider.region) {
-                                    "US" -> "🇺🇸 United States"
-                                    "GB" -> "🇬🇧 United Kingdom"
-                                    "SG" -> "🇸🇬 Singapore"
-                                    "HK" -> "🇭🇰 Hong Kong"
-                                    "IN" -> "🇮🇳 India"
-                                    "CA" -> "🇨🇦 Canada"
-                                    "AU" -> "🇦🇺 Australia"
-                                    "FR" -> "🇫🇷 France"
-                                    "DE" -> "🇩🇪 Germany"
-                                    "KR" -> "🇰🇷 South Korea"
-                                    "JP" -> "🇯🇵 Japan"
-                                    "BR" -> "🇧🇷 Brazil"
-                                    "ZA" -> "🇿🇦 South Africa"
-                                    "AE" -> "🇦🇪 UAE"
-                                    else -> provider.region
-                                }
+                                val regionNameText = RegionUtils.getFormattedRegionName(provider.region)
 
                                 Row(
                                     modifier = Modifier
