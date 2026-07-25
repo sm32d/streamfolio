@@ -23,6 +23,7 @@ class AiSummaryHelperImpl(private val context: Context) : IAiSummaryHelper {
         .setInputType(InputType.ARTICLE)
         .setOutputType(OutputType.THREE_BULLETS)
         .setLanguage(Language.ENGLISH)
+        .setLongInputAutoTruncationEnabled(true)
         .build()
 
     private val client by lazy {
@@ -53,12 +54,17 @@ class AiSummaryHelperImpl(private val context: Context) : IAiSummaryHelper {
     }
 
     /**
-     * Runs on-device AI summarization.
+     * Runs on-device AI summarization with smart preprocessing.
      */
     override suspend fun summarizeText(text: String): String {
-        val request = SummarizationRequest.builder(text).build()
-        val result = client.runInference(request).await()
-        return result.summary
+        return try {
+            val preparedText = TextSummarizerPreprocessor.preprocessArticleText(text)
+            val request = SummarizationRequest.builder(preparedText).build()
+            val result = client.runInference(request).await()
+            result.summary
+        } catch (e: Throwable) {
+            throw AiSummaryException.map(e, text.length)
+        }
     }
 
     // Pure Kotlin extension to convert ListenableFuture to a suspend function
@@ -76,3 +82,85 @@ class AiSummaryHelperImpl(private val context: Context) : IAiSummaryHelper {
         }, executor)
     }
 }
+
+object TextSummarizerPreprocessor {
+
+    /**
+     * Cleans up noise (HTML tags, extra whitespace, boilerplate text) and intelligently
+     * structures text so ML Kit Gemini Nano produces maximum quality key takeaways.
+     */
+    fun preprocessArticleText(rawText: String, maxChars: Int = 6500): String {
+        if (rawText.isBlank()) return ""
+
+        // 1. Remove HTML tags if present
+        var cleaned = if (rawText.contains("<") && rawText.contains(">")) {
+            try {
+                org.jsoup.Jsoup.parse(rawText).text()
+            } catch (e: Exception) {
+                rawText.replace(Regex("<[^>]*>"), " ")
+            }
+        } else {
+            rawText
+        }
+
+        // 2. Remove common web noise & boilerplate lines
+        cleaned = cleaned
+            .replace(Regex("(?i)subscribe to read full article.*"), "")
+            .replace(Regex("(?i)all rights reserved.*"), "")
+            .replace(Regex("(?i)follow us on (twitter|facebook|instagram|linkedin).*"), "")
+            .replace(Regex("(?i)cookie (policy|preferences|settings).*"), "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
+        if (cleaned.length <= maxChars) {
+            return cleaned
+        }
+
+        // 3. Smart Chunking / Intelligent Truncation for long text (> maxChars)
+        // Extract opening lead section (headline facts) and conclusion section
+        val splitParagraphs = cleaned.split(Regex("\n\\s*\n|(?<=[.!?])\\s{2,}"))
+            .map { it.trim() }
+            .filter { it.length > 20 }
+
+        if (splitParagraphs.size <= 3) {
+            return truncateOnWordBoundary(cleaned, maxChars)
+        }
+
+        val leadBudget = (maxChars * 0.70).toInt()
+        val tailBudget = maxChars - leadBudget - 100
+
+        val leadText = StringBuilder()
+        var paragraphIdx = 0
+        while (paragraphIdx < splitParagraphs.size && (leadText.length + splitParagraphs[paragraphIdx].length + 1) <= leadBudget) {
+            if (leadText.isNotEmpty()) leadText.append("\n\n")
+            leadText.append(splitParagraphs[paragraphIdx])
+            paragraphIdx++
+        }
+
+        val tailText = StringBuilder()
+        var tailIdx = splitParagraphs.size - 1
+        while (tailIdx > paragraphIdx && (tailText.length + splitParagraphs[tailIdx].length + 1) <= tailBudget) {
+            if (tailText.isNotEmpty()) tailText.insert(0, "\n\n")
+            tailText.insert(0, splitParagraphs[tailIdx])
+            tailIdx--
+        }
+
+        return if (tailText.isNotEmpty()) {
+            "${leadText.toString()}\n\n[...]\n\n${tailText.toString()}"
+        } else {
+            truncateOnWordBoundary(leadText.toString(), maxChars)
+        }
+    }
+
+    private fun truncateOnWordBoundary(text: String, limit: Int): String {
+        if (text.length <= limit) return text
+        val cut = text.substring(0, limit)
+        val lastSpace = cut.lastIndexOf(' ')
+        return if (lastSpace > limit / 2) {
+            cut.substring(0, lastSpace) + "..."
+        } else {
+            cut + "..."
+        }
+    }
+}
+

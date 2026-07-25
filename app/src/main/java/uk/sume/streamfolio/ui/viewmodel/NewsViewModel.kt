@@ -1001,7 +1001,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun generateAiSummary(text: String) {
         if (text.isBlank()) {
-            _aiSummaryState.value = AiSummaryState.Error("Article body is empty.")
+            _aiSummaryState.value = AiSummaryState.Error("Article content is empty or unavailable.")
             return
         }
         _aiSummaryState.value = AiSummaryState.Loading
@@ -1036,18 +1036,39 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 _currentArticleDetail.value?.link?.let { link ->
                     repository.updateAiSummary(link, summary)
                 }
-            } catch (e: Throwable) {
-                val msg = e.message ?: "Failed to generate summary."
-                if (msg.contains("AICore", ignoreCase = true)) {
-                    _aiSummaryState.value = AiSummaryState.Error("Gemini Nano (AICore) is not available or requires update on this device.")
-                } else {
-                    _aiSummaryState.value = AiSummaryState.Error(msg)
-                    val isSafetyBlock = msg.contains("safety policy check failed", ignoreCase = true) ||
-                                       (e is com.google.mlkit.genai.common.GenAiException && msg.contains("safety", ignoreCase = true))
-                    if (isSafetyBlock) {
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                
+                val domainError = uk.sume.streamfolio.data.network.AiSummaryException.map(e, text.length)
+                
+                when (domainError) {
+                    is uk.sume.streamfolio.data.network.AiSummaryException.InputTooLongException -> {
+                        try {
+                            val helper = aiSummaryHelper
+                            if (helper != null) {
+                                val fallbackText = uk.sume.streamfolio.data.network.TextSummarizerPreprocessor.preprocessArticleText(text, maxChars = 3000)
+                                val fallbackSummary = helper.summarizeText(fallbackText)
+                                _aiSummaryState.value = AiSummaryState.Success(fallbackSummary)
+                                _currentArticleDetail.value?.link?.let { link ->
+                                    repository.updateAiSummary(link, fallbackSummary)
+                                }
+                                return@launch
+                            }
+                        } catch (_: Throwable) {}
+                        
+                        _aiSummaryState.value = AiSummaryState.Error("Article length exceeds local AI capacity. Standard preview is shown below.")
+                    }
+                    is uk.sume.streamfolio.data.network.AiSummaryException.SafetyPolicyViolationException -> {
+                        _aiSummaryState.value = AiSummaryState.Error("safety policy check failed")
                         _currentArticleDetail.value?.link?.let { link ->
                             repository.updateAiSummary(link, "blocked_by_safety_policy")
                         }
+                    }
+                    is uk.sume.streamfolio.data.network.AiSummaryException.ModelNotAvailableException -> {
+                        _aiSummaryState.value = AiSummaryState.Error("Gemini Nano (AICore) is not available or needs updating on this device.")
+                    }
+                    is uk.sume.streamfolio.data.network.AiSummaryException.UnknownAiException -> {
+                        _aiSummaryState.value = AiSummaryState.Error("Unable to generate AI key insights at this time. Standard RSS preview is provided below.")
                     }
                 }
             }

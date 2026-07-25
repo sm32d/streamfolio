@@ -811,35 +811,96 @@ fun DetailScreen(
                                             }
                                             is AiSummaryState.Success -> {
                                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                    val bullets = state.summary.split("\n")
-                                                        .map { it.trim().removePrefix("*").trim() }
+                                                    val rawSummary = state.summary
+                                                    val bullets = rawSummary.split("\n")
+                                                        .map { it.trim().removePrefix("*").removePrefix("-").removePrefix("•").trim() }
                                                         .filter { it.isNotBlank() }
+                                                    
+                                                    val context = LocalContext.current
+                                                    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
                                                     
                                                     if (bullets.isNotEmpty()) {
                                                         for (bullet in bullets) {
-                                                            Row(modifier = Modifier.fillMaxWidth()) {
-                                                                Text(
-                                                                    text = "•",
-                                                                    color = MaterialTheme.colorScheme.primary,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    fontSize = 15.sp,
-                                                                    modifier = Modifier.padding(end = 8.dp)
-                                                                )
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                verticalAlignment = Alignment.Top
+                                                            ) {
+                                                                Surface(
+                                                                    shape = CircleShape,
+                                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                                    modifier = Modifier
+                                                                        .padding(top = 4.dp, end = 8.dp)
+                                                                        .size(6.dp)
+                                                                ) {}
                                                                 Text(
                                                                     text = bullet,
                                                                     fontSize = 13.sp,
-                                                                    lineHeight = 18.sp,
-                                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                                    lineHeight = 19.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                                                                 )
                                                             }
                                                         }
                                                     } else {
                                                         Text(
-                                                            text = state.summary,
+                                                            text = rawSummary,
                                                             fontSize = 13.sp,
-                                                            lineHeight = 18.sp,
-                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                            lineHeight = 19.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                                                         )
+                                                    }
+
+                                                    // Action toolbar: Copy & Regenerate
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(top = 4.dp),
+                                                        horizontalArrangement = Arrangement.End,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        TextButton(
+                                                            onClick = {
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(bullets.joinToString("\n• ") { it }.let { if (it.isNotBlank()) "• $it" else rawSummary }))
+                                                                android.widget.Toast.makeText(context, "Key takeaways copied", android.widget.Toast.LENGTH_SHORT).show()
+                                                            },
+                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.ContentCopy,
+                                                                contentDescription = "Copy",
+                                                                modifier = Modifier.size(14.dp),
+                                                                tint = MaterialTheme.colorScheme.primary
+                                                            )
+                                                            Spacer(modifier = Modifier.width(4.dp))
+                                                            Text(
+                                                                text = "Copy",
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                fontWeight = FontWeight.Medium
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        TextButton(
+                                                            onClick = {
+                                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                viewModel.generateAiSummary(articleBody)
+                                                            },
+                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Refresh,
+                                                                contentDescription = "Regenerate",
+                                                                modifier = Modifier.size(14.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                                            )
+                                                            Spacer(modifier = Modifier.width(4.dp))
+                                                            Text(
+                                                                text = "Regenerate",
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                                                fontWeight = FontWeight.Medium
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -847,7 +908,7 @@ fun DetailScreen(
                                                 Column(
                                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
-                                                    val isPolicyCheck = state.message.contains("policy check", ignoreCase = true)
+                                                    val isPolicyCheck = state.message.contains("policy check", ignoreCase = true) || state.message.contains("safety", ignoreCase = true)
                                                     
                                                     Surface(
                                                         shape = RoundedCornerShape(12.dp),
@@ -855,20 +916,50 @@ fun DetailScreen(
                                                         modifier = Modifier.fillMaxWidth()
                                                     ) {
                                                         Column(modifier = Modifier.padding(12.dp)) {
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                Icon(
-                                                                    imageVector = if (isPolicyCheck) Icons.Default.Info else Icons.Default.Warning,
-                                                                    contentDescription = null,
-                                                                    tint = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                                                    modifier = Modifier.size(16.dp)
-                                                                )
-                                                                Spacer(modifier = Modifier.width(8.dp))
-                                                                Text(
-                                                                    text = if (isPolicyCheck) "On-Device Safety Guardrails" else "Summarization Error",
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    fontSize = 12.sp,
-                                                                    color = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-                                                                )
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                    Icon(
+                                                                        imageVector = if (isPolicyCheck) Icons.Default.Info else Icons.Default.Warning,
+                                                                        contentDescription = null,
+                                                                        tint = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                                                        modifier = Modifier.size(16.dp)
+                                                                    )
+                                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                                    Text(
+                                                                        text = if (isPolicyCheck) "On-Device Safety Guardrails" else "Summarization Notice",
+                                                                        fontWeight = FontWeight.Bold,
+                                                                        fontSize = 12.sp,
+                                                                        color = if (isPolicyCheck) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                                                    )
+                                                                }
+                                                                
+                                                                if (!isPolicyCheck) {
+                                                                    TextButton(
+                                                                        onClick = {
+                                                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                                            viewModel.generateAiSummary(articleBody)
+                                                                        },
+                                                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = Icons.Default.Refresh,
+                                                                            contentDescription = "Retry",
+                                                                            modifier = Modifier.size(12.dp),
+                                                                            tint = MaterialTheme.colorScheme.error
+                                                                        )
+                                                                        Spacer(modifier = Modifier.width(2.dp))
+                                                                        Text(
+                                                                            text = "Retry",
+                                                                            fontSize = 10.sp,
+                                                                            color = MaterialTheme.colorScheme.error,
+                                                                            fontWeight = FontWeight.Bold
+                                                                        )
+                                                                    }
+                                                                }
                                                             }
                                                             Spacer(modifier = Modifier.height(4.dp))
                                                             Text(
