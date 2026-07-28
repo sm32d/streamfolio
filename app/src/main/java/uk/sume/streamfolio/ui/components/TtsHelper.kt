@@ -199,7 +199,7 @@ class TtsHelper(context: Context) : TextToSpeech.OnInitListener {
         if (!isInitialized) return
         stop()
         tts?.setPitch(1.35f)
-        tts?.setSpeechRate(1.22f)
+        tts?.setSpeechRate(_speechRate.value)
         _isPlaying.value = true
         val params = android.os.Bundle()
         params.putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, "dj_broadcast")

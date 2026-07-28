@@ -68,6 +68,7 @@ import uk.sume.streamfolio.util.OpmlHelper
 import uk.sume.streamfolio.util.OpmlFeed
 import uk.sume.streamfolio.util.UrlSecurityValidator
 import java.io.File
+import java.net.URLEncoder
 import androidx.core.content.FileProvider
 import android.content.Intent
 import android.widget.Toast
@@ -92,20 +93,70 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
     var lastVersionTapTime by remember { mutableLongStateOf(0L) }
     var showDjEasterEgg by remember { mutableStateOf(false) }
     var djBroadcastText by remember { mutableStateOf("") }
+    var currentBroadcastArticleUrl by remember { mutableStateOf<String?>(null) }
     val articles by viewModel.articles.collectAsState()
     val isTtsPlaying by viewModel.ttsHelper.isPlaying.collectAsState()
 
     val spinNextDjHeadline = remember(articles) {
         {
+            val intros = listOf(
+                "Now spinning on 99.9 FM: ",
+                "Coming up next on StreamFolio FM: ",
+                "This just in: ",
+                "In the headlines right now: ",
+                "We've got a big one for you: ",
+                "Here's what's trending: ",
+                "Your next story: ",
+                "Breaking news coming your way: ",
+                "Let's get into this one: ",
+                "This one's a big deal: "
+            )
+            val attributions = listOf(
+                "From %s.",
+                "Courtesy of %s.",
+                "Straight from %s.",
+                "Reported by %s.",
+                "via %s."
+            )
+            val transitions = listOf(
+                "Alright, let's get into this...",
+                "Moving on...",
+                "And now for something different...",
+                "In other news...",
+                "Stay with us for this one...",
+                "You won't want to miss this..."
+            )
+            val quips = listOf(
+                "You won't want to miss this one.",
+                "This is a big deal.",
+                "Stay locked in.",
+                "This one's got people talking.",
+                "A lot of buzz around this one."
+            )
+
             val validArticles = articles.filter { it.title.isNotBlank() }
             if (validArticles.isNotEmpty()) {
                 val randomArt = validArticles.random()
-                val textToSay = "Now spinning on 99.9 FM: ${randomArt.title}. From ${randomArt.sourceName}."
+                val useIntro = (0..9).random() < 7
+                val useAttribution = (0..9).random() < 6
+                val useTransition = (0..9).random() < 2
+                val useQuip = !useTransition && (0..9).random() < 2
+
+                val parts = mutableListOf<String>()
+                if (useTransition) parts.add(transitions.random())
+                if (useIntro) parts.add(intros.random())
+                parts.add(randomArt.title)
+                if (useAttribution) parts.add(attributions.random().format(randomArt.sourceName))
+                else if (useQuip) parts.add(quips.random())
+
+                val textToSay = parts.joinToString(" ")
                 djBroadcastText = textToSay
+                currentBroadcastArticleUrl = randomArt.link
                 viewModel.ttsHelper.speakDjBroadcast(textToSay)
             } else {
-                val fallbackText = "Spinning hot news tracks! StreamFolio 1.2.0 is operating at peak frequency!"
+                val fallbackText = "Spinning hot news tracks! StreamFolio is operating at peak frequency!"
                 djBroadcastText = fallbackText
+                currentBroadcastArticleUrl = null
                 viewModel.ttsHelper.speakDjBroadcast(fallbackText)
             }
         }
@@ -254,6 +305,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                             } else if (versionTapCount >= 5) {
                                 versionTapCount = 0
                                 showDjEasterEgg = true
+                                currentBroadcastArticleUrl = null
                                 val introLine = "Yo! You're locked into StreamFolio FM 99.9! All the top headlines, zero noise. Stay tuned!"
                                 djBroadcastText = introLine
                                 viewModel.ttsHelper.speakDjBroadcast(introLine)
@@ -426,6 +478,7 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
                         viewModel.ttsHelper.onDjUtteranceCompleted = null
                         viewModel.ttsHelper.stop()
                         showDjEasterEgg = false
+                        currentBroadcastArticleUrl = null
                     }
             )
         }
@@ -448,6 +501,16 @@ fun SettingsScreen(navController: NavController, viewModel: NewsViewModel) {
             StreamFolioRadioCard(
                 activeBroadcastText = djBroadcastText,
                 isPlaying = isTtsPlaying,
+                currentArticleUrl = currentBroadcastArticleUrl,
+                onOpenArticle = {
+                    currentBroadcastArticleUrl?.let { url ->
+                        viewModel.ttsHelper.onDjUtteranceCompleted = null
+                        viewModel.ttsHelper.stop()
+                        showDjEasterEgg = false
+                        val encodedUrl = URLEncoder.encode(url, "UTF-8")
+                        navController.navigate("detail_screen/$encodedUrl")
+                    }
+                },
                 onTuneOff = {
                     viewModel.ttsHelper.onDjUtteranceCompleted = null
                     viewModel.ttsHelper.stop()
