@@ -816,7 +816,15 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun generateBackupJson(): String {
         val feeds = repository.getAllCustomFeedsSync()
         val articles = repository.getBookmarkedAndReadArticles()
-        return uk.sume.streamfolio.util.BackupHelper.generateBackupJson(getApplication(), feeds, articles)
+        val lists = repository.getAllBookmarkListsSync()
+        val crossRefs = repository.getAllBookmarkCrossRefsSync()
+        return uk.sume.streamfolio.util.BackupHelper.generateBackupJson(
+            getApplication(),
+            feeds,
+            articles,
+            lists,
+            crossRefs
+        )
     }
 
     fun restoreSettingsBackup(backupJson: String, onSuccess: () -> Unit, onError: (Exception) -> Unit) {
@@ -827,6 +835,12 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 repository.addCustomFeeds(parsed.customFeeds)
                 if (parsed.articles.isNotEmpty()) {
                     repository.restoreArticles(parsed.articles)
+                }
+                if (parsed.bookmarkLists.isNotEmpty()) {
+                    repository.restoreBookmarkLists(parsed.bookmarkLists)
+                }
+                if (parsed.crossRefs.isNotEmpty()) {
+                    repository.restoreBookmarkCrossRefs(parsed.crossRefs)
                 }
                 parsed.applyPreferences(prefs)
                 reloadPreferencesToStateFlows()

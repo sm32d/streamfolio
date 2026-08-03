@@ -16,6 +16,8 @@ import org.jsoup.Jsoup
 import uk.sume.streamfolio.data.local.AppDatabase
 import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.data.model.ArticleBookmarkListCrossRef
+import uk.sume.streamfolio.data.model.BookmarkList
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.util.UrlSecurityValidator
 import java.util.concurrent.TimeUnit
@@ -921,6 +923,24 @@ class NewsRepository(private val context: Context) {
 
     suspend fun restoreArticles(articles: List<Article>) = withContext(Dispatchers.IO) {
         articleDao.insertArticles(articles)
+    }
+
+    suspend fun getAllBookmarkListsSync(): List<BookmarkList> = withContext(Dispatchers.IO) {
+        bookmarkListDao.getAllListsSync()
+    }
+
+    suspend fun getAllBookmarkCrossRefsSync(): List<ArticleBookmarkListCrossRef> = withContext(Dispatchers.IO) {
+        bookmarkListDao.getAllCrossRefsSync()
+    }
+
+    suspend fun restoreBookmarkLists(lists: List<BookmarkList>) = withContext(Dispatchers.IO) {
+        bookmarkListDao.deleteAllCustomLists()
+        bookmarkListDao.insertLists(lists)
+    }
+
+    suspend fun restoreBookmarkCrossRefs(crossRefs: List<ArticleBookmarkListCrossRef>) = withContext(Dispatchers.IO) {
+        bookmarkListDao.deleteAllCrossRefs()
+        bookmarkListDao.insertCrossRefs(crossRefs)
     }
 
     suspend fun getAllArticlesUnlimitedSync(): List<Article> = withContext(Dispatchers.IO) {

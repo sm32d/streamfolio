@@ -7,11 +7,19 @@ import org.json.JSONArray
 import org.json.JSONObject
 import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.data.model.ArticleBookmarkListCrossRef
+import uk.sume.streamfolio.data.model.BookmarkList
 import uk.sume.streamfolio.data.model.CustomFeed
 
 object BackupHelper {
 
-    fun generateBackupJson(context: Context, customFeeds: List<CustomFeed>, articles: List<Article>): String {
+    fun generateBackupJson(
+        context: Context,
+        customFeeds: List<CustomFeed>,
+        articles: List<Article>,
+        bookmarkLists: List<BookmarkList> = emptyList(),
+        crossRefs: List<ArticleBookmarkListCrossRef> = emptyList()
+    ): String {
         val prefs = PreferencesHelper(context)
         val backupObj = JSONObject()
         backupObj.put("version", 2)
@@ -37,6 +45,11 @@ object BackupHelper {
             put("swipe_right_action", prefs.swipeRightAction)
             put("tts_speech_rate", prefs.ttsSpeechRate.toDouble())
             put("use_dynamic_colors", prefs.useDynamicColors)
+            put("group_similar_stories", prefs.groupSimilarStories)
+            put("bookmark_list_view_mode_is_grid", prefs.bookmarkListViewModeIsGrid)
+            put("last_selected_bookmark_list_id", prefs.lastSelectedBookmarkListId)
+            put("has_seen_swipe_hint", prefs.hasSeenSwipeHint)
+            put("recent_searches", JSONArray(prefs.recentSearches))
         }
         backupObj.put("preferences", prefsObj)
 
@@ -77,20 +90,44 @@ object BackupHelper {
         }
         backupObj.put("articles", articlesArr)
 
+        val listsArr = JSONArray()
+        for (list in bookmarkLists) {
+            val listObj = JSONObject().apply {
+                put("id", list.id)
+                put("name", list.name)
+                put("isDefault", list.isDefault)
+                put("createdAt", list.createdAt)
+            }
+            listsArr.put(listObj)
+        }
+        backupObj.put("bookmark_lists", listsArr)
+
+        val crossRefsArr = JSONArray()
+        for (ref in crossRefs) {
+            val refObj = JSONObject().apply {
+                put("articleLink", ref.articleLink)
+                put("listId", ref.listId)
+            }
+            crossRefsArr.put(refObj)
+        }
+        backupObj.put("article_bookmark_cross_refs", crossRefsArr)
+
         return backupObj.toString(4)
     }
 
     data class ParsedBackup(
         val customFeeds: List<CustomFeed>,
         val articles: List<Article>,
+        val bookmarkLists: List<BookmarkList>,
+        val crossRefs: List<ArticleBookmarkListCrossRef>,
         val applyPreferences: (PreferencesHelper) -> Unit
     )
 
     fun parseBackupJson(jsonString: String): ParsedBackup {
         val backupObj = JSONObject(jsonString)
-        val version = backupObj.optInt("version", 0)
-        if (version < 2) {
-            throw IllegalArgumentException("Backup version $version is not supported. Only version 2 and above are supported.")
+        val version = backupObj.optInt("version", 1)
+        if (version < 1) {
+            throw IllegalArgumentException("Backup version $version is not supported.")
         }
 
         val customFeeds = mutableListOf<CustomFeed>()
@@ -98,7 +135,8 @@ object BackupHelper {
             val feedsArr = backupObj.getJSONArray("custom_feeds")
             for (i in 0 until feedsArr.length()) {
                 val feedObj = feedsArr.getJSONObject(i)
-                val rawUrl = feedObj.getString("url")
+                val rawUrl = feedObj.optString("url", "")
+                if (rawUrl.isEmpty()) continue
                 val safeUrl = UrlSecurityValidator.sanitizeUrl(rawUrl, requireHttps = true)
                 if (safeUrl == null) {
                     Log.w("StreamFolioBackup", "Skipping unsafe custom feed URL from backup: ${UrlSecurityValidator.normalizeUrl(rawUrl)?.toHttpUrlOrNull()?.host ?: "[invalid]"}")
@@ -106,9 +144,9 @@ object BackupHelper {
                 }
                 customFeeds.add(
                     CustomFeed(
-                        title = feedObj.getString("title").take(200),
+                        title = feedObj.optString("title", "Custom Feed").take(200),
                         url = safeUrl,
-                        category = feedObj.getString("category").take(100)
+                        category = feedObj.optString("category", "General").take(100)
                     )
                 )
             }
@@ -119,7 +157,8 @@ object BackupHelper {
             val articlesArr = backupObj.getJSONArray("articles")
             for (i in 0 until articlesArr.length()) {
                 val articleObj = articlesArr.getJSONObject(i)
-                val rawLink = articleObj.getString("link")
+                val rawLink = articleObj.optString("link", "")
+                if (rawLink.isEmpty()) continue
                 val safeLink = UrlSecurityValidator.sanitizeUrl(rawLink, requireHttps = false)
                 if (safeLink == null) {
                     Log.w("StreamFolioBackup", "Skipping unsafe article URL from backup: ${UrlSecurityValidator.normalizeUrl(rawLink)?.toHttpUrlOrNull()?.host ?: "[invalid]"}")
@@ -128,25 +167,59 @@ object BackupHelper {
                 restoredArticles.add(
                     Article(
                         link = safeLink,
-                        title = articleObj.getString("title").take(500),
-                        description = articleObj.getString("description").take(2000),
-                        pubDate = articleObj.getString("pubDate").take(100),
-                        sourceName = articleObj.getString("sourceName").take(200),
-                        sourceUrl = articleObj.getString("sourceUrl").take(500),
-                        category = articleObj.getString("category").take(100),
-                        thumbnailUrl = if (articleObj.isNull("thumbnailUrl")) null else articleObj.getString("thumbnailUrl")?.take(500)?.let { UrlSecurityValidator.normalizeToHttps(it) },
-                        isBookmarked = articleObj.getBoolean("isBookmarked"),
-                        customFeedId = if (articleObj.isNull("customFeedId")) null else articleObj.getInt("customFeedId"),
-                        fullText = if (articleObj.isNull("fullText")) null else articleObj.getString("fullText")?.take(50_000),
-                        tags = if (articleObj.isNull("tags")) null else articleObj.getString("tags")?.take(500),
-                        aiSummary = if (articleObj.isNull("aiSummary")) null else articleObj.getString("aiSummary")?.take(10_000),
-                        translatedTitle = if (articleObj.isNull("translatedTitle")) null else articleObj.getString("translatedTitle")?.take(500),
-                        translatedBody = if (articleObj.isNull("translatedBody")) null else articleObj.getString("translatedBody")?.take(50_000),
-                        translatedLanguage = if (articleObj.isNull("translatedLanguage")) null else articleObj.getString("translatedLanguage")?.take(50),
-                        detectedLanguage = if (articleObj.isNull("detectedLanguage")) null else articleObj.getString("detectedLanguage")?.take(50),
-                        isRead = if (articleObj.has("isRead")) articleObj.getBoolean("isRead") else false
+                        title = articleObj.optString("title", "Untitled").take(500),
+                        description = articleObj.optString("description", "").take(2000),
+                        pubDate = articleObj.optString("pubDate", "").take(100),
+                        sourceName = articleObj.optString("sourceName", "Unknown").take(200),
+                        sourceUrl = articleObj.optString("sourceUrl", "").take(500),
+                        category = articleObj.optString("category", "General").take(100),
+                        thumbnailUrl = if (articleObj.isNull("thumbnailUrl")) null else articleObj.optString("thumbnailUrl", "")?.take(500)?.let { UrlSecurityValidator.normalizeToHttps(it) },
+                        isBookmarked = articleObj.optBoolean("isBookmarked", true),
+                        customFeedId = if (articleObj.isNull("customFeedId")) null else articleObj.optInt("customFeedId"),
+                        fullText = if (articleObj.isNull("fullText")) null else articleObj.optString("fullText", "")?.take(50_000),
+                        tags = if (articleObj.isNull("tags")) null else articleObj.optString("tags", "")?.take(500),
+                        aiSummary = if (articleObj.isNull("aiSummary")) null else articleObj.optString("aiSummary", "")?.take(10_000),
+                        translatedTitle = if (articleObj.isNull("translatedTitle")) null else articleObj.optString("translatedTitle", "")?.take(500),
+                        translatedBody = if (articleObj.isNull("translatedBody")) null else articleObj.optString("translatedBody", "")?.take(50_000),
+                        translatedLanguage = if (articleObj.isNull("translatedLanguage")) null else articleObj.optString("translatedLanguage", "")?.take(50),
+                        detectedLanguage = if (articleObj.isNull("detectedLanguage")) null else articleObj.optString("detectedLanguage", "")?.take(50),
+                        isRead = articleObj.optBoolean("isRead", false)
                     )
                 )
+            }
+        }
+
+        val restoredLists = mutableListOf<BookmarkList>()
+        if (backupObj.has("bookmark_lists")) {
+            val listsArr = backupObj.getJSONArray("bookmark_lists")
+            for (i in 0 until listsArr.length()) {
+                val listObj = listsArr.getJSONObject(i)
+                restoredLists.add(
+                    BookmarkList(
+                        id = listObj.getLong("id"),
+                        name = listObj.optString("name", "List").take(100),
+                        isDefault = listObj.optBoolean("isDefault", false),
+                        createdAt = listObj.optLong("createdAt", System.currentTimeMillis())
+                    )
+                )
+            }
+        }
+
+        val restoredCrossRefs = mutableListOf<ArticleBookmarkListCrossRef>()
+        if (backupObj.has("article_bookmark_cross_refs")) {
+            val crossRefsArr = backupObj.getJSONArray("article_bookmark_cross_refs")
+            for (i in 0 until crossRefsArr.length()) {
+                val refObj = crossRefsArr.getJSONObject(i)
+                val rawLink = refObj.getString("articleLink")
+                val safeLink = UrlSecurityValidator.sanitizeUrl(rawLink, requireHttps = false)
+                if (safeLink != null) {
+                    restoredCrossRefs.add(
+                        ArticleBookmarkListCrossRef(
+                            articleLink = safeLink,
+                            listId = refObj.getLong("listId")
+                        )
+                    )
+                }
             }
         }
 
@@ -245,10 +318,44 @@ object BackupHelper {
                     val action = prefsObj.getString("swipe_right_action")
                     if (isValidSwipeAction(action)) prefs.swipeRightAction = action
                 }
+
+                if (prefsObj.has("tts_speech_rate")) {
+                    val rate = prefsObj.getDouble("tts_speech_rate").toFloat()
+                    if (rate in 0.5f..3.0f) prefs.ttsSpeechRate = rate
+                }
+
+                if (prefsObj.has("use_dynamic_colors")) {
+                    prefs.useDynamicColors = prefsObj.getBoolean("use_dynamic_colors")
+                }
+
+                if (prefsObj.has("group_similar_stories")) {
+                    prefs.groupSimilarStories = prefsObj.getBoolean("group_similar_stories")
+                }
+
+                if (prefsObj.has("bookmark_list_view_mode_is_grid")) {
+                    prefs.bookmarkListViewModeIsGrid = prefsObj.getBoolean("bookmark_list_view_mode_is_grid")
+                }
+
+                if (prefsObj.has("last_selected_bookmark_list_id")) {
+                    prefs.lastSelectedBookmarkListId = prefsObj.getLong("last_selected_bookmark_list_id")
+                }
+
+                if (prefsObj.has("has_seen_swipe_hint")) {
+                    prefs.hasSeenSwipeHint = prefsObj.getBoolean("has_seen_swipe_hint")
+                }
+
+                if (prefsObj.has("recent_searches")) {
+                    val searchesArr = prefsObj.getJSONArray("recent_searches")
+                    val searchesList = mutableListOf<String>()
+                    for (i in 0 until searchesArr.length()) {
+                        searchesList.add(searchesArr.getString(i))
+                    }
+                    prefs.recentSearches = searchesList
+                }
             }
         }
 
-        return ParsedBackup(customFeeds, restoredArticles, applyPrefs)
+        return ParsedBackup(customFeeds, restoredArticles, restoredLists, restoredCrossRefs, applyPrefs)
     }
 
     private fun isValidSwipeAction(action: String?): Boolean {

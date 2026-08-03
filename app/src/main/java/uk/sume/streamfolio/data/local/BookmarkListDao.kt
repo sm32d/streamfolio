@@ -61,4 +61,22 @@ interface BookmarkListDao {
 
     @Query("UPDATE OR IGNORE article_bookmark_lists SET listId = :toListId WHERE listId = :fromListId")
     suspend fun reassignListArticles(fromListId: Long, toListId: Long)
+
+    @Query("SELECT * FROM bookmark_lists")
+    suspend fun getAllListsSync(): List<BookmarkList>
+
+    @Query("SELECT * FROM article_bookmark_lists")
+    suspend fun getAllCrossRefsSync(): List<ArticleBookmarkListCrossRef>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertLists(lists: List<BookmarkList>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCrossRefs(crossRefs: List<ArticleBookmarkListCrossRef>)
+
+    @Query("DELETE FROM bookmark_lists WHERE isDefault = 0")
+    suspend fun deleteAllCustomLists()
+
+    @Query("DELETE FROM article_bookmark_lists")
+    suspend fun deleteAllCrossRefs()
 }
