@@ -430,15 +430,36 @@ fun BookmarkCollectionDetailScreen(
             )
         }
 
+        val allLists by viewModel.allBookmarkLists.collectAsState()
+        var showMoveDestinationPicker by remember { mutableStateOf(false) }
+
         // Delete Collection Modal Bottom Sheet
         if (showDeleteListModal && currentList != null) {
             DeleteCollectionModalSheet(
                 listName = currentList.name,
                 isEmpty = listArticles.isEmpty(),
                 onDismiss = { showDeleteListModal = false },
-                onConfirm = { moveArticlesToDefault ->
-                    viewModel.deleteBookmarkList(currentList.id, moveArticlesToDefault)
+                onConfirmMove = {
                     showDeleteListModal = false
+                    showMoveDestinationPicker = true
+                },
+                onConfirmDeleteAll = {
+                    viewModel.deleteBookmarkList(currentList.id, moveArticlesToDefault = false)
+                    showDeleteListModal = false
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // Destination Picker Sheet when deleting non-empty collection
+        if (showMoveDestinationPicker && currentList != null) {
+            MoveArticlesDestinationModalSheet(
+                allLists = allLists,
+                deletingListId = currentList.id,
+                onDismiss = { showMoveDestinationPicker = false },
+                onListSelected = { targetListId ->
+                    viewModel.deleteBookmarkList(currentList.id, targetMoveListId = targetListId)
+                    showMoveDestinationPicker = false
                     navController.popBackStack()
                 }
             )
@@ -846,13 +867,13 @@ private fun CreateCollectionModalSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeleteCollectionModalSheet(
     listName: String,
     isEmpty: Boolean = false,
     onDismiss: () -> Unit,
-    onConfirm: (moveArticlesToDefault: Boolean) -> Unit
+    onConfirmMove: () -> Unit,
+    onConfirmDeleteAll: () -> Unit
 ) {
     if (isEmpty) {
         ConfirmationModalSheet(
@@ -861,7 +882,7 @@ private fun DeleteCollectionModalSheet(
             icon = Icons.Default.Delete,
             primaryButtonText = "Delete Collection",
             primaryButtonColor = MaterialTheme.colorScheme.error,
-            onPrimaryClick = { onConfirm(false) },
+            onPrimaryClick = { onConfirmDeleteAll() },
             secondaryButtonText = "Cancel",
             onDismiss = onDismiss
         )
@@ -870,16 +891,128 @@ private fun DeleteCollectionModalSheet(
             title = "Delete Collection",
             message = "Are you sure you want to delete \"$listName\"? Choose what happens to the saved articles in this collection.",
             icon = Icons.Default.Delete,
-            primaryButtonText = "Move Articles to 'Saved'",
+            primaryButtonText = "Move Articles To...",
             primaryButtonColor = MaterialTheme.colorScheme.primary,
-            onPrimaryClick = { onConfirm(true) },
+            onPrimaryClick = { onConfirmMove() },
             secondaryButtonText = "Remove Bookmarks",
             secondaryButtonColor = MaterialTheme.colorScheme.error,
             isSecondaryOutlined = true,
-            onSecondaryClick = { onConfirm(false) },
+            onSecondaryClick = { onConfirmDeleteAll() },
             tertiaryButtonText = "Cancel",
             onTertiaryClick = { },
             onDismiss = onDismiss
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MoveArticlesDestinationModalSheet(
+    allLists: List<uk.sume.streamfolio.data.model.BookmarkList>,
+    deletingListId: Long,
+    onDismiss: () -> Unit,
+    onListSelected: (targetListId: Long) -> Unit
+) {
+    val availableLists = remember(allLists, deletingListId) {
+        allLists.filter { it.id != deletingListId }
+    }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+
+    fun animateDismiss(action: () -> Unit = {}) {
+        coroutineScope.launch {
+            sheetState.hide()
+        }.invokeOnCompletion {
+            action()
+            onDismiss()
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Folder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Move Articles To...",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Select destination collection for saved articles",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(availableLists, key = { it.id }) { list ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                            .clickable {
+                                animateDismiss { onListSelected(list.id) }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (list.isDefault) Icons.Outlined.FolderSpecial else Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = list.name,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }

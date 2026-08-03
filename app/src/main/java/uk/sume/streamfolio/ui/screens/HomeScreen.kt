@@ -1043,7 +1043,6 @@ fun ArticleListItem(
 
     val currentArticle by rememberUpdatedState(article)
     val currentOnBookmarkToggle by rememberUpdatedState(onBookmarkToggle)
-    val showRemoveConfirmationState = remember { mutableStateOf(false) }
     var showLongPressModal by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -1051,11 +1050,7 @@ fun ArticleListItem(
     val swipeRightAction = viewModel?.swipeRightAction?.collectAsState()?.value ?: "share"
 
     fun handleBookmarkToggle() {
-        if (currentArticle.isBookmarked) {
-            showRemoveConfirmationState.value = true
-        } else {
-            currentOnBookmarkToggle()
-        }
+        currentOnBookmarkToggle()
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
     }
 
@@ -1488,89 +1483,6 @@ fun ArticleListItem(
                                 )
                             }
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showRemoveConfirmationState.value) {
-        ModalBottomSheet(
-            onDismissRequest = { showRemoveConfirmationState.value = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            dragHandle = { BottomSheetDefaults.DragHandle() },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color(0xFFEF5350).copy(alpha = 0.1f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = Color(0xFFEF5350),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Remove Bookmark",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Are you sure you want to remove this article from your saved bookmarks?",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    lineHeight = 20.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showRemoveConfirmationState.value = false },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                    ) {
-                        Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = {
-                            showRemoveConfirmationState.value = false
-                            currentOnBookmarkToggle()
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Remove", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
                 }
             }

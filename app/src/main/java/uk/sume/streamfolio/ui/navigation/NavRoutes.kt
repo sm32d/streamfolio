@@ -29,6 +29,7 @@ import uk.sume.streamfolio.ui.components.BottomTab
 import uk.sume.streamfolio.ui.components.GlassmorphicNavBar
 import uk.sume.streamfolio.ui.components.TtsMiniPlayer
 import uk.sume.streamfolio.ui.components.TtsLyricsVisualizer
+import uk.sume.streamfolio.ui.components.BookmarkToastBanner
 import uk.sume.streamfolio.ui.screens.*
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLDecoder
@@ -507,6 +508,14 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 onDismiss = { viewModel.setShowLyricsVisualizer(false) }
             )
         }
+
+        BookmarkToastBanner(
+            viewModel = viewModel,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(bottom = if (showBottomBar) 100.dp else 24.dp)
+        )
     }
 }
 }

@@ -25,6 +25,11 @@ data class CategoryArticlesState(
     val groups: List<uk.sume.streamfolio.data.model.ArticleGroup> = emptyList()
 )
 
+data class BookmarkToastEvent(
+    val article: Article,
+    val listName: String
+)
+
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -258,6 +263,13 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _articleForSaveToListSheet = MutableStateFlow<Article?>(null)
     val articleForSaveToListSheet: StateFlow<Article?> = _articleForSaveToListSheet
+
+    private val _bookmarkToastEvent = MutableStateFlow<BookmarkToastEvent?>(null)
+    val bookmarkToastEvent: StateFlow<BookmarkToastEvent?> = _bookmarkToastEvent
+
+    fun clearBookmarkToastEvent() {
+        _bookmarkToastEvent.value = null
+    }
 
     // Local & Remote search flows
     private val _searchQuery = MutableStateFlow("")
@@ -510,40 +522,17 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun toggleBookmark(article: Article, currentListId: Long? = null) {
-        viewModelScope.launch {
-            if (!article.isBookmarked) {
-                // SAVING A NEW BOOKMARK -> Always show modal to choose list
-                openSaveToListSheet(article)
-            } else {
-                // REMOVING A BOOKMARK
-                if (currentListId != null && currentListId > 0L) {
-                    // Inside a specific list -> Remove from this list immediately
-                    repository.removeArticleFromList(article.link, currentListId)
-                    if (_currentArticleDetail.value?.link == article.link) {
-                        val remainingCount = repository.getListIdsForArticleSync(article.link).size
-                        _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = remainingCount > 0)
-                    }
-                } else {
-                    val listIds = repository.getListIdsForArticleSync(article.link)
-                    if (listIds.size > 1) {
-                        // Belongs to 2+ lists -> Open modal to manage lists
-                        openSaveToListSheet(article)
-                    } else {
-                        // Belongs to 1 list -> Unbookmark immediately without modal
-                        repository.toggleBookmark(article.link, false)
-                        if (_currentArticleDetail.value?.link == article.link) {
-                            _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = false)
-                        }
-                    }
-                }
-            }
-        }
+        openSaveToListSheet(article)
     }
 
     fun saveArticleToLists(article: Article, targetListIds: Set<Long>) {
         viewModelScope.launch {
             if (targetListIds.isNotEmpty()) {
-                prefs.lastSelectedBookmarkListId = targetListIds.last()
+                val targetId = targetListIds.last()
+                prefs.lastSelectedBookmarkListId = targetId
+                val allLists = repository.getAllBookmarkLists().firstOrNull() ?: emptyList()
+                val listName = allLists.firstOrNull { it.id == targetId }?.name ?: "Saved"
+                _bookmarkToastEvent.value = BookmarkToastEvent(article, listName)
             }
             repository.saveArticleToLists(article.link, targetListIds)
             val isBookmarkedNow = targetListIds.isNotEmpty()
@@ -563,9 +552,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun deleteBookmarkList(listId: Long, moveArticlesToDefault: Boolean) {
+    fun deleteBookmarkList(listId: Long, moveArticlesToDefault: Boolean = false, targetMoveListId: Long? = null) {
         viewModelScope.launch {
-            repository.deleteBookmarkList(listId, moveArticlesToDefault)
+            repository.deleteBookmarkList(listId, moveArticlesToDefault, targetMoveListId)
             if (_selectedBookmarkListId.value == listId) {
                 _selectedBookmarkListId.value = null
             }

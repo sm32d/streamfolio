@@ -886,14 +886,15 @@ class NewsRepository(private val context: Context) {
         articleDao.updateBookmarkStatus(articleLink, isNowBookmarked)
     }
 
-    suspend fun deleteBookmarkList(listId: Long, moveArticlesToDefault: Boolean) {
+    suspend fun deleteBookmarkList(listId: Long, moveArticlesToDefault: Boolean = false, targetMoveListId: Long? = null) {
         val defaultList = bookmarkListDao.getDefaultList()
         val defaultListId = defaultList?.id ?: 1L
-        if (moveArticlesToDefault && listId != defaultListId) {
-            bookmarkListDao.reassignListArticles(listId, defaultListId)
-        } else {
-            bookmarkListDao.deleteCrossRefsForList(listId)
+        val destinationId = targetMoveListId ?: if (moveArticlesToDefault && listId != defaultListId) defaultListId else null
+
+        if (destinationId != null && listId != destinationId) {
+            bookmarkListDao.reassignListArticles(listId, destinationId)
         }
+        bookmarkListDao.deleteCrossRefsForList(listId)
         bookmarkListDao.deleteList(listId)
 
         // Ensure articles with 0 remaining list associations get updated isBookmarked = false

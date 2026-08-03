@@ -1,6 +1,7 @@
 package uk.sume.streamfolio.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkRemove
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Folder
@@ -109,7 +111,7 @@ fun SaveToListBottomSheet(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Save to Collection",
+                        text = if (article.isBookmarked || assignedListIds.isNotEmpty()) "Manage Collections" else "Save to Collection",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -272,7 +274,7 @@ fun SaveToListBottomSheet(
                 )
             ) {
                 Text(
-                    text = if (selectedListIds.isEmpty()) "Remove Bookmark" else "Done",
+                    text = "Done",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
