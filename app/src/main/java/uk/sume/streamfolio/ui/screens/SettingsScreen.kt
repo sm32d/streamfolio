@@ -27,7 +27,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -539,22 +541,6 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
         "hi" to "हिन्दी",
         "zh" to "中文"
     )
-    val regions = mapOf(
-        "US" to "United States",
-        "GB" to "United Kingdom",
-        "CA" to "Canada",
-        "FR" to "France",
-        "DE" to "Germany",
-        "IN" to "India",
-        "AU" to "Australia",
-        "SG" to "Singapore",
-        "HK" to "Hong Kong",
-        "KR" to "South Korea",
-        "JP" to "Japan",
-        "BR" to "Brazil",
-        "ZA" to "South Africa",
-        "AE" to "UAE"
-    )
     val cacheOptions = mapOf(
         "1" to "1 Day",
         "3" to "3 Days",
@@ -567,8 +553,10 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
 
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
-
     var showRegionModal by remember { mutableStateOf(false) }
+
+    val groupSimilarStories by viewModel.groupSimilarStories.collectAsState()
+    val useDynamicColors by viewModel.useDynamicColors.collectAsState()
 
     if (showRegionModal) {
         RegionPickerModal(
@@ -596,144 +584,69 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
         ) {
             SubPageTopBar(title = "Preferences", onBack = { navController.popBackStack() })
 
-            SettingsSubHeader(
-                title = "Preferences",
-                description = "Choose the source regions and database cache retention durations that best match your news reading preferences.",
-                icon = Icons.Default.Tune
-            )
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "REGION / COUNTRY",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .border(
-                            1.dp,
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                            RoundedCornerShape(16.dp)
+            // 👑 Master Hero Master Banner
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
                         )
-                        .clickable { showRegionModal = true }
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    )
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Place,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = RegionUtils.getFormattedRegionName(selectedRegion),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            SettingsSelectorField(
-                label = "Offline Cache History",
-                icon = Icons.Default.History,
-                value = cacheOptions[cacheDays] ?: "7 Days",
-                options = cacheOptions.mapValues { it.value to null },
-                onSelected = {
-                    cacheDays = it
-                    viewModel.prefs.cacheHistoryDays = it.toInt()
-                }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "FEED CURATION",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val groupSimilarStories by viewModel.groupSimilarStories.collectAsState()
-
-            SettingsCard {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.secondary),
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Layers,
+                                imageVector = Icons.Default.Tune,
                                 contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-
-                        Spacer(modifier = Modifier.width(14.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Group Similar Stories",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text = "Reading & Regional Profile",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Consolidate duplicate stories from different sources",
+                                text = "Tailor news sources, retention & themes",
                                 fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                         }
                     }
-                    HapticSwitch(
-                        checked = groupSimilarStories,
-                        onCheckedChange = { checked ->
-                            viewModel.setGroupSimilarStories(checked)
-                        },
-                        enabled = true,
-                        modifier = Modifier.scale(0.85f),
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // 🌍 Section 1: Region & Locale
             Text(
-                text = "THEME & STYLE",
+                text = "REGION & LOCALE",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
@@ -741,12 +654,11 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
             )
             Spacer(modifier = Modifier.height(8.dp))
 
-            val useDynamicColors by viewModel.useDynamicColors.collectAsState()
-
             SettingsCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clickable { showRegionModal = true }
                         .padding(horizontal = 18.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -760,38 +672,172 @@ fun SettingsPreferencesScreen(navController: NavController, viewModel: NewsViewM
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Palette,
+                                imageVector = Icons.Default.Place,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
                             Text(
-                                text = "Dynamic Colors",
+                                text = "Source Region / Country",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Use Material You colors from your wallpaper",
+                                text = RegionUtils.getFormattedRegionName(selectedRegion),
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                             )
                         }
                     }
-                    HapticSwitch(
-                        checked = useDynamicColors,
-                        onCheckedChange = { checked ->
-                            viewModel.setUseDynamicColors(checked)
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                        )
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ⚡ Section 2: Storage & Cache Retention
+            Text(
+                text = "STORAGE & OFF-LINING",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsSelectorField(
+                label = "Offline Cache History",
+                icon = Icons.Default.History,
+                value = cacheOptions[cacheDays] ?: "7 Days",
+                options = cacheOptions.mapValues { it.value to null },
+                showLabel = false,
+                onSelected = {
+                    cacheDays = it
+                    viewModel.prefs.cacheHistoryDays = it.toInt()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // 📰 Section 3: Curation & Appearance
+            Text(
+                text = "FEED CURATION & THEME",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            SettingsCard {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.secondary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Layers,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    text = "Group Similar Stories",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Consolidate duplicate stories from different sources",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                        HapticSwitch(
+                            checked = groupSimilarStories,
+                            onCheckedChange = { checked ->
+                                viewModel.setGroupSimilarStories(checked)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.tertiary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Palette,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    text = "Dynamic Colors",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Use Material You colors from your wallpaper",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+                        HapticSwitch(
+                            checked = useDynamicColors,
+                            onCheckedChange = { checked ->
+                                viewModel.setUseDynamicColors(checked)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
                 }
             }
 
@@ -2280,18 +2326,21 @@ private fun SettingsSelectorField(
     value: String,
     icon: ImageVector,
     options: Map<String, Pair<String, ImageVector?>>,
+    showLabel: Boolean = true,
     onSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+        if (showLabel && label.isNotBlank()) {
+            Text(
+                text = label.uppercase(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         Box {
             Row(
                 modifier = Modifier
@@ -2456,18 +2505,28 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
             SubPageTopBar(title = "AI Services", onBack = { navController.popBackStack() })
 
             // 1. HERO MASTER CARD: Enable On-Device AI
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
+                    .padding(top = 12.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2931,6 +2990,8 @@ fun SettingsAiScreen(navController: NavController, viewModel: NewsViewModel) {
 fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewModel) {
     val swipeLeftAction by viewModel.swipeLeftAction.collectAsState()
     val swipeRightAction by viewModel.swipeRightAction.collectAsState()
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
 
     val options = mapOf(
         "bookmark" to ("Toggle Bookmark" to Icons.Outlined.BookmarkAdd),
@@ -2957,31 +3018,99 @@ fun SettingsGesturesScreen(navController: NavController, viewModel: NewsViewMode
         ) {
             SubPageTopBar(title = "Swipe Gestures", onBack = { navController.popBackStack() })
 
-            SettingsSubHeader(
-                title = "Gesture Actions",
-                description = "Configure the actions executed when you swipe articles to the left or to the right on your feed listings.",
-                icon = Icons.Default.Swipe
+            // 👑 Master Hero Master Banner
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Swipe,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Swipe Gesture Engine",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Custom quick actions for article feed cards",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // ⚙️ Section 1: Gesture Action Selectors
+            Text(
+                text = "GESTURE CONFIGURATION",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
             )
+            Spacer(modifier = Modifier.height(8.dp))
 
             SettingsSelectorField(
                 label = "Swipe Left Action",
                 icon = Icons.Default.KeyboardArrowLeft,
                 value = options[swipeLeftAction]?.first ?: "Toggle Bookmark",
                 options = options,
+                showLabel = false,
                 onSelected = {
                     viewModel.setSwipeLeftAction(it)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             SettingsSelectorField(
                 label = "Swipe Right Action",
                 icon = Icons.Default.KeyboardArrowRight,
                 value = options[swipeRightAction]?.first ?: "Share",
                 options = options,
+                showLabel = false,
                 onSelected = {
                     viewModel.setSwipeRightAction(it)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
             )
 
