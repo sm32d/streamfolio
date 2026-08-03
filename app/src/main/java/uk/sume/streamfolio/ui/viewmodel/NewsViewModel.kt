@@ -249,6 +249,16 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val customFeeds: StateFlow<List<CustomFeed>> = repository.getCustomFeeds()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Bookmark Lists flow
+    val allBookmarkLists: StateFlow<List<uk.sume.streamfolio.data.model.BookmarkList>> = repository.getAllBookmarkLists()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedBookmarkListId = MutableStateFlow<Long?>(null)
+    val selectedBookmarkListId: StateFlow<Long?> = _selectedBookmarkListId
+
+    private val _articleForSaveToListSheet = MutableStateFlow<Article?>(null)
+    val articleForSaveToListSheet: StateFlow<Article?> = _articleForSaveToListSheet
+
     // Local & Remote search flows
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -491,15 +501,73 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
+    fun openSaveToListSheet(article: Article) {
+        _articleForSaveToListSheet.value = article
+    }
+
+    fun closeSaveToListSheet() {
+        _articleForSaveToListSheet.value = null
+    }
+
     fun toggleBookmark(article: Article) {
-        viewModelScope.launch {
-            val newStatus = !article.isBookmarked
-            repository.toggleBookmark(article.link, newStatus)
-            if (_currentArticleDetail.value?.link == article.link) {
-                _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = newStatus)
+        if (!article.isBookmarked) {
+            // Open sheet to pick list when saving
+            openSaveToListSheet(article)
+        } else {
+            // Unbookmark
+            viewModelScope.launch {
+                repository.toggleBookmark(article.link, false)
+                if (_currentArticleDetail.value?.link == article.link) {
+                    _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = false)
+                }
             }
         }
     }
+
+    fun saveArticleToLists(article: Article, targetListIds: Set<Long>) {
+        viewModelScope.launch {
+            repository.saveArticleToLists(article.link, targetListIds)
+            val isBookmarkedNow = targetListIds.isNotEmpty()
+            if (_currentArticleDetail.value?.link == article.link) {
+                _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = isBookmarkedNow)
+            }
+            closeSaveToListSheet()
+        }
+    }
+
+    fun createBookmarkList(name: String, onCreated: (Long) -> Unit = {}) {
+        viewModelScope.launch {
+            val newId = repository.createBookmarkList(name)
+            if (newId != -1L) {
+                onCreated(newId)
+            }
+        }
+    }
+
+    fun deleteBookmarkList(listId: Long, moveArticlesToDefault: Boolean) {
+        viewModelScope.launch {
+            repository.deleteBookmarkList(listId, moveArticlesToDefault)
+            if (_selectedBookmarkListId.value == listId) {
+                _selectedBookmarkListId.value = null
+            }
+        }
+    }
+
+    fun selectBookmarkList(listId: Long?) {
+        _selectedBookmarkListId.value = listId
+    }
+
+    fun getArticlesForBookmarkList(listId: Long): Flow<List<Article>> {
+        return repository.getArticlesForBookmarkList(listId)
+    }
+
+    fun getListIdsForArticle(articleLink: String): Flow<List<Long>> {
+        return repository.getListIdsForArticle(articleLink)
+    }
+
+    fun getArticleCountForList(listId: Long): Flow<Int> = repository.getArticleCountForList(listId)
+
+    fun getPreviewThumbnailForList(listId: Long): Flow<String?> = repository.getPreviewThumbnailForList(listId)
 
     fun deleteBookmark(article: Article) {
         viewModelScope.launch {

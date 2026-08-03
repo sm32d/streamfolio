@@ -54,7 +54,8 @@ fun AppNavigation(viewModel: NewsViewModel) {
         BottomTab.HOME.route,
         BottomTab.SEARCH.route,
         BottomTab.BOOKMARKS.route,
-        BottomTab.SETTINGS.route
+        BottomTab.SETTINGS.route,
+        "bookmark_collection_detail/{listId}"
     )
 
     val showBottomBar = currentRoute in bottomBarRoutes
@@ -386,13 +387,38 @@ fun AppNavigation(viewModel: NewsViewModel) {
                     animatedVisibilityScope = this
                 )
             }
+            composable(
+                route = "bookmark_collection_detail/{listId}",
+                arguments = listOf(navArgument("listId") { type = NavType.LongType }),
+                enterTransition = {
+                    slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300))
+                },
+                exitTransition = {
+                    slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
+                },
+                popEnterTransition = {
+                    slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(animationSpec = tween(300))
+                },
+                popExitTransition = {
+                    slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeOut(animationSpec = tween(300))
+                }
+            ) { backStackEntry ->
+                val listId = backStackEntry.arguments?.getLong("listId") ?: -1L
+                uk.sume.streamfolio.ui.screens.BookmarkCollectionDetailScreen(
+                    navController = navController,
+                    viewModel = viewModel,
+                    listId = listId,
+                    sharedTransitionScope = this@SharedTransitionLayout,
+                    animatedVisibilityScope = this
+                )
+            }
         }
     }
 
         if (showBottomBar) {
             val selectedTab = when (currentRoute) {
                 BottomTab.SEARCH.route -> BottomTab.SEARCH
-                BottomTab.BOOKMARKS.route -> BottomTab.BOOKMARKS
+                BottomTab.BOOKMARKS.route, "bookmark_collection_detail/{listId}" -> BottomTab.BOOKMARKS
                 BottomTab.SETTINGS.route -> BottomTab.SETTINGS
                 else -> BottomTab.HOME
             }

@@ -5,18 +5,21 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import uk.sume.streamfolio.data.model.Article
+import uk.sume.streamfolio.data.model.ArticleBookmarkListCrossRef
+import uk.sume.streamfolio.data.model.BookmarkList
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.data.model.TtsPlaylistState
 
 @Database(
-    entities = [Article::class, CustomFeed::class, TtsPlaylistState::class],
-    version = 7,
+    entities = [Article::class, CustomFeed::class, TtsPlaylistState::class, BookmarkList::class, ArticleBookmarkListCrossRef::class],
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun articleDao(): ArticleDao
     abstract fun customFeedDao(): CustomFeedDao
     abstract fun ttsPlaylistStateDao(): TtsPlaylistStateDao
+    abstract fun bookmarkListDao(): BookmarkListDao
 
     companion object {
         @Volatile

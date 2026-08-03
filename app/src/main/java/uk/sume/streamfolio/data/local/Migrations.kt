@@ -39,4 +39,34 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_5_6, MIGRATION_6_7)
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `bookmark_lists` (" +
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`name` TEXT NOT NULL, " +
+                "`isDefault` INTEGER NOT NULL, " +
+                "`createdAt` INTEGER NOT NULL" +
+                ")"
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_bookmark_lists_name` ON `bookmark_lists` (`name`)")
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `article_bookmark_lists` (" +
+                "`articleLink` TEXT NOT NULL, " +
+                "`listId` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`articleLink`, `listId`)" +
+                ")"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_article_bookmark_lists_articleLink` ON `article_bookmark_lists` (`articleLink`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_article_bookmark_lists_listId` ON `article_bookmark_lists` (`listId`)")
+
+        // Seed default "Saved" list (id = 1)
+        db.execSQL("INSERT OR IGNORE INTO `bookmark_lists` (`id`, `name`, `isDefault`, `createdAt`) VALUES (1, 'Saved', 1, ${System.currentTimeMillis()})")
+
+        // Migrate existing bookmarked articles to default "Saved" list
+        db.execSQL("INSERT OR IGNORE INTO `article_bookmark_lists` (`articleLink`, `listId`) SELECT `link`, 1 FROM `articles` WHERE `isBookmarked` = 1")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)

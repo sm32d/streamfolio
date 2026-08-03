@@ -84,6 +84,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.BorderStroke
 import kotlinx.coroutines.launch
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.ui.components.SaveToListBottomSheet
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import okhttp3.Headers
 import java.net.URLEncoder
@@ -766,12 +767,21 @@ fun HomeScreen(
                                 trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                             )
                         }
+                        }
                     }
                 }
             }
         }
+
+        val saveToListArticle by viewModel.articleForSaveToListSheet.collectAsState()
+        saveToListArticle?.let { art ->
+            SaveToListBottomSheet(
+                article = art,
+                viewModel = viewModel,
+                onDismiss = { viewModel.closeSaveToListSheet() }
+            )
+        }
     }
-}
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)

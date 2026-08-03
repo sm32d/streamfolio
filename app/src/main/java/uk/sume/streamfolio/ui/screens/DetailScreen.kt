@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import uk.sume.streamfolio.ui.components.SaveToListBottomSheet
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -1233,7 +1234,7 @@ fun DetailScreen(
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 if (article != null) {
-                                    viewModel.toggleBookmark(article)
+                                    viewModel.openSaveToListSheet(article)
                                 }
                             }
                             .padding(horizontal = 14.dp, vertical = 8.dp),
@@ -1332,6 +1333,16 @@ fun DetailScreen(
                     }
                 }
             }
+        }
+
+        // Save to List Sheet
+        val saveToListArticle by viewModel.articleForSaveToListSheet.collectAsState()
+        saveToListArticle?.let { art ->
+            SaveToListBottomSheet(
+                article = art,
+                viewModel = viewModel,
+                onDismiss = { viewModel.closeSaveToListSheet() }
+            )
         }
     }
 }

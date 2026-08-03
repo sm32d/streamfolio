@@ -29,6 +29,7 @@ class NewsRepository(private val context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val articleDao = db.articleDao()
     private val customFeedDao = db.customFeedDao()
+    private val bookmarkListDao = db.bookmarkListDao()
     private val prefs = PreferencesHelper(context)
     private val parser = RssParser()
     private val aiSummaryHelper by lazy { AiHelperFactory.createSummaryHelper(context) }
@@ -832,7 +833,69 @@ class NewsRepository(private val context: Context) {
 
     // Bookmark actions
     suspend fun toggleBookmark(articleLink: String, isBookmarked: Boolean) {
-        articleDao.updateBookmarkStatus(articleLink, isBookmarked)
+        if (!isBookmarked) {
+            // Unbookmark: clear all list associations
+            bookmarkListDao.deleteAllCrossRefsForArticle(articleLink)
+            articleDao.updateBookmarkStatus(articleLink, false)
+        } else {
+            // Bookmark: add to default 'Saved' list (id = 1) if no list assigned yet
+            var defaultList = bookmarkListDao.getDefaultList()
+            if (defaultList == null) {
+                val newId = bookmarkListDao.insertList(uk.sume.streamfolio.data.model.BookmarkList(name = "Saved", isDefault = true))
+                defaultList = uk.sume.streamfolio.data.model.BookmarkList(id = newId, name = "Saved", isDefault = true)
+            }
+            bookmarkListDao.insertCrossRef(uk.sume.streamfolio.data.model.ArticleBookmarkListCrossRef(articleLink, defaultList.id))
+            articleDao.updateBookmarkStatus(articleLink, true)
+        }
+    }
+
+    // Bookmark List actions
+    fun getAllBookmarkLists(): Flow<List<uk.sume.streamfolio.data.model.BookmarkList>> = bookmarkListDao.getAllLists()
+
+    fun getArticlesForBookmarkList(listId: Long): Flow<List<Article>> = bookmarkListDao.getArticlesForList(listId)
+
+    fun getListIdsForArticle(articleLink: String): Flow<List<Long>> = bookmarkListDao.getListIdsForArticle(articleLink)
+
+    suspend fun getListIdsForArticleSync(articleLink: String): List<Long> = bookmarkListDao.getListIdsForArticleSync(articleLink)
+
+    fun getArticleCountForList(listId: Long): Flow<Int> = bookmarkListDao.getArticleCountForList(listId)
+
+    fun getPreviewThumbnailForList(listId: Long): Flow<String?> = bookmarkListDao.getPreviewThumbnailForList(listId)
+
+    suspend fun createBookmarkList(name: String): Long {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return -1L
+        val list = uk.sume.streamfolio.data.model.BookmarkList(name = trimmed)
+        return bookmarkListDao.insertList(list)
+    }
+
+    suspend fun saveArticleToLists(articleLink: String, targetListIds: Set<Long>) {
+        bookmarkListDao.deleteAllCrossRefsForArticle(articleLink)
+        for (listId in targetListIds) {
+            bookmarkListDao.insertCrossRef(uk.sume.streamfolio.data.model.ArticleBookmarkListCrossRef(articleLink, listId))
+        }
+        val isNowBookmarked = targetListIds.isNotEmpty()
+        articleDao.updateBookmarkStatus(articleLink, isNowBookmarked)
+    }
+
+    suspend fun deleteBookmarkList(listId: Long, moveArticlesToDefault: Boolean) {
+        val defaultList = bookmarkListDao.getDefaultList()
+        val defaultListId = defaultList?.id ?: 1L
+        if (moveArticlesToDefault && listId != defaultListId) {
+            bookmarkListDao.reassignListArticles(listId, defaultListId)
+        } else {
+            bookmarkListDao.deleteCrossRefsForList(listId)
+        }
+        bookmarkListDao.deleteList(listId)
+
+        // Ensure articles with 0 remaining list associations get updated isBookmarked = false
+        val bookmarkedArticles = articleDao.getBookmarkedAndReadArticlesSync().filter { it.isBookmarked }
+        for (article in bookmarkedArticles) {
+            val count = bookmarkListDao.getArticleListAssociationCount(article.link)
+            if (count == 0) {
+                articleDao.updateBookmarkStatus(article.link, false)
+            }
+        }
     }
 
     // Custom Feed actions

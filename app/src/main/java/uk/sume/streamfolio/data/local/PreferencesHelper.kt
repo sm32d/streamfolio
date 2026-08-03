@@ -117,4 +117,8 @@ class PreferencesHelper(context: Context) {
     var groupSimilarStories: Boolean
         get() = prefs.getBoolean("group_similar_stories", true)
         set(value) = prefs.edit().putBoolean("group_similar_stories", value).apply()
+
+    var bookmarkListViewModeIsGrid: Boolean
+        get() = prefs.getBoolean("bookmark_list_view_mode_is_grid", true)
+        set(value) = prefs.edit().putBoolean("bookmark_list_view_mode_is_grid", value).apply()
 }
