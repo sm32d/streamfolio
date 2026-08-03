@@ -432,7 +432,9 @@ fun AppNavigation(viewModel: NewsViewModel) {
                 GlassmorphicNavBar(
                     selectedTab = selectedTab,
                     onTabSelected = { tab ->
-                        if (currentRoute != tab.route) {
+                        if (tab == BottomTab.BOOKMARKS && (currentRoute?.startsWith("bookmark_collection_detail") == true)) {
+                            navController.popBackStack(BottomTab.BOOKMARKS.route, inclusive = false)
+                        } else if (currentRoute != tab.route) {
                             navController.navigate(tab.route) {
                                 popUpTo(BottomTab.HOME.route) {
                                     saveState = true
