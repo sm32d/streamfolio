@@ -1213,34 +1213,41 @@ fun DetailScreen(
                 Row(
                     modifier = Modifier
                         .wrapContentWidth()
-                        .height(60.dp)
-                        .shadow(16.dp, RoundedCornerShape(30.dp))
-                        .clip(RoundedCornerShape(30.dp))
+                        .height(54.dp)
+                        .shadow(16.dp, RoundedCornerShape(28.dp))
+                        .clip(RoundedCornerShape(28.dp))
                         .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(30.dp))
-                        .padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(32.dp),
+                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Save Bookmark Action
                     Row(
-                        modifier = Modifier.clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (article != null) {
-                                viewModel.toggleBookmark(article)
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (article != null && article.isBookmarked) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (article != null) {
+                                    viewModel.toggleBookmark(article)
+                                }
                             }
-                        },
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = if (article != null && article.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = "Save",
-                            tint = if (article != null && article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            tint = if (article != null && article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (article != null && article.isBookmarked) "Saved" else "Save",
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (article != null && article.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                         )
@@ -1248,27 +1255,32 @@ fun DetailScreen(
 
                     // Share Action
                     Row(
-                        modifier = Modifier.clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            val shareUrl = UrlSecurityValidator.normalizeToHttps(url) ?: url
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, article.title)
-                                putExtra(Intent.EXTRA_TEXT, shareUrl)
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                val shareUrl = UrlSecurityValidator.normalizeToHttps(url) ?: url
+                                val shareText = "${article.title}\n\nRead more: $shareUrl\n\nShared via StreamFolio: https://play.google.com/store/apps/details?id=uk.sume.streamfolio"
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, article.title)
+                                    putExtra(Intent.EXTRA_TEXT, shareText)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
-                        },
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = "Share",
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Share",
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -1278,15 +1290,22 @@ fun DetailScreen(
                     if (showTranslateOption) {
                         val isTranslated = translatedTitle.isNotEmpty()
                         Row(
-                            modifier = Modifier.clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (isTranslated) {
-                                    viewModel.clearTranslation()
-                                } else {
-                                    val body = if (currentTab == "Web") "" else (articleBody.takeIf { it.isNotBlank() } ?: article.description)
-                                    viewModel.translateArticleText(article.title, body)
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (isTranslated) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (isTranslated) {
+                                        viewModel.clearTranslation()
+                                    } else {
+                                        val body = if (currentTab == "Web") "" else (articleBody.takeIf { it.isNotBlank() } ?: article.description)
+                                        viewModel.translateArticleText(article.title, body)
+                                    }
                                 }
-                            },
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (isTranslationLoading) {
@@ -1299,13 +1318,13 @@ fun DetailScreen(
                                 Icon(
                                     imageVector = Icons.Default.Translate,
                                     contentDescription = "Translate",
-                                    tint = if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    tint = if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = if (isTranslated) "Original" else "Translate",
-                                fontSize = 14.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isTranslated) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )

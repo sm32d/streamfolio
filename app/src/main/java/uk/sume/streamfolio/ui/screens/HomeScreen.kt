@@ -1056,10 +1056,11 @@ fun ArticleListItem(
             }
             "share" -> {
                 val shareUrl = UrlSecurityValidator.normalizeToHttps(currentArticle.link) ?: currentArticle.link
+                val shareText = "${currentArticle.title}\n\nRead more: $shareUrl\n\nShared via StreamFolio: https://play.google.com/store/apps/details?id=uk.sume.streamfolio"
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
-                    putExtra(Intent.EXTRA_TEXT, "${currentArticle.title}\n\nRead more at: $shareUrl")
+                    putExtra(Intent.EXTRA_TEXT, shareText)
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1677,10 +1678,11 @@ fun ArticleListItem(
                     onClick = {
                         showLongPressModal = false
                         val shareUrl = UrlSecurityValidator.normalizeToHttps(article.link) ?: article.link
+                        val shareText = "${article.title}\n\nRead more: $shareUrl\n\nShared via StreamFolio: https://play.google.com/store/apps/details?id=uk.sume.streamfolio"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_SUBJECT, article.title)
-                            putExtra(Intent.EXTRA_TEXT, "${article.title}\n\nRead more at: $shareUrl")
+                            putExtra(Intent.EXTRA_TEXT, shareText)
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "Share Article"))
                     }
