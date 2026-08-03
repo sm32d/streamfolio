@@ -509,16 +509,32 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         _articleForSaveToListSheet.value = null
     }
 
-    fun toggleBookmark(article: Article) {
-        if (!article.isBookmarked) {
-            // Open sheet to pick list when saving
-            openSaveToListSheet(article)
-        } else {
-            // Unbookmark
-            viewModelScope.launch {
-                repository.toggleBookmark(article.link, false)
-                if (_currentArticleDetail.value?.link == article.link) {
-                    _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = false)
+    fun toggleBookmark(article: Article, currentListId: Long? = null) {
+        viewModelScope.launch {
+            if (!article.isBookmarked) {
+                // SAVING A NEW BOOKMARK -> Always show modal to choose list
+                openSaveToListSheet(article)
+            } else {
+                // REMOVING A BOOKMARK
+                if (currentListId != null && currentListId > 0L) {
+                    // Inside a specific list -> Remove from this list immediately
+                    repository.removeArticleFromList(article.link, currentListId)
+                    if (_currentArticleDetail.value?.link == article.link) {
+                        val remainingCount = repository.getListIdsForArticleSync(article.link).size
+                        _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = remainingCount > 0)
+                    }
+                } else {
+                    val listIds = repository.getListIdsForArticleSync(article.link)
+                    if (listIds.size > 1) {
+                        // Belongs to 2+ lists -> Open modal to manage lists
+                        openSaveToListSheet(article)
+                    } else {
+                        // Belongs to 1 list -> Unbookmark immediately without modal
+                        repository.toggleBookmark(article.link, false)
+                        if (_currentArticleDetail.value?.link == article.link) {
+                            _currentArticleDetail.value = _currentArticleDetail.value?.copy(isBookmarked = false)
+                        }
+                    }
                 }
             }
         }
@@ -526,6 +542,9 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveArticleToLists(article: Article, targetListIds: Set<Long>) {
         viewModelScope.launch {
+            if (targetListIds.isNotEmpty()) {
+                prefs.lastSelectedBookmarkListId = targetListIds.last()
+            }
             repository.saveArticleToLists(article.link, targetListIds)
             val isBookmarkedNow = targetListIds.isNotEmpty()
             if (_currentArticleDetail.value?.link == article.link) {

@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import uk.sume.streamfolio.ui.components.ConfirmationModalSheet
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import uk.sume.streamfolio.data.model.Article
@@ -388,7 +389,7 @@ fun BookmarkCollectionDetailScreen(
                             }
                         }
                         val articleState = rememberUpdatedState(article)
-                        val onBookmarkToggle = remember { { viewModel.openSaveToListSheet(articleState.value) } }
+                        val onBookmarkToggle = remember(listId) { { viewModel.toggleBookmark(articleState.value, listId) } }
                         val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
                         val onQueueClick = remember(article.link, context) {
                             {
@@ -433,6 +434,7 @@ fun BookmarkCollectionDetailScreen(
         if (showDeleteListModal && currentList != null) {
             DeleteCollectionModalSheet(
                 listName = currentList.name,
+                isEmpty = listArticles.isEmpty(),
                 onDismiss = { showDeleteListModal = false },
                 onConfirm = { moveArticlesToDefault ->
                     viewModel.deleteBookmarkList(currentList.id, moveArticlesToDefault)
@@ -844,121 +846,40 @@ private fun CreateCollectionModalSheet(
     }
 }
 
-// DELETE COLLECTION MODAL SHEET
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeleteCollectionModalSheet(
     listName: String,
+    isEmpty: Boolean = false,
     onDismiss: () -> Unit,
     onConfirm: (moveArticlesToDefault: Boolean) -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val coroutineScope = rememberCoroutineScope()
-
-    fun animateDismiss(action: () -> Unit = {}) {
-        coroutineScope.launch {
-            sheetState.hide()
-        }.invokeOnCompletion {
-            action()
-            onDismiss()
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.12f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Delete Collection",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Are you sure you want to delete \"$listName\"? Choose what happens to the saved articles in this collection.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                lineHeight = 20.sp
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Primary CTA: Move to Saved
-                Button(
-                    onClick = { animateDismiss { onConfirm(true) } },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text("Move Articles to 'Saved'", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Secondary Action: Remove Bookmarks
-                OutlinedButton(
-                    onClick = { animateDismiss { onConfirm(false) } },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
-                ) {
-                    Text("Remove Bookmarks", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Cancel Action
-                TextButton(
-                    onClick = { animateDismiss() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(44.dp)
-                ) {
-                    Text(
-                        text = "Cancel",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-            }
-        }
+    if (isEmpty) {
+        ConfirmationModalSheet(
+            title = "Delete Collection",
+            message = "Are you sure you want to delete \"$listName\"? This action cannot be undone.",
+            icon = Icons.Default.Delete,
+            primaryButtonText = "Delete Collection",
+            primaryButtonColor = MaterialTheme.colorScheme.error,
+            onPrimaryClick = { onConfirm(false) },
+            secondaryButtonText = "Cancel",
+            onDismiss = onDismiss
+        )
+    } else {
+        ConfirmationModalSheet(
+            title = "Delete Collection",
+            message = "Are you sure you want to delete \"$listName\"? Choose what happens to the saved articles in this collection.",
+            icon = Icons.Default.Delete,
+            primaryButtonText = "Move Articles to 'Saved'",
+            primaryButtonColor = MaterialTheme.colorScheme.primary,
+            onPrimaryClick = { onConfirm(true) },
+            secondaryButtonText = "Remove Bookmarks",
+            secondaryButtonColor = MaterialTheme.colorScheme.error,
+            isSecondaryOutlined = true,
+            onSecondaryClick = { onConfirm(false) },
+            tertiaryButtonText = "Cancel",
+            onTertiaryClick = { },
+            onDismiss = onDismiss
+        )
     }
 }

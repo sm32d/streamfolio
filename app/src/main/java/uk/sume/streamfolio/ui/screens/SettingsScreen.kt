@@ -3,6 +3,7 @@ package uk.sume.streamfolio.ui.screens
 import uk.sume.streamfolio.ui.components.RegionPickerModal
 import uk.sume.streamfolio.ui.components.RegionUtils
 import uk.sume.streamfolio.ui.components.StreamFolioRadioCard
+import uk.sume.streamfolio.ui.components.ConfirmationModalSheet
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -1876,86 +1877,21 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
 
     // Delete Confirmation Dialog
     if (feedToDelete != null) {
-        ModalBottomSheet(
-            onDismissRequest = { feedToDelete = null },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            dragHandle = { BottomSheetDefaults.DragHandle() },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Delete Feed",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Are you sure you want to unsubscribe from \"${feedToDelete?.title}\"?",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    lineHeight = 20.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { feedToDelete = null },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                    ) {
-                        Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = {
-                            feedToDelete?.let { viewModel.removeCustomRssFeed(it) }
-                            feedToDelete = null
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Delete", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
-                    }
-                }
-            }
-        }
+        val targetFeed = feedToDelete!!
+        ConfirmationModalSheet(
+            title = "Delete Feed",
+            message = "Are you sure you want to unsubscribe from \"${targetFeed.title}\"?",
+            icon = Icons.Default.Delete,
+            primaryButtonText = "Delete Feed",
+            primaryButtonColor = MaterialTheme.colorScheme.error,
+            onPrimaryClick = {
+                viewModel.removeCustomRssFeed(targetFeed)
+                feedToDelete = null
+            },
+            secondaryButtonText = "Cancel",
+            onSecondaryClick = { feedToDelete = null },
+            onDismiss = { feedToDelete = null }
+        )
     }
 
     Box(
@@ -3380,105 +3316,38 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
     // Settings Restore Confirmation Dialog
     if (fullBackupJsonToRestore != null) {
         val backupJson = fullBackupJsonToRestore!!
-        ModalBottomSheet(
-            onDismissRequest = { fullBackupJsonToRestore = null },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            dragHandle = { BottomSheetDefaults.DragHandle() },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 24.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
+        ConfirmationModalSheet(
+            title = "Restore Settings",
+            message = "This will overwrite all of your current custom RSS feeds, swipe action choices, categories, and translation preferences. Are you sure you want to proceed?",
+            icon = Icons.Default.Warning,
+            primaryButtonText = "Restore Settings",
+            primaryButtonColor = MaterialTheme.colorScheme.error,
+            onPrimaryClick = {
+                viewModel.restoreSettingsBackup(
+                    backupJson = backupJson,
+                    onSuccess = {
+                        scope.launch {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            kotlinx.coroutines.delay(100)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                        Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { e ->
+                        scope.launch {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            kotlinx.coroutines.delay(200)
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        }
+                        Toast.makeText(context, "Restore failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Restore Settings",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "This will overwrite all of your current custom RSS feeds, swipe action choices, categories, and translation preferences. Are you sure you want to proceed?",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    lineHeight = 20.sp
                 )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { fullBackupJsonToRestore = null },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                    ) {
-                        Text("Cancel", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    Button(
-                        onClick = {
-                            viewModel.restoreSettingsBackup(
-                                backupJson = backupJson,
-                                onSuccess = {
-                                    scope.launch {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        kotlinx.coroutines.delay(100)
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    }
-                                    Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_SHORT).show()
-                                },
-                                onError = { e ->
-                                    scope.launch {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        kotlinx.coroutines.delay(200)
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    }
-                                    Toast.makeText(context, "Restore failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                                }
-                            )
-                            fullBackupJsonToRestore = null
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Restore", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onError)
-                    }
-
-                }
-            }
-        }
+                fullBackupJsonToRestore = null
+            },
+            secondaryButtonText = "Cancel",
+            onSecondaryClick = { fullBackupJsonToRestore = null },
+            onDismiss = { fullBackupJsonToRestore = null }
+        )
     }
 
     Box(

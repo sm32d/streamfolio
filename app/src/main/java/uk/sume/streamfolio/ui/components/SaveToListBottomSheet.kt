@@ -48,15 +48,21 @@ fun SaveToListBottomSheet(
     val selectedListIds = remember { mutableStateListOf<Long>() }
     var isInitialized by remember { mutableStateOf(false) }
 
-    LaunchedEffect(assignedListIds) {
+    LaunchedEffect(assignedListIds, allLists) {
         if (!isInitialized && assignedListIds.isNotEmpty()) {
             selectedListIds.clear()
             selectedListIds.addAll(assignedListIds)
             isInitialized = true
         } else if (!isInitialized && allLists.isNotEmpty()) {
-            // Default to 'Saved' list (id = 1 or isDefault) if not previously bookmarked
+            selectedListIds.clear()
+            val lastSavedId = viewModel.prefs.lastSelectedBookmarkListId
             val defaultId = allLists.firstOrNull { it.isDefault }?.id ?: 1L
-            selectedListIds.add(defaultId)
+            val targetInitialId = if (lastSavedId != -1L && allLists.any { it.id == lastSavedId }) {
+                lastSavedId
+            } else {
+                defaultId
+            }
+            selectedListIds.add(targetInitialId)
             isInitialized = true
         }
     }
@@ -198,7 +204,11 @@ fun SaveToListBottomSheet(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(onDone = {
                             if (newListName.isNotBlank()) {
-                                viewModel.createBookmarkList(newListName.trim())
+                                viewModel.createBookmarkList(newListName.trim()) { newId ->
+                                    if (!selectedListIds.contains(newId)) {
+                                        selectedListIds.add(newId)
+                                    }
+                                }
                                 newListName = ""
                                 showCreateField = false
                             }
@@ -208,7 +218,11 @@ fun SaveToListBottomSheet(
                     Button(
                         onClick = {
                             if (newListName.isNotBlank()) {
-                                viewModel.createBookmarkList(newListName.trim())
+                                viewModel.createBookmarkList(newListName.trim()) { newId ->
+                                    if (!selectedListIds.contains(newId)) {
+                                        selectedListIds.add(newId)
+                                    }
+                                }
                                 newListName = ""
                                 showCreateField = false
                             }

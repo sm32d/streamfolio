@@ -121,4 +121,8 @@ class PreferencesHelper(context: Context) {
     var bookmarkListViewModeIsGrid: Boolean
         get() = prefs.getBoolean("bookmark_list_view_mode_is_grid", true)
         set(value) = prefs.edit().putBoolean("bookmark_list_view_mode_is_grid", value).apply()
+
+    var lastSelectedBookmarkListId: Long
+        get() = prefs.getLong("last_selected_bookmark_list_id", -1L)
+        set(value) = prefs.edit().putLong("last_selected_bookmark_list_id", value).apply()
 }

@@ -849,6 +849,14 @@ class NewsRepository(private val context: Context) {
         }
     }
 
+    suspend fun removeArticleFromList(articleLink: String, listId: Long) {
+        bookmarkListDao.deleteCrossRef(articleLink, listId)
+        val remainingListIds = bookmarkListDao.getListIdsForArticleSync(articleLink)
+        if (remainingListIds.isEmpty()) {
+            articleDao.updateBookmarkStatus(articleLink, false)
+        }
+    }
+
     // Bookmark List actions
     fun getAllBookmarkLists(): Flow<List<uk.sume.streamfolio.data.model.BookmarkList>> = bookmarkListDao.getAllLists()
 
