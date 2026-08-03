@@ -23,6 +23,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -883,10 +886,74 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
         ) {
             SubPageTopBar(title = "Manage Content & Sources", onBack = { navController.popBackStack() })
 
-            SettingsSubHeader(
-                title = "Content Categories",
-                description = "Choose which news categories are displayed on your dashboard. You can toggle default feeds, change category order, or manage custom news sources.",
-                icon = Icons.Default.Category
+            // 👑 Master Hero Master Banner Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Category,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Feed Composition & Sources",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Configure default news categories & custom RSS curation",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Section 1: Default Curated Feeds
+            Text(
+                text = "CURATED FEED CATEGORIES",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             // Default Feeds toggle card
@@ -965,15 +1032,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
 
             AnimatedVisibility(visible = isDefaultFeedsEnabled) {
                 Column {
-                    Spacer(modifier = Modifier.height(28.dp))
-                    Text(
-                        text = "CATEGORIES",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -984,6 +1043,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                             CategoryToggleChip(
                                 label = label,
                                 isSelected = isSelected,
+                                icon = getCategoryIcon(label),
                                 onClick = {
                                     val updated = if (isSelected) {
                                         if (selectedCats.size > 1) selectedCats - key else selectedCats
@@ -999,7 +1059,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "${selectedCats.size} of ${availableCategories.size} selected",
+                        text = "${selectedCats.size} of ${availableCategories.size} categories active",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
@@ -1008,7 +1068,7 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
 
             Spacer(modifier = Modifier.height(28.dp))
             Text(
-                text = "CURATION OPTIONS",
+                text = "ADVANCED CURATION",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
@@ -1031,7 +1091,6 @@ fun SettingsManageContentScreen(navController: NavController, viewModel: NewsVie
                     subtitle = "Enable or disable curated news publishers",
                     onClick = { navController.navigate("settings_providers") }
                 )
-
             }
         }
     }
@@ -1079,10 +1138,141 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
         ) {
             SubPageTopBar(title = "Reorder Category Tabs", onBack = { navController.popBackStack() })
 
-            SettingsSubHeader(
-                title = "Category Order",
-                description = "Hold and drag the handles next to each category to change the order in which they appear on your dashboard tab layout.",
-                icon = Icons.Default.Sort
+            // 👑 Master Hero Master Banner Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Category Tab Layout Engine",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Reorder dashboard category tabs using drag handles or arrows",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 📱 Section 1: Live Tab Strip Preview Card
+            Text(
+                text = "LIVE TAB BAR PREVIEW",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(20.dp)
+                    )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    categoryList.forEachIndexed { idx, cat ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (idx == 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+                                )
+                                .border(
+                                    1.dp,
+                                    if (idx == 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+                                    RoundedCornerShape(20.dp)
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = getCategoryIcon(cat),
+                                    contentDescription = null,
+                                    tint = if (idx == 0) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = cat,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (idx == 0) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Section 2: Category Priority Order List
+            Text(
+                text = "CATEGORY PRIORITY ORDER",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                modifier = Modifier.padding(bottom = 8.dp)
             )
 
             var draggedIndex by remember { mutableStateOf(-1) }
@@ -1101,7 +1291,7 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp)
+                            .padding(vertical = 4.dp)
                             .graphicsLayer {
                                 translationY = if (isDraggingThis) dragOffset else 0f
                                 shadowElevation = if (isDraggingThis) 8f else 0f
@@ -1114,7 +1304,7 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
                                 else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
                             )
                             .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1175,11 +1365,26 @@ fun SettingsReorderScreen(navController: NavController, viewModel: NewsViewModel
                                         )
                                     }
                             )
-                            Spacer(modifier = Modifier.width(16.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = getCategoryIcon(category),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
                             Text(
                                 text = category,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -1290,59 +1495,81 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
         ) {
             SubPageTopBar(title = "Default Feed Providers", onBack = { navController.popBackStack() })
 
-            SettingsSubHeader(
-                title = "News Providers",
-                description = "Manage which default, curated global news publishers and regional sources are active or hidden across your dashboard categories.",
-                icon = Icons.Default.Public
-            )
-
-            // Category Filter Active Banner
-            if (categoryFilter != null) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+            // 👑 Master Hero Master Banner Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                        RoundedCornerShape(24.dp)
+                    )
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Showing category: $categoryFilter",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Show All",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable { categoryFilter = null }
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Widgets,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Default Feed Publishers",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Customize active news sources per region & category",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // Segmented-style toggle button row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .padding(bottom = 12.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f))
-                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
                     .padding(4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .clickable { groupByCategory = false }
                         .background(if (!groupByCategory) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .padding(vertical = 8.dp),
@@ -1351,7 +1578,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                     Text(
                         text = "Group by Region",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = if (!groupByCategory) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
@@ -1359,7 +1586,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .clickable { groupByCategory = true }
                         .background(if (groupByCategory) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .padding(vertical = 8.dp),
@@ -1368,20 +1595,118 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                     Text(
                         text = "Group by Category",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = if (groupByCategory) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                 }
             }
 
-            Column(
+            // 🎯 Quick Filter Horizontal Pill Strip
+            var regionFilter by remember { mutableStateOf<String?>(null) }
+            val availableCategoriesList = remember {
+                listOf("Top Stories", "World", "Business", "Technology", "Science", "Sports", "Health", "Entertainment")
+            }
+
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 120.dp)
+                    .horizontalScroll(rememberScrollState())
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!groupByCategory) {
-                    for (regionCode in sortedRegions) {
+                    // Region Quick Filter Pills
+                    val isAllSelected = regionFilter == null
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (isAllSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                        modifier = Modifier.clickable { regionFilter = null }
+                    ) {
+                        Text(
+                            text = "ALL REGIONS",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isAllSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    sortedRegions.forEach { rCode ->
+                        val isSelected = regionFilter == rCode
+                        val rName = RegionUtils.getRegionInfo(rCode).name
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                            modifier = Modifier.clickable { regionFilter = if (isSelected) null else rCode }
+                        ) {
+                            Text(
+                                text = rName.uppercase(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                            )
+                        }
+                    }
+                } else {
+                    // Category Quick Filter Pills with Vector Icons
+                    val isAllSelected = categoryFilter == null
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, if (isAllSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                        modifier = Modifier.clickable { categoryFilter = null }
+                    ) {
+                        Text(
+                            text = "ALL CATEGORIES",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isAllSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    availableCategoriesList.forEach { catName ->
+                        val isSelected = categoryFilter?.equals(catName, ignoreCase = true) == true
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                            modifier = Modifier.clickable { categoryFilter = if (isSelected) null else catName }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = getCategoryIcon(catName),
+                                    contentDescription = null,
+                                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = catName.uppercase(),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 120.dp)
+            ) {
+                if (!groupByCategory) {
+                    val activeSortedRegions = sortedRegions.filter { regionFilter == null || it == regionFilter }
+                    activeSortedRegions.forEach { regionCode ->
                         val providersInRegion = (groupedProviders[regionCode] ?: emptyList()).filter {
                             categoryFilter == null || it.category.equals(categoryFilter, ignoreCase = true)
                         }
@@ -1390,141 +1715,178 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         if (providersInRegion.isNotEmpty()) {
                             val regionName = RegionUtils.getFormattedRegionName(regionCode)
                             
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 24.dp, bottom = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = regionName,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isActiveRegion) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
-                                    border = BorderStroke(1.dp, if (isActiveRegion) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                            item(key = "region_header_$regionCode") {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 20.dp, bottom = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                      Text(
-                                          text = if (isActiveRegion) "Active Region" else "Inactive",
-                                          fontSize = 11.sp,
-                                          fontWeight = FontWeight.SemiBold,
-                                          color = if (isActiveRegion) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                                          modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                      )
+                                    Text(
+                                        text = regionName,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isActiveRegion) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
+                                        border = BorderStroke(1.dp, if (isActiveRegion) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                    ) {
+                                          Text(
+                                              text = if (isActiveRegion) "Active Region" else "Inactive",
+                                              fontSize = 11.sp,
+                                              fontWeight = FontWeight.SemiBold,
+                                              color = if (isActiveRegion) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                              modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                          )
+                                    }
                                 }
                             }
                             
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-                                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                            ) {
-                                val sortedProviders = providersInRegion.sortedBy { it.category }
-                                for (i in sortedProviders.indices) {
-                                    val provider = sortedProviders[i]
-                                    val compositeKey = "${provider.region}|${provider.category}|${provider.url}"
-                                    val isEnabled = if (isActiveRegion) {
-                                        !disabledUrls.contains(compositeKey)
-                                    } else {
-                                        enabledCrossRegion.contains(compositeKey)
-                                    }
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                if (isActiveRegion) {
-                                                    val isCurrentlyEnabled = !disabledUrls.contains(compositeKey)
-                                                    val newDisabled = if (isCurrentlyEnabled) {
-                                                        disabledUrls + compositeKey
+                            item(key = "region_card_$regionCode") {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                                ) {
+                                    val sortedProviders = providersInRegion.sortedBy { it.category }
+                                    for (i in sortedProviders.indices) {
+                                        val provider = sortedProviders[i]
+                                        val compositeKey = "${provider.region}|${provider.category}|${provider.url}"
+                                        val isEnabled = if (isActiveRegion) {
+                                            !disabledUrls.contains(compositeKey)
+                                        } else {
+                                            enabledCrossRegion.contains(compositeKey)
+                                        }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    if (isActiveRegion) {
+                                                        val isCurrentlyEnabled = !disabledUrls.contains(compositeKey)
+                                                        val newDisabled = if (isCurrentlyEnabled) {
+                                                            disabledUrls + compositeKey
+                                                        } else {
+                                                            disabledUrls - compositeKey
+                                                        }
+                                                        disabledUrls = newDisabled
+                                                        viewModel.prefs.disabledFeedUrls = newDisabled
+                                                        if (!isCurrentlyEnabled) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
                                                     } else {
-                                                        disabledUrls - compositeKey
+                                                        val isCurrentlyEnabled = enabledCrossRegion.contains(compositeKey)
+                                                        val newEnabled = if (isCurrentlyEnabled) {
+                                                            enabledCrossRegion - compositeKey
+                                                        } else {
+                                                            enabledCrossRegion + compositeKey
+                                                        }
+                                                        enabledCrossRegion = newEnabled
+                                                        viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                        if (!isCurrentlyEnabled) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
                                                     }
-                                                    disabledUrls = newDisabled
-                                                    viewModel.prefs.disabledFeedUrls = newDisabled
-                                                    if (!isCurrentlyEnabled) {
-                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                    }
-                                                } else {
-                                                    val isCurrentlyEnabled = enabledCrossRegion.contains(compositeKey)
-                                                    val newEnabled = if (isCurrentlyEnabled) {
-                                                        enabledCrossRegion - compositeKey
-                                                    } else {
-                                                        enabledCrossRegion + compositeKey
-                                                    }
-                                                    enabledCrossRegion = newEnabled
-                                                    viewModel.prefs.enabledCrossRegionFeeds = newEnabled
-                                                    if (!isCurrentlyEnabled) {
-                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                    viewModel.triggerPrefsChanged()
+                                                }
+                                                .graphicsLayer {
+                                                    alpha = if (isEnabled) 1f else 0.6f
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                // 🖼️ Publisher Avatar Badge
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(40.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = provider.publisherName.take(1).uppercase(),
+                                                        fontSize = 17.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.width(14.dp))
+
+                                                Column {
+                                                    Text(
+                                                        text = provider.publisherName,
+                                                        fontSize = 15.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(
+                                                            imageVector = getCategoryIcon(provider.category),
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                                                            modifier = Modifier.size(12.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        Text(
+                                                            text = provider.category,
+                                                            fontSize = 12.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                        )
                                                     }
                                                 }
-                                                viewModel.triggerPrefsChanged()
                                             }
-                                            .graphicsLayer {
-                                                alpha = if (isEnabled) 1f else 0.6f
-                                            }
-                                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = provider.publisherName,
-                                                fontSize = 15.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = provider.category,
-                                                fontSize = 12.sp,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+
+                                            HapticSwitch(
+                                                checked = isEnabled,
+                                                onCheckedChange = { checked ->
+                                                    if (isActiveRegion) {
+                                                        val newDisabled = if (checked) {
+                                                            disabledUrls - compositeKey
+                                                        } else {
+                                                            disabledUrls + compositeKey
+                                                        }
+                                                        disabledUrls = newDisabled
+                                                        viewModel.prefs.disabledFeedUrls = newDisabled
+                                                        if (checked) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
+                                                    } else {
+                                                        val newEnabled = if (checked) {
+                                                            enabledCrossRegion + compositeKey
+                                                        } else {
+                                                            enabledCrossRegion - compositeKey
+                                                        }
+                                                        enabledCrossRegion = newEnabled
+                                                        viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                        if (checked) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
+                                                    }
+                                                    viewModel.triggerPrefsChanged()
+                                                },
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = Color.White,
+                                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                                )
                                             )
                                         }
-                                        HapticSwitch(
-                                            checked = isEnabled,
-                                            onCheckedChange = { checked ->
-                                                if (isActiveRegion) {
-                                                    val newDisabled = if (checked) {
-                                                        disabledUrls - compositeKey
-                                                    } else {
-                                                        disabledUrls + compositeKey
-                                                    }
-                                                    disabledUrls = newDisabled
-                                                    viewModel.prefs.disabledFeedUrls = newDisabled
-                                                    if (checked) {
-                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                    }
-                                                } else {
-                                                    val newEnabled = if (checked) {
-                                                        enabledCrossRegion + compositeKey
-                                                    } else {
-                                                        enabledCrossRegion - compositeKey
-                                                    }
-                                                    enabledCrossRegion = newEnabled
-                                                    viewModel.prefs.enabledCrossRegionFeeds = newEnabled
-                                                    if (checked) {
-                                                        viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                    }
-                                                }
-                                                viewModel.triggerPrefsChanged()
-                                            },
-                                            colors = SwitchDefaults.colors(
-                                                checkedThumbColor = Color.White,
-                                                checkedTrackColor = MaterialTheme.colorScheme.primary
+                                        if (i < sortedProviders.size - 1) {
+                                            HorizontalDivider(
+                                                modifier = Modifier.padding(horizontal = 16.dp),
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                                             )
-                                        )
-                                    }
-                                    if (i < sortedProviders.size - 1) {
-                                        HorizontalDivider(
-                                            modifier = Modifier.padding(horizontal = 16.dp),
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                        )
+                                        }
                                     }
                                 }
                             }
@@ -1536,133 +1898,172 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         categoryFilter == null || it.equals(categoryFilter, ignoreCase = true)
                     }
                     
-                    for (categoryName in sortedCategories) {
-                        val providersInCat = groupedByCategory[categoryName] ?: emptyList()
-                        
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 24.dp, bottom = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = categoryName,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                    sortedCategories.forEach { categoryName ->
+                        val providersInCat = (groupedByCategory[categoryName] ?: emptyList()).filter {
+                            regionFilter == null || it.region == regionFilter
                         }
-                        
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
-                                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
-                        ) {
-                            val sortedProviders = providersInCat.sortedBy { it.publisherName }
-                            for (i in sortedProviders.indices) {
-                                val provider = sortedProviders[i]
-                                val isProviderActiveRegion = provider.region == activeRegion
-                                val compositeKey = "${provider.region}|${provider.category}|${provider.url}"
-                                val isEnabled = if (isProviderActiveRegion) {
-                                    !disabledUrls.contains(compositeKey)
-                                } else {
-                                    enabledCrossRegion.contains(compositeKey)
-                                }
-                                
-                                val regionNameText = RegionUtils.getFormattedRegionName(provider.region)
 
+                        if (providersInCat.isNotEmpty()) {
+                            item(key = "cat_header_$categoryName") {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
-                                            if (isProviderActiveRegion) {
-                                                val isCurrentlyEnabled = !disabledUrls.contains(compositeKey)
-                                                val newDisabled = if (isCurrentlyEnabled) {
-                                                    disabledUrls + compositeKey
-                                                } else {
-                                                    disabledUrls - compositeKey
-                                                }
-                                                disabledUrls = newDisabled
-                                                viewModel.prefs.disabledFeedUrls = newDisabled
-                                                if (!isCurrentlyEnabled) {
-                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                }
-                                            } else {
-                                                val isCurrentlyEnabled = enabledCrossRegion.contains(compositeKey)
-                                                val newEnabled = if (isCurrentlyEnabled) {
-                                                    enabledCrossRegion - compositeKey
-                                                } else {
-                                                    enabledCrossRegion + compositeKey
-                                                }
-                                                enabledCrossRegion = newEnabled
-                                                viewModel.prefs.enabledCrossRegionFeeds = newEnabled
-                                                if (!isCurrentlyEnabled) {
-                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                }
-                                            }
-                                            viewModel.triggerPrefsChanged()
-                                        }
-                                        .graphicsLayer {
-                                            alpha = if (isEnabled) 1f else 0.6f
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                        .padding(top = 20.dp, bottom = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = provider.publisherName,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = regionNameText,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                        )
-                                    }
-                                    HapticSwitch(
-                                        checked = isEnabled,
-                                        onCheckedChange = { checked ->
-                                            if (isProviderActiveRegion) {
-                                                val newDisabled = if (checked) {
-                                                    disabledUrls - compositeKey
-                                                } else {
-                                                    disabledUrls + compositeKey
-                                                }
-                                                disabledUrls = newDisabled
-                                                viewModel.prefs.disabledFeedUrls = newDisabled
-                                                if (checked) {
-                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                }
-                                            } else {
-                                                val newEnabled = if (checked) {
-                                                    enabledCrossRegion + compositeKey
-                                                } else {
-                                                    enabledCrossRegion - compositeKey
-                                                }
-                                                enabledCrossRegion = newEnabled
-                                                viewModel.prefs.enabledCrossRegionFeeds = newEnabled
-                                                if (checked) {
-                                                    viewModel.fetchSingleFeed(provider.url, provider.category)
-                                                }
-                                            }
-                                            viewModel.triggerPrefsChanged()
-                                        },
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = Color.White,
-                                            checkedTrackColor = MaterialTheme.colorScheme.primary
-                                        )
+                                    Icon(
+                                        imageVector = getCategoryIcon(categoryName),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = categoryName,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                                if (i < sortedProviders.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-                                    )
+                            }
+                            
+                            item(key = "cat_card_$categoryName") {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f))
+                                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                                ) {
+                                    val sortedProviders = providersInCat.sortedBy { it.publisherName }
+                                    for (i in sortedProviders.indices) {
+                                        val provider = sortedProviders[i]
+                                        val isProviderActiveRegion = provider.region == activeRegion
+                                        val compositeKey = "${provider.region}|${provider.category}|${provider.url}"
+                                        val isEnabled = if (isProviderActiveRegion) {
+                                            !disabledUrls.contains(compositeKey)
+                                        } else {
+                                            enabledCrossRegion.contains(compositeKey)
+                                        }
+                                        
+                                        val regionNameText = RegionUtils.getFormattedRegionName(provider.region)
+
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    if (isProviderActiveRegion) {
+                                                        val isCurrentlyEnabled = !disabledUrls.contains(compositeKey)
+                                                        val newDisabled = if (isCurrentlyEnabled) {
+                                                            disabledUrls + compositeKey
+                                                        } else {
+                                                            disabledUrls - compositeKey
+                                                        }
+                                                        disabledUrls = newDisabled
+                                                        viewModel.prefs.disabledFeedUrls = newDisabled
+                                                        if (!isCurrentlyEnabled) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
+                                                    } else {
+                                                        val isCurrentlyEnabled = enabledCrossRegion.contains(compositeKey)
+                                                        val newEnabled = if (isCurrentlyEnabled) {
+                                                            enabledCrossRegion - compositeKey
+                                                        } else {
+                                                            enabledCrossRegion + compositeKey
+                                                        }
+                                                        enabledCrossRegion = newEnabled
+                                                        viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                        if (!isCurrentlyEnabled) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
+                                                    }
+                                                    viewModel.triggerPrefsChanged()
+                                                }
+                                                .graphicsLayer {
+                                                    alpha = if (isEnabled) 1f else 0.6f
+                                                }
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                // 🖼️ Publisher Avatar Badge
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(40.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = provider.publisherName.take(1).uppercase(),
+                                                        fontSize = 17.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.width(14.dp))
+
+                                                Column {
+                                                    Text(
+                                                        text = provider.publisherName,
+                                                        fontSize = 15.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = regionNameText,
+                                                        fontSize = 12.sp,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                                    )
+                                                }
+                                            }
+
+                                            HapticSwitch(
+                                                checked = isEnabled,
+                                                onCheckedChange = { checked ->
+                                                    if (isProviderActiveRegion) {
+                                                        val newDisabled = if (checked) {
+                                                            disabledUrls - compositeKey
+                                                        } else {
+                                                            disabledUrls + compositeKey
+                                                        }
+                                                        disabledUrls = newDisabled
+                                                        viewModel.prefs.disabledFeedUrls = newDisabled
+                                                        if (checked) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
+                                                    } else {
+                                                        val newEnabled = if (checked) {
+                                                            enabledCrossRegion + compositeKey
+                                                        } else {
+                                                            enabledCrossRegion - compositeKey
+                                                        }
+                                                        enabledCrossRegion = newEnabled
+                                                        viewModel.prefs.enabledCrossRegionFeeds = newEnabled
+                                                        if (checked) {
+                                                            viewModel.fetchSingleFeed(provider.url, provider.category)
+                                                        }
+                                                    }
+                                                    viewModel.triggerPrefsChanged()
+                                                },
+                                                colors = SwitchDefaults.colors(
+                                                    checkedThumbColor = Color.White,
+                                                    checkedTrackColor = MaterialTheme.colorScheme.primary
+                                                )
+                                            )
+                                        }
+                                        if (i < sortedProviders.size - 1) {
+                                            HorizontalDivider(
+                                                modifier = Modifier.padding(horizontal = 16.dp),
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -2292,26 +2693,53 @@ private fun InfoNote(text: String) {
     }
 }
 
+private fun getCategoryIcon(category: String): ImageVector {
+    return when (category.lowercase()) {
+        "top stories" -> Icons.Default.Star
+        "world" -> Icons.Default.Public
+        "business" -> Icons.Default.BusinessCenter
+        "technology", "tech" -> Icons.Default.Memory
+        "science" -> Icons.Default.Science
+        "sports" -> Icons.Default.SportsBasketball
+        "health" -> Icons.Default.MedicalServices
+        "entertainment" -> Icons.Default.Movie
+        else -> Icons.Default.RssFeed
+    }
+}
+
 @Composable
-private fun CategoryToggleChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun CategoryToggleChip(
+    label: String,
+    isSelected: Boolean,
+    icon: ImageVector? = null,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(12.dp))
+            .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(20.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier.size(16.dp)
+            )
+        }
         Text(
             text = label,
-            fontSize = 13.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
             color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
         )
         if (isSelected) {
