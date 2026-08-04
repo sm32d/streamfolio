@@ -32,6 +32,7 @@ import androidx.navigation.NavController
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.ui.components.CardDivider
 import uk.sume.streamfolio.ui.components.ConfirmationModalSheet
+import uk.sume.streamfolio.ui.components.PublisherAvatar
 import uk.sume.streamfolio.ui.components.SettingsCard
 import uk.sume.streamfolio.ui.components.SubPageTopBar
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
@@ -443,7 +444,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                                     Spacer(modifier = Modifier.width(6.dp))
                                 }
                                 Text(
-                                    text = category.uppercase(),
+                                    text = category,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -474,20 +475,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = feed.title.take(1).uppercase(),
-                                            fontSize = 17.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
+                                    PublisherAvatar(sourceName = feed.title, url = feed.url, size = 40.dp)
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(feed.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)

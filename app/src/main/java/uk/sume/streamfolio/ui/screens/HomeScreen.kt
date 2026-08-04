@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LibraryBooks
+import uk.sume.streamfolio.ui.components.CategoryPill
+import uk.sume.streamfolio.ui.components.PublisherAvatar
 import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.outlined.Newspaper
@@ -232,9 +234,6 @@ fun HomeScreen(
             ) {
                 categories.forEach { category ->
                     val isSelected = category == selectedCategory
-                    val tabBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                    val tabColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-
                     Tab(
                         selected = isSelected,
                         onClick = {
@@ -246,17 +245,20 @@ fun HomeScreen(
                                 viewModel.selectCategory(category)
                             }
                         },
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(tabBg)
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(end = 8.dp)
                     ) {
-                        Text(
+                        CategoryPill(
                             text = category,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = tabColor
+                            isSelected = isSelected,
+                            onClick = {
+                                if (category.startsWith("#")) {
+                                    viewModel.setDynamicTagFilter(category)
+                                    viewModel.selectCategory(category)
+                                } else {
+                                    viewModel.setDynamicTagFilter(null)
+                                    viewModel.selectCategory(category)
+                                }
+                            }
                         )
                     }
                 }

@@ -28,6 +28,7 @@ import androidx.navigation.NavController
 import uk.sume.streamfolio.data.network.CuratedProvider
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
 import uk.sume.streamfolio.ui.components.HapticSwitch
+import uk.sume.streamfolio.ui.components.PublisherAvatar
 import uk.sume.streamfolio.ui.components.RegionUtils
 import uk.sume.streamfolio.ui.components.SubPageTopBar
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
@@ -237,7 +238,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                             modifier = Modifier.clickable { regionFilter = if (isSelected) null else rCode }
                         ) {
                             Text(
-                                text = rName.uppercase(),
+                                text = rName,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
@@ -255,7 +256,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                         modifier = Modifier.clickable { categoryFilter = null }
                     ) {
                         Text(
-                            text = "ALL CATEGORIES",
+                            text = "All Categories",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isAllSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
@@ -283,7 +284,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = catName.uppercase(),
+                                    text = catName,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -399,20 +400,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.weight(1f)
                                             ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(40.dp)
-                                                        .clip(RoundedCornerShape(12.dp))
-                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = provider.publisherName.take(1).uppercase(),
-                                                        fontSize = 17.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    )
-                                                }
+                                                PublisherAvatar(sourceName = provider.publisherName, url = provider.url, size = 40.dp)
 
                                                 Spacer(modifier = Modifier.width(14.dp))
 
@@ -583,20 +571,7 @@ fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewMod
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.weight(1f)
                                             ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(40.dp)
-                                                        .clip(RoundedCornerShape(12.dp))
-                                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = provider.publisherName.take(1).uppercase(),
-                                                        fontSize = 17.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    )
-                                                }
+                                                PublisherAvatar(sourceName = provider.publisherName, url = provider.url, size = 40.dp)
 
                                                 Spacer(modifier = Modifier.width(14.dp))
 

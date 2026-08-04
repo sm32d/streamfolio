@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import uk.sume.streamfolio.ui.components.PublisherAvatar
 import uk.sume.streamfolio.ui.components.SaveToListBottomSheet
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -550,23 +551,12 @@ fun DetailScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(32.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.surface)
-                                        .padding(4.dp)
-                                ) {
-                                    val domain = getPublisherDomain(article.sourceName, article.sourceUrl, article.link)
-                                    AsyncImage(
-                                        model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
+                                val domain = getPublisherDomain(article.sourceName, article.sourceUrl, article.link)
+                                PublisherAvatar(
+                                    sourceName = article.sourceName,
+                                    logoUrl = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
+                                    size = 32.dp
+                                )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(

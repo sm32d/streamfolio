@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import uk.sume.streamfolio.ui.components.CategoryPill
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
@@ -253,33 +255,15 @@ fun SearchScreen(
                                     contentPadding = PaddingValues(vertical = 4.dp)
                                 ) {
                                     items(trendingTopics) { topic ->
-                                        Row(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                                .clickable {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    viewModel.setSearchQuery(topic)
-                                                    viewModel.addRecentSearch(topic)
-                                                }
-                                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.TrendingUp,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = topic,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                            )
-                                        }
+                                        CategoryPill(
+                                            text = topic,
+                                            isSelected = false,
+                                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                                            onClick = {
+                                                viewModel.setSearchQuery(topic)
+                                                viewModel.addRecentSearch(topic)
+                                            }
+                                        )
                                     }
                                 }
                             }
