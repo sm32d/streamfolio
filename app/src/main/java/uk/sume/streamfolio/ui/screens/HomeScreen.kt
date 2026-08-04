@@ -1742,36 +1742,75 @@ fun calculateReadingTime(article: Article): String {
 // Convert pubDate format to relative time helper
 fun formatPubDate(pubDateStr: String): String {
     if (pubDateStr.isBlank()) return ""
+
+    val trimmed = pubDateStr.trim()
+
+    // 1. Try Java 8+ java.time parses (OffsetDateTime / Instant / ZonedDateTime)
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+        try {
+            val instant = java.time.OffsetDateTime.parse(trimmed).toInstant()
+            return calculateRelativeTime(instant.toEpochMilli())
+        } catch (_: Exception) {}
+        try {
+            val instant = java.time.ZonedDateTime.parse(trimmed, java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toInstant()
+            return calculateRelativeTime(instant.toEpochMilli())
+        } catch (_: Exception) {}
+    }
+
+    // 2. Comprehensive SimpleDateFormat pattern fallback
     val formats = listOf(
-        "EEE, dd MMM yyyy HH:mm:ss z",
-        "EEE, dd MMM yyyy HH:mm:ss Z",
+        "EEE, d MMM yyyy HH:mm:ss z",
+        "EEE, d MMM yyyy HH:mm:ss Z",
+        "EEE, d MMM yyyy HH:mm:ss zzz",
+        "EEE, d MMM yyyy HH:mm:ss",
+        "EEE, d MMM yyyy HH:mm z",
+        "EEE, d MMM yyyy HH:mm Z",
+        "d MMM yyyy HH:mm:ss z",
+        "d MMM yyyy HH:mm:ss Z",
+        "d MMM yyyy HH:mm z",
+        "d MMM yyyy HH:mm Z",
         "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
+        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSZ",
         "yyyy-MM-dd'T'HH:mm:ssXXX",
         "yyyy-MM-dd'T'HH:mm:ss'Z'",
-        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-        "yyyy-MM-dd HH:mm:ss"
+        "yyyy-MM-dd'T'HH:mm:ssZ",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd HH:mm"
     )
+
     for (format in formats) {
         try {
             val sdf = SimpleDateFormat(format, Locale.US)
-            val date = sdf.parse(pubDateStr)
+            val date = sdf.parse(trimmed)
             if (date != null) {
-                val diff = Date().time - date.time
-                val minutes = (diff / (1000 * 60)).toInt()
-                val hours = (diff / (1000 * 60 * 60)).toInt()
-                val days = (diff / (1000 * 60 * 60 * 24)).toInt()
-
-                return when {
-                    minutes < 60 -> "${minutes.coerceAtLeast(1)} min ago"
-                    hours < 24 -> "$hours hours ago"
-                    else -> "$days days ago"
-                }
+                return calculateRelativeTime(date.time)
             }
-        } catch (e: Exception) {
-            // try next format
-        }
+        } catch (_: Exception) {}
     }
+
     return pubDateStr // fallback
+}
+
+private fun calculateRelativeTime(timeMillis: Long): String {
+    val diff = (Date().time - timeMillis).coerceAtLeast(0L)
+    val seconds = (diff / 1000).toInt()
+    val minutes = (diff / (1000 * 60)).toInt()
+    val hours = (diff / (1000 * 60 * 60)).toInt()
+    val days = (diff / (1000 * 60 * 60 * 24)).toInt()
+
+    return when {
+        seconds < 45 -> "Just now"
+        minutes < 60 -> "${minutes.coerceAtLeast(1)} min ago"
+        hours == 1 -> "1 hour ago"
+        hours < 24 -> "$hours hours ago"
+        days == 1 -> "1 day ago"
+        days < 7 -> "$days days ago"
+        days < 30 -> "${days / 7} ${if (days / 7 == 1) "week" else "weeks"} ago"
+        days < 365 -> "${days / 30} ${if (days / 30 == 1) "month" else "months"} ago"
+        else -> "${days / 365} ${if (days / 365 == 1) "year" else "years"} ago"
+    }
 }
 
 @Composable
