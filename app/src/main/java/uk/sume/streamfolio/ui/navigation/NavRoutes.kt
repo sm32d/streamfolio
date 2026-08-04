@@ -31,6 +31,7 @@ import uk.sume.streamfolio.ui.components.TtsMiniPlayer
 import uk.sume.streamfolio.ui.components.TtsLyricsVisualizer
 import uk.sume.streamfolio.ui.components.BookmarkToastBanner
 import uk.sume.streamfolio.ui.screens.*
+import uk.sume.streamfolio.ui.screens.settings.*
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 import java.net.URLDecoder
 import java.net.URLEncoder
