@@ -1,5 +1,5 @@
 $buildFile = "app\build.gradle.kts"
-$settingsFile = "app\src\main\java\uk\sume\streamfolio\ui\screens\SettingsScreen.kt"
+$settingsFile = "app\src\main\java\uk\sume\streamfolio\ui\screens\settings\SettingsMainScreen.kt"
 
 Write-Host "=== Update App Version ===" -ForegroundColor Cyan
 
@@ -52,11 +52,9 @@ $buildContent = $buildContent `
 [System.IO.File]::WriteAllText($buildFile, $buildContent)
 Write-Host "Updated $buildFile" -ForegroundColor Green
 
-# --- Update SettingsScreen.kt ---
+# --- Update SettingsMainScreen.kt ---
 $settingsContent = [System.IO.File]::ReadAllText($settingsFile)
-$oldStr = 'text = "Version ' + $currentName
-$newStr = 'text = "Version ' + $newName
-$settingsContent = $settingsContent.Replace($oldStr, $newStr)
+$settingsContent = [regex]::Replace($settingsContent, 'Version \d+\.\d+(\.\d+)?', "Version $newName")
 [System.IO.File]::WriteAllText($settingsFile, $settingsContent)
 Write-Host "Updated $settingsFile" -ForegroundColor Green
 

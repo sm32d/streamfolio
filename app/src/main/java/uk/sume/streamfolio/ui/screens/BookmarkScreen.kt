@@ -24,6 +24,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.outlined.FolderSpecial
 import androidx.compose.material3.*
@@ -388,17 +390,17 @@ fun BookmarkCollectionDetailScreen(
                         val articleState = rememberUpdatedState(article)
                         val onBookmarkToggle = remember(listId) { { viewModel.toggleBookmark(articleState.value, listId) } }
                         val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
-                        val onQueueClick = remember(article.link, context) {
+                        val onQueueClick = remember(article.link) {
                             {
                                 viewModel.addToTtsPlaylist(article)
-                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("Added to audio playlist", Icons.Default.PlaylistAdd)
                             }
                         }
 
-                        val onPlayNextClick = remember(article.link, context) {
+                        val onPlayNextClick = remember(article.link) {
                             {
                                 viewModel.playNextInTtsPlaylist(article)
-                                Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("Added to play next", Icons.Default.QueueMusic)
                             }
                         }
 

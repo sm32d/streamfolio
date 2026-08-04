@@ -263,9 +263,9 @@ fun SettingsMainScreen(navController: NavController, viewModel: NewsViewModel) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             if (versionTapCount == 3) {
-                                Toast.makeText(context, "2 more taps for StreamFolio FM...", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("2 more taps for StreamFolio FM...", Icons.Default.Radio)
                             } else if (versionTapCount == 4) {
-                                Toast.makeText(context, "1 more tap for StreamFolio FM!", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("1 more tap for StreamFolio FM!", Icons.Default.Radio)
                             } else if (versionTapCount >= 5) {
                                 versionTapCount = 0
                                 showDjEasterEgg = true
@@ -303,7 +303,7 @@ fun SettingsMainScreen(navController: NavController, viewModel: NewsViewModel) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Version 1.2.1 · Free forever",
+                            text = "Version 1.3.0 · Free forever",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )
@@ -323,7 +323,7 @@ fun SettingsMainScreen(navController: NavController, viewModel: NewsViewModel) {
                             }
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Could not open mail app", Toast.LENGTH_SHORT).show()
+                            viewModel.showInfoToast("Could not open mail app", Icons.Default.Email)
                         }
                     }
                 )

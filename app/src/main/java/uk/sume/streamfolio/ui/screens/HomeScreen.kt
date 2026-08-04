@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.QueueMusic
 import uk.sume.streamfolio.ui.components.CategoryPill
 import uk.sume.streamfolio.ui.components.PublisherAvatar
 import androidx.compose.material.icons.outlined.Hearing
@@ -559,7 +560,7 @@ fun HomeScreen(
                                                     },
                                                     onQueueClick = {
                                                         viewModel.addToTtsPlaylist(article)
-                                                        Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                                        viewModel.showInfoToast("Added to audio playlist", Icons.Default.PlaylistAdd)
                                                     },
                                                     onTap = {
                                                         viewModel.selectArticleForDetail(article)
@@ -687,16 +688,16 @@ fun HomeScreen(
                                     val articleState = rememberUpdatedState(article)
                                     val onBookmarkToggle = remember { { viewModel.toggleBookmark(articleState.value) } }
                                     val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
-                                    val onQueueClick = remember(article.link, context) {
+                                    val onQueueClick = remember(article.link) {
                                         {
                                             viewModel.addToTtsPlaylist(article)
-                                            Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                            viewModel.showInfoToast("Added to audio playlist", Icons.Default.PlaylistAdd)
                                         }
                                     }
-                                    val onPlayNextClick = remember(article.link, context) {
+                                    val onPlayNextClick = remember(article.link) {
                                         {
                                             viewModel.playNextInTtsPlaylist(article)
-                                            Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show()
+                                            viewModel.showInfoToast("Added to play next", Icons.Default.QueueMusic)
                                         }
                                     }
                                     val onSecondaryTap = remember(navController) {

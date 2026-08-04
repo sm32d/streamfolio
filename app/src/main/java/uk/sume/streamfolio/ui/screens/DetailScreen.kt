@@ -211,7 +211,7 @@ fun DetailScreen(
                             IconButton(onClick = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 viewModel.addToTtsPlaylist(art)
-                                Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("Added to audio playlist", Icons.Default.PlaylistAdd)
                             }) {
                                 Icon(
                                     imageVector = Icons.Filled.PlaylistAdd,
@@ -852,7 +852,7 @@ fun DetailScreen(
                                                             onClick = {
                                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                                 clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(bullets.joinToString("\n• ") { it }.let { if (it.isNotBlank()) "• $it" else rawSummary }))
-                                                                android.widget.Toast.makeText(context, "Key takeaways copied", android.widget.Toast.LENGTH_SHORT).show()
+                                                                viewModel.showInfoToast("Key takeaways copied", Icons.Default.Check)
                                                             },
                                                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                                         ) {

@@ -149,7 +149,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                         if (canAdd) {
                             val safeUrl = UrlSecurityValidator.sanitizeUrl(addUrl, requireHttps = true)
                             if (safeUrl == null) {
-                                Toast.makeText(context, "Please enter a valid HTTPS URL", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("Please enter a valid HTTPS URL", Icons.Default.Info)
                                 return@Button
                             }
                             viewModel.addCustomRssFeed(
@@ -256,7 +256,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                         if (canSave) {
                             val safeUrl = UrlSecurityValidator.sanitizeUrl(editUrl, requireHttps = true)
                             if (safeUrl == null) {
-                                Toast.makeText(context, "Please enter a valid HTTPS URL", Toast.LENGTH_SHORT).show()
+                                viewModel.showInfoToast("Please enter a valid HTTPS URL", Icons.Default.Info)
                                 return@Button
                             }
                             val updatedFeed = originalFeed.copy(

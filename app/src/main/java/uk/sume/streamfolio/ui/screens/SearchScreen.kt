@@ -19,6 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.outlined.Search
@@ -391,17 +393,17 @@ fun SearchScreen(
                                 val articleState = rememberUpdatedState(article)
                                 val onBookmarkToggle = remember { { viewModel.toggleBookmark(articleState.value) } }
                                 val onPlayClick = remember(article.link) { { viewModel.speakArticle(article) } }
-                                val onQueueClick = remember(article.link, context) {
+                                val onQueueClick = remember(article.link) {
                                     {
                                         viewModel.addToTtsPlaylist(article)
-                                        Toast.makeText(context, "Added to audio playlist", Toast.LENGTH_SHORT).show()
+                                        viewModel.showInfoToast("Added to audio playlist", Icons.Default.PlaylistAdd)
                                     }
                                 }
 
-                                val onPlayNextClick = remember(article.link, context) {
+                                val onPlayNextClick = remember(article.link) {
                                     {
                                         viewModel.playNextInTtsPlaylist(article)
-                                        Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show()
+                                        viewModel.showInfoToast("Added to play next", Icons.Default.QueueMusic)
                                     }
                                 }
 

@@ -25,10 +25,12 @@ data class CategoryArticlesState(
     val groups: List<uk.sume.streamfolio.data.model.ArticleGroup> = emptyList()
 )
 
-data class BookmarkToastEvent(
-    val article: Article,
-    val listName: String
-)
+sealed class ToastEvent {
+    data class Bookmark(val article: Article, val listName: String) : ToastEvent()
+    data class Info(val message: String, val icon: androidx.compose.ui.graphics.vector.ImageVector? = null) : ToastEvent()
+}
+
+typealias BookmarkToastEvent = ToastEvent.Bookmark
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NewsViewModel(application: Application) : AndroidViewModel(application) {
@@ -264,11 +266,23 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val _articleForSaveToListSheet = MutableStateFlow<Article?>(null)
     val articleForSaveToListSheet: StateFlow<Article?> = _articleForSaveToListSheet
 
-    private val _bookmarkToastEvent = MutableStateFlow<BookmarkToastEvent?>(null)
-    val bookmarkToastEvent: StateFlow<BookmarkToastEvent?> = _bookmarkToastEvent
+    private val _toastEvent = MutableStateFlow<ToastEvent?>(null)
+    val toastEvent: StateFlow<ToastEvent?> = _toastEvent
+
+    val bookmarkToastEvent: StateFlow<BookmarkToastEvent?> = _toastEvent
+        .map { it as? BookmarkToastEvent }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun showInfoToast(message: String, icon: androidx.compose.ui.graphics.vector.ImageVector? = null) {
+        _toastEvent.value = ToastEvent.Info(message, icon)
+    }
+
+    fun clearToastEvent() {
+        _toastEvent.value = null
+    }
 
     fun clearBookmarkToastEvent() {
-        _bookmarkToastEvent.value = null
+        clearToastEvent()
     }
 
     // Local & Remote search flows
@@ -532,7 +546,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 prefs.lastSelectedBookmarkListId = targetId
                 val allLists = repository.getAllBookmarkLists().firstOrNull() ?: emptyList()
                 val listName = allLists.firstOrNull { it.id == targetId }?.name ?: "Saved"
-                _bookmarkToastEvent.value = BookmarkToastEvent(article, listName)
+                _toastEvent.value = ToastEvent.Bookmark(article, listName)
             }
             repository.saveArticleToLists(article.link, targetListIds)
             val isBookmarkedNow = targetListIds.isNotEmpty()

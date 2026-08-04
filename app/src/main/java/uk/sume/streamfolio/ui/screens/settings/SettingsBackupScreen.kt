@@ -70,11 +70,11 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                     if (parsed.isNotEmpty()) {
                         parsedFeedsToImport = parsed
                     } else {
-                        Toast.makeText(context, "No RSS feeds found in this OPML file.", Toast.LENGTH_SHORT).show()
+                        viewModel.showInfoToast("No RSS feeds found in this OPML file.", Icons.Default.Info)
                     }
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Failed to parse OPML: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                viewModel.showInfoToast("Failed to parse OPML: ${e.localizedMessage}", Icons.Default.Error)
             }
         }
     }
@@ -94,7 +94,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             kotlinx.coroutines.delay(200)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
-                        Toast.makeText(context, "Invalid backup file.", Toast.LENGTH_SHORT).show()
+                        viewModel.showInfoToast("Invalid backup file.", Icons.Default.Error)
                     }
                 }
             } catch (e: Exception) {
@@ -103,7 +103,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                     kotlinx.coroutines.delay(200)
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 }
-                Toast.makeText(context, "Failed to read backup: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                viewModel.showInfoToast("Failed to read backup: ${e.localizedMessage}", Icons.Default.Error)
             }
         }
     }
@@ -353,8 +353,8 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                                     categoryMapping = categoryMapping.toMap(),
                                     selectedCategories = selectedCategories.value
                                 )
-                                parsedFeedsToImport = null
-                                Toast.makeText(context, "Feeds imported successfully!", Toast.LENGTH_SHORT).show()
+                                 parsedFeedsToImport = null
+                                viewModel.showInfoToast("Feeds imported successfully!", Icons.Default.Check)
                             },
                             enabled = selectedCategories.value.isNotEmpty(),
                             modifier = Modifier.weight(1.5f),
@@ -387,7 +387,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             kotlinx.coroutines.delay(100)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
-                        Toast.makeText(context, "Backup restored successfully!", Toast.LENGTH_SHORT).show()
+                        viewModel.showInfoToast("Backup restored successfully!", Icons.Default.Check)
                     },
                     onError = { e ->
                         scope.launch {
@@ -395,7 +395,7 @@ fun SettingsBackupScreen(navController: NavController, viewModel: NewsViewModel)
                             kotlinx.coroutines.delay(200)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         }
-                        Toast.makeText(context, "Restore failed: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                        viewModel.showInfoToast("Restore failed: ${e.localizedMessage}", Icons.Default.Error)
                     }
                 )
                 fullBackupJsonToRestore = null
