@@ -2,216 +2,174 @@
 
 <div align="left">
 
-<!-- TODO: Add project logo specific to StreamFolio -->
-<!-- ![Logo](path-to-logo) -->
+[![Android Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20(API%2026%2B)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose%20M3-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[![Room Database](https://img.shields.io/badge/Database-Room%202.6.1%20(SQLite%20v8)-F4511E?style=for-the-badge&logo=sqlite&logoColor=white)](https://developer.android.com/training/data-storage/room)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](LICENSE)
+[![Get it on Google Play](https://img.shields.io/badge/Google_Play-StreamFolio-green?style=for-the-badge&logo=google-play)](https://play.google.com/store/apps/details?id=uk.sume.streamfolio)
 
-[![GitHub stars](https://img.shields.io/github/stars/sm32d/streamfolio?style=for-the-badge)](https://github.com/sm32d/streamfolio/stargazers)
-
-[![GitHub forks](https://img.shields.io/github/forks/sm32d/streamfolio?style=for-the-badge)](https://github.com/sm32d/streamfolio/network)
-
-[![GitHub issues](https://img.shields.io/github/issues/sm32d/streamfolio?style=for-the-badge)](https://github.com/sm32d/streamfolio/issues)
-
-[![GitHub license](https://img.shields.io/github/license/sm32d/streamfolio?style=for-the-badge)](LICENSE)
-
-**A modern, intuitive news-reading RSS application designed for Android devices.**
-
-[![Get it on Google Play](https://img.shields.io/badge/Google_Play-StreamFolio-green?style=for-the-badge&logo=google-play)](https://play.google.com/store/apps/details?id=uk.sume.streamfolio&pli=1)
+**A modern, zero-telemetry, privacy-focused RSS & Atom news reader for Android with On-Device AI Summarization and Background Audio Playback.**
 
 </div>
 
+---
+
 ## 📖 Overview
 
-StreamFolio is an elegant and efficient RSS reader built specifically for Android, aiming to provide a seamless news consumption experience. In an era where information is abundant and often scattered across countless platforms, StreamFolio centralizes your favorite news feeds into a clean, modern interface. It empowers users to stay updated with their preferred content sources without the clutter and distractions of traditional news apps or web browsing, making daily news digestion a delightful and organized routine.
+**StreamFolio** (`uk.sume.streamfolio`) is an elegant, open-source RSS and Atom news reader engineered specifically for Android. In contrast to algorithmic aggregators and ad-heavy news applications, StreamFolio is built on a strict **100% on-device architecture**: no remote application servers, zero telemetry SDKs, no cloud user accounts, and complete offline availability.
 
-## ✨ Features
+It combines multi-region curated news feeds (14 countries), custom RSS/Atom feed management with OPML 2.0 import/export, on-device GenAI summarization powered by **Gemini Nano** (via Google AICore / ML Kit), on-device ML translation, and background Text-To-Speech (TTS) audio with Android `MediaSessionCompat` lockscreen controls.
 
--   🎯 **Comprehensive RSS Feed Management:** Easily add, organize, and manage all your RSS subscriptions in one place.
--   📰 **Intuitive News Article Display:** Read articles with a clean, distraction-free interface, focusing purely on the content.
--   📱 **Modern Android User Interface:** Leveraging the latest Android design principles for a smooth and enjoyable user experience.
--   🚀 **Fast & Responsive Performance:** Optimized for speed and responsiveness, ensuring a fluid experience even with numerous feeds.
--   📖 **Offline Reading Support:** Access your cached articles even without an internet connection (feature inferred as common for news apps).
--   🎨 **Customizable Reading Experience:** Adjust settings like font size and theme to personalize your reading environment (feature inferred as common for news apps).
+---
 
-## 🖥️ Screenshots (Also available in Dark Mode)
+## 📚 Complete Project Documentation (`/docs`)
 
-<img width="300" alt="Screenshot_2026-06-28-23-23-40-88_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/2bf5d171-9358-441c-b7e8-9a801f7c58cf" />
-<img width="300" alt="Screenshot_2026-06-28-23-11-28-22_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/b87c13bc-8558-4ee1-9a9b-ae3210264cc0" />
-<img width="300" alt="Screenshot_2026-06-28-23-27-32-64_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/95ad05fd-86ad-4738-8387-94bf9b5f487f" />
-<img width="300" alt="Screenshot_2026-06-28-23-11-42-56_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/806ef57f-7dac-409c-b91c-b2d70e0679aa" />
-<img width="300" alt="Screenshot_2026-06-28-23-11-57-61_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/94edb3bf-14f9-4e3c-bfb4-7cb7e12e09c9" />
-<img width="300" alt="Screenshot_2026-06-28-23-12-03-08_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/b54c6cdb-5fa1-4e0d-83ab-8dd0212563b3" />
-<img width="300" alt="Screenshot_2026-06-28-23-28-51-06_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/a8f51402-a02b-4efe-8b9d-3126e3f92604" />
-<img width="300" alt="Screenshot_2026-06-28-23-28-53-19_34560391c33fd1aa9be0fa889e4c24c9" src="https://github.com/user-attachments/assets/f5b3d051-cc16-4d58-a709-e62a15d57167" />
-<img width="300" alt="image" src="https://github.com/user-attachments/assets/ce34c864-8a39-4369-a494-54ec265da589" />
+Comprehensive architectural, operational, security, and developer documentation is organized under the [`/docs`](docs/) directory:
 
-## 🛠️ Tech Stack
+| Document | Description | Target Audience |
+| :--- | :--- | :--- |
+| [**00 — Project Overview**](docs/00-project-overview.md) | Product mission, key problems solved, personas, system boundaries, and stack. | All Stakeholders |
+| [**01 — Architecture**](docs/01-architecture.md) | C4 context/container diagrams, UDF patterns, and sequence flows (Sync, AI, TTS). | Architects & Developers |
+| [**02 — Local Development**](docs/02-local-development.md) | Toolchain matrix (JDK 17, SDK 36), IDE setup, build, test, and debug commands. | Engineers & Contributors |
+| [**03 — Configuration & Environments**](docs/03-configuration-and-environments.md) | Environment variables, Gradle settings, and `SharedPreferences` reference. | DevOps & Developers |
+| [**04 — API & External Integrations**](docs/04-api-documentation.md) | Outbound RSS/Atom APIs, Google News integration, IPC intents, and Backup JSON schema. | Integrators & QA |
+| [**05 — Data Model & Database**](docs/05-data-model-and-database.md) | Room SQLite ERD, table definitions, migration history (v5 $\rightarrow$ v8), retention rules. | Database & Core Engineers |
+| [**06 — Authentication & Security**](docs/06-authentication-and-security.md) | Zero-Auth model, SSRF defenses, DNS rebinding interceptor, and threat analysis. | Security Auditors |
+| [**07 — Frontend & Android Client**](docs/07-frontend-or-client-app.md) | Compose navigation graph, screen deep dives, shared components, and design system tokens. | UI / Android Engineers |
+| [**08 — Background Services & OS Integrations**](docs/08-backend-services.md) | WorkManager `NewsSyncWorker`, MediaSession `TtsPlaybackService`, AppWidget service. | Core & Systems Engineers |
+| [**09 — Testing & Quality Assurance**](docs/09-testing-and-quality.md) | Unit tests, live feed verification suite, Lint analysis, and untested critical paths. | QA & Engineers |
+| [**10 — CI/CD & Release Engineering**](docs/10-ci-cd-and-release.md) | Build commands, R8 minification, versioning script (`update-version.ps1`), app signing. | DevOps & Release Leads |
+| [**11 — Deployment & Operations**](docs/11-deployment-and-operations.md) | Distribution channels (Play Store, GitHub, Landing), staged rollouts, rollback safety. | Release & Operations |
+| [**12 — Observability & Troubleshooting**](docs/12-observability-and-troubleshooting.md) | ADB Logcat diagnostics, error tag conventions, and failure runbooks. | Support & DevOps |
+| [**13 — Contributing & Engineering Standards**](docs/13-contributing.md) | Git branching, Conventional Commits, validation checklist, and ADR template. | All Contributors |
+| [**14 — Architecture Decisions & Limitations**](docs/14-decisions-and-known-limitations.md) | Inferred ADRs, known technical debt, and architectural trade-offs. | Architects & Leads |
+| [**15 — Glossary & Terminology**](docs/15-glossary.md) | Definitions for Android, RSS, Security, and On-Device AI terminology. | All Team Members |
+| [**Onboarding Checklist**](docs/onboarding-checklist.md) | Structured Day 1 to Day 3 step-by-step onboarding guide for new developers. | New Engineers |
 
-**Mobile Platform:**
+---
 
-[![Kotlin](https://img.shields.io/badge/Kotlin-0095D5?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
+## ✨ Core Features
 
-[![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
+- 🌐 **14 Supported Curated Regions:** Pre-configured news providers for `US`, `GB`, `SG`, `IN`, `CA`, `AU`, `FR`, `DE`, `HK`, `KR`, `JP`, `BR`, `ZA`, `AE`.
+- 📂 **Custom Feeds & OPML 2.0:** Subscribe to any valid HTTPS RSS/Atom feed; bulk import and export subscriptions.
+- 🤖 **On-Device GenAI Summaries:** Instant bulleted key takeaways generated locally via **Gemini Nano** without cloud API calls or subscriptions.
+- 🌍 **On-Device Translation:** Offline headline and body translation powered by Google ML Kit NLP models.
+- 🎧 **Background TTS & Media Controls:** Native Android foreground audio playback with lockscreen controls, variable speeds (0.5x–3.0x), and synchronized lyrics-style visualizer.
+- 📑 **Custom Bookmark Collections:** Create customized bookmark lists with fluid 2-column grid and compact list view modes.
+- 🛡️ **SSRF & Defensive Networking:** Hardened OkHttp client blocking private IP probes, loopback subnets, and DNS-rebinding attacks.
+- 📱 **Home Screen AppWidget:** Glassmorphic widget with configurable category filters and one-tap reading launch.
+- 🔄 **WorkManager Background Sync:** Automated 6-hour background sync ensuring cached feeds are ready for offline reading.
 
-[![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)](https://gradle.org/)
+---
 
-**Key Libraries (Inferred common for modern Android development):**
-<!-- TODO: Refine based on actual app/build.gradle.kts dependencies -->
--   **Architecture:** Likely leverages Android Jetpack components for robust and testable architecture (e.g., ViewModel, LiveData/Flow, Navigation).
--   **UI Toolkit:** Either modern Jetpack Compose for declarative UI or traditional Android Views with XML layouts.
--   **Networking:** Likely uses Retrofit for type-safe HTTP client and OkHttp for efficient network requests.
--   **Local Persistence:** Could employ Room Persistence Library for local database storage (SQLite abstraction).
+## 🖥️ Screenshots
 
-## 🚀 Quick Start
+<div align="center">
 
-To get StreamFolio up and running on your development machine, follow these steps:
+<img width="260" alt="Home Feed" src="https://github.com/user-attachments/assets/2bf5d171-9358-441c-b7e8-9a801f7c58cf" />
+<img width="260" alt="Article Reader" src="https://github.com/user-attachments/assets/b87c13bc-8558-4ee1-9a9b-ae3210264cc0" />
+<img width="260" alt="AI Summary" src="https://github.com/user-attachments/assets/95ad05fd-86ad-4738-8387-94bf9b5f487f" />
+<img width="260" alt="Bookmarks Grid" src="https://github.com/user-attachments/assets/806ef57f-7dac-409c-b91c-b2d70e0679aa" />
+<img width="260" alt="Search Screen" src="https://github.com/user-attachments/assets/94edb3bf-14f9-4e3c-bfb4-7cb7e12e09c9" />
+<img width="260" alt="TTS Player" src="https://github.com/user-attachments/assets/b54c6cdb-5fa1-4e0d-83ab-8dd0212563b3" />
+
+</div>
+
+---
+
+## 🛠️ Technology Stack
+
+| Domain | Technology / Library | Version |
+| :--- | :--- | :--- |
+| **Language & Toolchain** | Kotlin | `2.0.21` (Java 11 target) |
+| **Android Gradle Plugin** | AGP | `8.13.2` |
+| **SDK Levels** | Compile: 36, Target: 36, Min: 26 | Android 8.0 Oreo to Android 16 Preview |
+| **UI Toolkit** | Jetpack Compose BOM | `2025.05.00` |
+| **Design System** | Material Design 3 | Compose M3 (`androidx.compose.material3`) |
+| **Local Persistence** | AndroidX Room | `2.6.1` (SQLite Schema v8) |
+| **Networking & Security** | Square OkHttp | `4.12.0` (with custom `SsrfProtectionInterceptor`) |
+| **HTML / XML Parsers** | Jsoup & XmlPullParser | `1.18.1` / Standard XML pull |
+| **Image Loading** | Coil Compose & GIF | `2.7.0` |
+| **Background Sync** | AndroidX WorkManager | `2.9.1` (`NewsSyncWorker`) |
+| **Audio & Media** | AndroidX Media | `1.7.0` (`MediaSessionCompat`) |
+| **On-Device GenAI** | ML Kit GenAI Summarization | `1.0.0-beta1` (Gemini Nano / AICore) |
+| **Offline Translation** | ML Kit Translate & LangID | `17.0.3` / `17.0.6` |
+
+---
+
+## 🚀 Quick Start Guide
 
 ### Prerequisites
--   **Android Studio:** The official IDE for Android development.
-    -   Download from [developer.android.com](https://developer.android.com/studio).
--   **Java Development Kit (JDK):** Version 11 or higher. Android Studio typically bundles one, but ensure it's properly configured.
--   **Android SDK:** Installed via Android Studio. Ensure you have the necessary SDK Platforms and Build Tools.
+- **JDK 17 or 21** installed and configured (`JAVA_HOME`).
+- **Android Studio** (Ladybug 2024.2.1+ or Koala).
+- **Android API 36 SDK Platform** installed via Android Studio SDK Manager.
 
-### Installation
+### Building & Running Locally
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/sm32d/streamfolio.git
-    cd streamfolio
-    ```
+```powershell
+# 1. Clone the repository
+git clone https://github.com/sm32d/streamfolio.git
+cd streamfolio
 
-2.  **Open in Android Studio**
-    -   Launch Android Studio.
-    -   Select `File > Open` and navigate to the cloned `streamfolio` directory.
-    -   Android Studio will automatically detect the Gradle project. Allow it to sync dependencies.
+# 2. Build Debug APK
+./gradlew assembleDebug
 
-3.  **Build and Run**
-    -   Ensure an Android emulator is running or a physical device is connected and recognized by Android Studio.
-    -   Click the `Run` button (green play icon) in the toolbar.
-    -   Select your target device/emulator and the application will build and install.
+# 3. Run Unit Tests
+./gradlew testDebugUnitTest
 
-## 📁 Project Structure
+# 4. Install and launch on an attached device or emulator
+./gradlew installDebug
+adb shell am start -n uk.sume.streamfolio/.MainActivity
+```
+
+For comprehensive environment setup, refer to [docs/02-local-development.md](docs/02-local-development.md).
+
+---
+
+## 📁 Repository Structure
 
 ```
 streamfolio/
-├── .gradle/                  # Gradle caches and generated files
-├── .idea/                    # IntelliJ/Android Studio project configuration files
-├── .kotlin/                  # Kotlin-specific project settings
-├── app/                      # The main Android application module
-│   ├── src/                  # Source code, resources, and manifest for the app
-│   │   ├── main/             # Main source set (Kotlin code, layouts, drawables, assets, manifest)
-│   │   ├── androidTest/      # Android instrumented tests (for UI and integration testing)
-│   │   └── test/             # Unit tests (for business logic and pure Kotlin code)
-│   └── build.gradle.kts      # Module-specific Gradle build script for the 'app' module
-├── build.gradle.kts          # Top-level Gradle build script for the entire project
-├── gradle/                   # Gradle wrapper files
-├── gradle.properties         # Global Gradle properties and configurations
-├── gradlew                   # Gradle wrapper script (for Linux/macOS)
-├── gradlew.bat               # Gradle wrapper script (for Windows)
-├── LICENSE                   # Project license file (GPL-3.0)
-├── README.md                 # This README file
-├── package.json              # (Empty/placeholder file - not used for core app development)
-└── settings.gradle.kts       # Gradle settings file, defines project modules
+├── app/                                # Main Android application module
+│   ├── schemas/                        # Exported Room database schema definitions (v5, v6, v7, v8)
+│   ├── src/
+│   │   ├── main/                       # Kotlin source code, resources, manifest
+│   │   ├── test/                       # Local JVM unit tests (BackupHelperTest, DefaultFeedsTest)
+│   │   └── androidTest/                # Instrumented Android UI tests
+│   ├── build.gradle.kts                # Application module build script & dependencies
+│   └── proguard-rules.pro              # R8 minification and keep rules
+├── design_system/                      # Brand assets, React/HTML UI kit, CSS design tokens
+├── docs/                               # Complete project documentation suite
+├── gradle/                             # Gradle wrapper & version catalog (libs.versions.toml)
+├── landing/                            # Public marketing website (HTML, CSS, JS)
+├── sample_xml/                         # Reference RSS/Atom/OPML payloads
+├── build.gradle.kts                    # Root project build configuration
+├── settings.gradle.kts                 # Project module settings
+├── update-version.ps1                  # Version bump utility script
+├── CLAUDE.md                           # AI pair programming guidelines and rules
+└── README.md                           # This README file
 ```
 
-## ⚙️ Configuration
-
-Project configurations are primarily managed through Gradle.
-
-### Gradle Configuration Files
--   `build.gradle.kts`: The main build configuration for the entire project. Defines dependencies for modules and plugins.
--   `app/build.gradle.kts`: Contains specific configurations for the `app` module, including Android SDK versions, application ID, dependencies, and build types.
--   `gradle.properties`: Used to configure global Gradle properties, JVM arguments, and other build-related settings.
--   `local.properties` (ignored by Git): Automatically generated by Android Studio, points to your Android SDK installation.
-
-### Environment Variables
-For sensitive keys or build-time configurations, Android projects often use `buildConfigField` or `resValue` in `build.gradle.kts` to inject values that can be defined in `gradle.properties` or system environment variables. Refer to `app/build.gradle.kts` for specific variables if any are used.
-
-## 🔧 Development
-
-### Building the Project
-You can build the project directly from Android Studio or using the Gradle wrapper from your terminal:
-
-```bash
-
-# Clean the project
-./gradlew clean
-
-# Build the debug APK
-./gradlew assembleDebug
-
-# Build the release APK (unsigned)
-./gradlew assembleRelease
-```
-
-### Running on Device/Emulator
-Once the project is built, you can install and run it on an attached Android device or emulator via Android Studio's 'Run' button, or manually via ADB:
-
-```bash
-
-# Install the debug APK
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
-
-## 🧪 Testing
-
-StreamFolio includes tests to ensure reliability and correctness.
-
-### Running Tests
--   **Unit Tests:** For business logic and pure Kotlin code that doesn't depend on the Android framework.
-    ```bash
-    ./gradlew testDebugUnitTest
-    ```
--   **Instrumented Tests:** For testing UI interactions and components that rely on the Android framework, run on an emulator or physical device.
-    ```bash
-    ./gradlew connectedCheck
-    ```
-
-## 🚀 Deployment
-
-To prepare StreamFolio for release on platforms like the Google Play Store, you need to generate a signed Android App Bundle (AAB) or APK.
-
-### Generating a Signed App Bundle (Recommended for Play Store)
-```bash
-
-# Generate a release app bundle
-./gradlew bundleRelease
-```
-Before running this command for the first time, you will need to set up signing configurations in your `app/build.gradle.kts` and `keystore.properties` (which should not be committed to Git). Refer to the official Android documentation on [signing your app](https://developer.android.com/studio/publish/app-signing) for detailed instructions.
+---
 
 ## 🤝 Contributing
 
-We welcome contributions to StreamFolio! If you're interested in improving this project, please follow these steps:
+We welcome contributions! Please review our [Contributing Guidelines](docs/13-contributing.md) and [Onboarding Checklist](docs/onboarding-checklist.md) before opening a Pull Request.
 
-1.  Fork the repository.
-2.  Create a new branch for your feature or bug fix.
-3.  Make your changes and ensure tests pass.
-4.  Commit your changes with clear, descriptive commit messages.
-5.  Push your branch and open a pull request.
+1. Fork the repository and create a feature branch (`git checkout -b feat/my-feature`).
+2. Implement your changes and ensure `./gradlew testDebugUnitTest` and `./gradlew lintDebug` pass.
+3. Keep documentation under `/docs` updated in the same change set (per [CLAUDE.md](CLAUDE.md)).
+4. Submit a Pull Request with a clear Conventional Commit message.
 
-Please see our (TODO: Add `CONTRIBUTING.md` if available) for more detailed contribution guidelines.
+---
 
 ## 📄 License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE) - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
--   Built using the powerful [Kotlin](https://kotlinlang.org/) programming language.
--   Powered by the versatile [Android SDK](https://developer.android.com/sdk).
--   Utilizes [Gradle](https://gradle.org/) for robust build automation.
--   Thanks to the open-source community for numerous libraries and tools.
-
-## 📞 Support & Contact
-
--   🐛 **Issues:** Report bugs or suggest features via [GitHub Issues](https://github.com/sm32d/streamfolio/issues).
--   📧 **Contact:** For other inquiries, you can reach out to the repository owner `sm32d`. <!-- TODO: Add a specific contact email if available -->
-
----
-
 <div align="center">
 
-**⭐ Star this repo if you find it helpful!**
-
-Made with ❤️ by [sm32d](https://github.com/sm32d)
+Made with ❤️ for privacy and open news by [sm32d](https://github.com/sm32d)
 
 </div>
