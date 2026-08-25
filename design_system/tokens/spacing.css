@@ -1,0 +1,28 @@
+/* Compose dp values, used verbatim. The app is not on a strict 4dp grid:
+   14, 18 and 10 appear as often as 8, 12, 16. Do not snap. */
+:root{
+  --sf-space-1:2px;
+  --sf-space-2:4px;
+  --sf-space-3:6px;
+  --sf-space-4:8px;
+  --sf-space-5:10px;
+  --sf-space-6:12px;
+  --sf-space-7:14px;
+  --sf-space-8:16px;
+  --sf-space-9:18px;
+  --sf-space-10:20px;
+  --sf-space-11:24px;
+  --sf-space-12:32px;
+
+  --sf-gutter:24px;         /* the app's universal screen side padding */
+  --sf-gutter-tight:20px;   /* bookmark grid, AI banner */
+  --sf-gutter-sheet:24px;
+  --sf-card-pad:12px;       /* ArticleListItem inner padding */
+  --sf-card-pad-lg:18px;    /* SettingsCard rows, RadioCard */
+  --sf-thumb-sm:40px;
+  --sf-thumb-md:56px;       /* publisher filter avatar */
+  --sf-thumb-lg:96px;       /* article list thumbnail */
+  --sf-navbar-clearance:96px;/* LazyColumn bottom padding under the nav pill */
+  --sf-navbar-clearance-player:160px;
+  --sf-touch-target:48px;
+}

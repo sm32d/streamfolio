@@ -1,0 +1,12 @@
+/* Compose .shadow(Ndp) — translated to soft, wide, low-opacity drops.
+   Chrome (nav bar, mini player) carries the heaviest shadow; content cards carry none,
+   relying on a 1px hairline border instead. */
+:root{
+  --sf-shadow-none:none;
+  --sf-shadow-card:0 2px 8px rgb(6 13 30/.06);
+  --sf-shadow-6:0 4px 14px rgb(6 13 30/.10);
+  --sf-shadow-8:0 6px 20px rgb(6 13 30/.12);   /* trending card, toast */
+  --sf-shadow-16:0 10px 34px rgb(6 13 30/.18);  /* nav bar, mini player, radio card */
+  --sf-blur-chrome:blur(20px); /* @kind other */   /* glassmorphic nav bar / mini player backdrop */
+  --sf-blur-scrim:blur(16px); /* @kind other */    /* settings blur behind the FM easter egg */
+}

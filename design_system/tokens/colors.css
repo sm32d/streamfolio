@@ -1,0 +1,91 @@
+/* Source of truth: app/src/main/java/uk/sume/streamfolio/ui/theme/Color.kt + Theme.kt
+   Named "Emerald*" in code for historical reasons; the values are cobalt blue,
+   redefined to match the app-icon gradient. */
+:root{
+  /* Brand ramp */
+  --sf-blue-500:#1E88E5;      /* primary   — EmeraldPrimary */
+  --sf-blue-700:#1565C0;      /* secondary — EmeraldSecondary */
+  --sf-cyan-400:#00B0FF;      /* tertiary  — MintAccent */
+  --sf-blue-400:#3B82F6;      /* thumbnail fallback gradient start */
+
+  /* Semantic accents (hardcoded per-action colours in the screens) */
+  --sf-red-600:#D32F2F;       /* ErrorRed — destructive */
+  --sf-red-400:#EF5350;       /* inline "remove bookmark" */
+  --sf-green-500:#10B981;     /* save / queue success */
+  --sf-coral-500:#F43F5E;     /* AccentCoral — skip / dismiss */
+  --sf-amber-500:#F59E0B;     /* AccentAmber — share */
+  --sf-violet-500:#8B5CF6;    /* mark-as-read swipe */
+  --sf-indigo-500:#6366F1;    /* AI spotlight gradient start */
+  --sf-teal-600:#0D9488;      /* AI spotlight gradient end */
+
+  /* Dark neutrals */
+  --sf-dark-bg:#060D1E;
+  --sf-dark-surface:#0E1A33;
+  --sf-dark-surface-variant:#1A2B4C;
+  /* Light neutrals */
+  --sf-light-bg:#F0F6FC;
+  --sf-light-surface:#FFFFFF;
+  --sf-light-surface-variant:#E1EBF5;
+  --sf-white:#FFFFFF;
+
+  /* ---- Semantic aliases: LIGHT scheme (default) ---- */
+  --sf-primary:var(--sf-blue-500);
+  --sf-secondary:var(--sf-blue-700);
+  --sf-tertiary:var(--sf-cyan-400);
+  --sf-error:var(--sf-red-600);
+  --sf-on-primary:var(--sf-light-surface);
+  --sf-background:var(--sf-light-bg);
+  --sf-surface:var(--sf-light-surface);
+  --sf-surface-variant:var(--sf-light-surface-variant);
+  --sf-on-surface:var(--sf-dark-bg);
+  --sf-on-surface-rgb:6 13 30; /* @kind other */
+  --sf-primary-rgb:30 136 229; /* @kind other */
+
+  /* onSurface alpha ladder — the app's only text/border hierarchy */
+  --sf-text-strong:rgb(var(--sf-on-surface-rgb));
+  --sf-text-body:rgb(var(--sf-on-surface-rgb)/.85);
+  --sf-text-secondary:rgb(var(--sf-on-surface-rgb)/.6);
+  --sf-text-muted:rgb(var(--sf-on-surface-rgb)/.5);
+  --sf-text-faint:rgb(var(--sf-on-surface-rgb)/.4);
+  --sf-text-label:rgb(var(--sf-on-surface-rgb)/.45);
+  --sf-text-disabled:rgb(var(--sf-on-surface-rgb)/.3);
+  --sf-border-strong:rgb(var(--sf-on-surface-rgb)/.15);
+  --sf-border:rgb(var(--sf-on-surface-rgb)/.12);
+  --sf-border-soft:rgb(var(--sf-on-surface-rgb)/.08);
+  --sf-border-hairline:rgb(var(--sf-on-surface-rgb)/.06);
+
+  /* Card / chrome fills — surface at the alphas the app uses */
+  --sf-surface-card:rgb(255 255 255/.6);
+  --sf-surface-pill:rgb(255 255 255/.75);
+  --sf-surface-raised:rgb(255 255 255/.95);
+  --sf-surface-chrome:rgb(255 255 255/.98);
+  --sf-surface-variant-soft:rgb(225 235 245/.5);
+  --sf-primary-wash:rgb(var(--sf-primary-rgb)/.12);
+  --sf-primary-tint:rgb(var(--sf-primary-rgb)/.15);
+  --sf-primary-ghost:rgb(var(--sf-primary-rgb)/.08);
+
+  /* Gradients */
+  --sf-gradient-page:linear-gradient(180deg,rgb(var(--sf-primary-rgb)/.12) 0%,rgb(225 235 245/.15) 50%,var(--sf-background) 100%); /* @kind color */
+  --sf-gradient-light:linear-gradient(180deg,#E0F2FE 0%,#F0F9FF 50%,#F8FAFC 100%); /* @kind color */
+  --sf-gradient-dark:linear-gradient(180deg,#060D1E 0%,#0A142D 50%,#020409 100%); /* @kind color */
+  --sf-gradient-thumb-fallback:linear-gradient(135deg,#3B82F6 0%,#10B981 100%); /* @kind color */
+  --sf-gradient-icon:linear-gradient(135deg,#1E88E5 0%,#1565C0 100%); /* @kind color */
+  --sf-gradient-ai:linear-gradient(135deg,#6366F1 0%,#0D9488 100%); /* @kind color */
+  --sf-gradient-scrim:linear-gradient(180deg,transparent 25%,rgb(0 0 0/.85) 100%); /* @kind color */
+}
+
+/* ---- Semantic aliases: DARK scheme ---- */
+.sf-dark,[data-sf-theme="dark"]{
+  --sf-on-primary:var(--sf-light-surface);
+  --sf-background:var(--sf-dark-bg);
+  --sf-surface:var(--sf-dark-surface);
+  --sf-surface-variant:var(--sf-dark-surface-variant);
+  --sf-on-surface:var(--sf-light-bg);
+  --sf-on-surface-rgb:240 246 252; /* @kind other */
+  --sf-surface-card:rgb(14 26 51/.6);
+  --sf-surface-pill:rgb(14 26 51/.75);
+  --sf-surface-raised:rgb(14 26 51/.95);
+  --sf-surface-chrome:rgb(14 26 51/.98);
+  --sf-surface-variant-soft:rgb(26 43 76/.5);
+  --sf-gradient-page:linear-gradient(180deg,var(--sf-dark-bg) 0%,rgb(26 43 76/.3) 50%,var(--sf-dark-bg) 100%); /* @kind color */
+}

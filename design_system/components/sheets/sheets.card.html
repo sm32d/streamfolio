@@ -1,0 +1,25 @@
+<!-- @dsCard group="Components" viewport="700x380" name="Sheets" subtitle="Bottom sheet, action rows, confirmation" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>body{padding:16px;background:var(--sf-gradient-page)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}</style>
+</head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { BottomSheet, SheetActionRow, ConfirmationSheet } = window.StreamFolioDesignSystem_2b0fe2;
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <div className="grid">
+    <BottomSheet>
+      <div style={{font:'var(--sf-weight-bold) 18px/1.3 var(--sf-font-sans)',color:'var(--sf-text-strong)'}}>Central banks hold rates steady as inflation cools</div>
+      <div style={{marginTop:4,font:'var(--sf-weight-semibold) 12px/1 var(--sf-font-sans)',color:'var(--sf-primary)'}}>Reuters</div>
+      <div style={{height:1,margin:'16px 0',background:'var(--sf-border-soft)'}} />
+      <SheetActionRow icon="play_arrow" title="Play Next" subtitle="Insert next in the audio playlist queue" />
+      <SheetActionRow icon="playlist_add" iconTint="var(--sf-green-500)" title="Add to Queue" subtitle="Queue to end of the audio playlist" />
+      <SheetActionRow icon="bookmark_add" iconTint="var(--sf-secondary)" title="Save Bookmark" subtitle="Save to read offline later" />
+      <SheetActionRow icon="share" iconTint="var(--sf-amber-500)" title="Share Article" subtitle="Send this article link to other apps" />
+    </BottomSheet>
+    <ConfirmationSheet icon="stop" title="Stop audio playback?" message="Dismissing the player will stop the current article and clear the audio queue." primaryLabel="Stop" secondaryLabel="Keep Playing" tertiaryLabel="Don't ask again" />
+  </div>
+);
+</script></body></html>

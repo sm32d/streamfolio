@@ -1,0 +1,6 @@
+/* Minimal page defaults so specimen cards and kits pick up the brand without extra work. */
+body{margin:0;font-family:var(--sf-font-sans);color:var(--sf-text-strong);background:var(--sf-background);-webkit-font-smoothing:antialiased}
+a{color:var(--sf-primary);text-decoration:none}
+a:hover{color:var(--sf-secondary)}
+.sf-icon{font-family:var(--sf-font-icon);font-weight:400;font-style:normal;line-height:1;letter-spacing:normal;text-transform:none;display:inline-block;white-space:nowrap;direction:ltr;font-variation-settings:"FILL" 1,"wght" 400,"GRAD" 0,"opsz" 24}
+.sf-icon.outlined{font-variation-settings:"FILL" 0,"wght" 400,"GRAD" 0,"opsz" 24}

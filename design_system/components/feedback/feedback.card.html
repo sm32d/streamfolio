@@ -1,0 +1,25 @@
+<!-- @dsCard group="Components" viewport="700x400" name="Feedback" subtitle="Empty state, offline, skeleton, toast, swipe hint" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>body{padding:16px 8px;background:var(--sf-gradient-page)}h4{margin:0 0 6px 16px;font:var(--sf-weight-semibold) 11px/1 var(--sf-font-sans);letter-spacing:var(--sf-tracking-label);color:var(--sf-text-label);text-transform:uppercase}.grid{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start}.stack{display:flex;flex-direction:column;gap:14px}</style>
+</head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { EmptyState, OfflineIndicator, SkeletonLoader, ToastBanner, SwipeHintBanner } = window.StreamFolioDesignSystem_2b0fe2;
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <div className="grid">
+    <div>
+      <h4>EmptyState</h4>
+      <EmptyState illustration="../../assets/otter-no-bookmarks.png" title="No saved bookmarks" description="Swipe right on articles in the Home feed to save them to collections." />
+    </div>
+    <div className="stack">
+      <div><h4>OfflineIndicator</h4><OfflineIndicator /></div>
+      <div><h4>SwipeHintBanner</h4><SwipeHintBanner /></div>
+      <div><h4>ToastBanner</h4><ToastBanner icon="bookmark" message={'Saved to "Read later"'} actionLabel="Change" /></div>
+      <div><h4>SkeletonLoader</h4><SkeletonLoader rows={1} /></div>
+    </div>
+  </div>
+);
+</script></body></html>

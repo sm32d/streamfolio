@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="News feed screen" description="StreamFolio Android feed — wordmark header, category pills, trending hero, article list, floating nav bar" -->
+<helmet><script src="./ds-base.js"></script><style>body{margin:0;background:#DCE7F2;display:grid;place-items:center;min-height:100vh}*{box-sizing:border-box}::-webkit-scrollbar{width:0;height:0}</style></helmet>
+<div style="position:relative;width:412px;height:892px;overflow:hidden;border-radius:36px;background:var(--sf-gradient-page);font-family:var(--sf-font-sans);box-shadow:0 24px 70px rgb(6 13 30/.28);display:flex;flex-direction:column">
+<div style="height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex:0 0 auto;font:600 12px/1 var(--sf-font-sans);color:rgb(6 13 30/.75)"><span>9:41</span><span>StreamFolio</span></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;flex:0 0 auto">
+<span style="font:900 28px/1 var(--sf-font-sans);color:var(--sf-primary)">StreamFolio</span>
+<span style="font:400 13px/1 var(--sf-font-sans);color:var(--sf-text-muted)">Tuesday, Aug 25</span>
+</div>
+<div style="display:flex;gap:8px;padding:0 24px 12px;overflow-x:auto;flex:0 0 auto">
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.CategoryPill" text="Top Stories" selected="{{ true }}" hint-size="110px,34px"></x-import>
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.CategoryPill" text="World" hint-size="76px,34px"></x-import>
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.CategoryPill" text="Business" hint-size="92px,34px"></x-import>
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.CategoryPill" text="Technology" hint-size="106px,34px"></x-import>
+</div>
+<div style="flex:1;overflow-y:auto;padding-bottom:120px">
+<div style="padding:16px 24px;font:700 18px/1.25 var(--sf-font-sans);color:var(--sf-text-strong)">Trending Highlights</div>
+<div style="padding:0 24px">
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.TrendingCard" source="Reuters" category="Business" title="Central banks hold rates steady as inflation cools across major economies" publishedAt="1h ago" readingTime="4 min read" hint-size="100%,280px"></x-import>
+</div>
+<div style="padding:16px 24px;font:700 18px/1.25 var(--sf-font-sans);color:var(--sf-text-strong)">Latest Stories</div>
+<div style="display:flex;flex-direction:column;gap:8px;padding:0 24px">
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.ArticleCard" source="BBC News" title="Port strike ends after eleven days as unions accept revised terms" publishedAt="2h ago" readingTime="3 min read" coverageCount="{{ 3 }}" hint-size="100%,160px"></x-import>
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.ArticleCard" source="Wired" title="The quiet standard that finally made RSS readers pleasant again" publishedAt="4h ago" readingTime="5 min read" bookmarked="{{ true }}" hint-size="100%,120px"></x-import>
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.ArticleCard" source="Ars Technica" title="Why local text-to-speech got good enough to listen to all day" publishedAt="Yesterday" readingTime="9 min read" hint-size="100%,120px"></x-import>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:8px;z-index:30">
+<x-import component-from-global-scope="StreamFolioDesignSystem_2b0fe2.GlassmorphicNavBar" selected="home" hint-size="100%,80px"></x-import>
+</div>
+</div>
+
+</x-dc>
+</body>
+</html>

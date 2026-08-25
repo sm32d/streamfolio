@@ -1,0 +1,18 @@
+:root{
+  --sf-radius-xs:6px;   /* LIVE badge */
+  --sf-radius-sm:8px;   /* trending label, tag chip */
+  --sf-radius-md:10px;
+  --sf-radius-lg:12px;  /* icon tile, offline pill, buttons */
+  --sf-radius-14:14px;  /* radio card inner, sheet CTA */
+  --sf-radius-16:16px;  /* thumbnail, info field */
+  --sf-radius-18:18px;  /* search field */
+  --sf-radius-20:20px;  /* article card, settings card, toast */
+  --sf-radius-24:24px;  /* trending card, pill buttons */
+  --sf-radius-28:28px;  /* bottom-sheet top corners */
+  --sf-radius-32:32px;  /* nav bar pill, mini player */
+  --sf-radius-full:9999px;
+
+  --sf-border-width:1px;
+  --sf-border-width-emphasis:1.5px; /* "New Collection" dashed-feel card */
+  --sf-border-width-selected:2px;   /* selected publisher avatar ring */
+}

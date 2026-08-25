@@ -1,0 +1,34 @@
+<!-- @dsCard group="Components" viewport="700x400" name="Article" subtitle="Feed row, trending hero, publisher avatar" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>body{padding:16px 20px;background:var(--sf-gradient-page)}h4{margin:0 0 8px;font:var(--sf-weight-semibold) 11px/1 var(--sf-font-sans);letter-spacing:var(--sf-tracking-label);color:var(--sf-text-label);text-transform:uppercase}.grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}.stack{display:flex;flex-direction:column;gap:8px}.row{display:flex;gap:12px;align-items:center;margin-top:14px}</style>
+</head><body><div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+const { ArticleCard, TrendingCard, PublisherAvatar } = window.StreamFolioDesignSystem_2b0fe2;
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <div className="grid">
+    <div>
+      <h4>ArticleCard</h4>
+      <div className="stack">
+        <ArticleCard source="Reuters" title="Central banks hold rates steady as inflation cools across major economies" publishedAt="2h ago" readingTime="4 min read" coverageCount={3} />
+        <ArticleCard source="The Verge" title="On-device models are quietly reshaping what phones can do offline" publishedAt="5h ago" readingTime="6 min read" bookmarked />
+        <ArticleCard source="BBC News" title="Marked as read — the card dims to 55%" publishedAt="Yesterday" readingTime="3 min read" read />
+      </div>
+      <h4 style={{marginTop:18}}>PublisherAvatar</h4>
+      <div className="row">
+        <PublisherAvatar sourceName="BBC News" domain="bbc.co.uk" size={56} ringed />
+        <PublisherAvatar sourceName="Reuters" domain="reuters.com" size={56} />
+        <PublisherAvatar sourceName="Wired" domain="wired.com" size={40} />
+        <PublisherAvatar sourceName="Nikkei Asia" size={40} />
+      </div>
+    </div>
+    <div>
+      <h4>TrendingCard</h4>
+      <TrendingCard source="Ars Technica" category="Science" title="Deep-sea sensors reveal a current no model predicted" publishedAt="1h ago" readingTime="7 min read" />
+    </div>
+  </div>
+);
+</script></body></html>

@@ -1,0 +1,33 @@
+/* Compose uses raw sp values inline rather than named text styles.
+   These are the sizes actually present in the screens, with their roles. */
+:root{
+  --sf-text-display:34px;   /* screen titles: Search, Bookmarks, Settings */
+  --sf-text-brand:28px;     /* "StreamFolio" home wordmark */
+  --sf-text-subpage:24px;   /* SubPageTopBar title */
+  --sf-text-sheet-title:20px;
+  --sf-text-section:18px;   /* "Trending Highlights", "Latest Stories" */
+  --sf-text-card-title:16px;/* trending card title, collection title */
+  --sf-text-row-title:15px; /* settings row title */
+  --sf-text-body:14px;
+  --sf-text-body-sm:13px;
+  --sf-text-meta:12px;
+  --sf-text-caption:11px;   /* source name, timestamps, reading time */
+  --sf-text-micro:10px;     /* nav labels, badges */
+  --sf-text-nano:9px;       /* "LIVE DJ" badge */
+
+  --sf-weight-regular:400; /* @kind font */
+  --sf-weight-medium:500; /* @kind font */
+  --sf-weight-semibold:600; /* @kind font */
+  --sf-weight-bold:700; /* @kind font */
+  --sf-weight-extrabold:800; /* @kind font */
+  --sf-weight-black:900; /* @kind font */    /* home wordmark only */
+
+  --sf-leading-body:24px; /* @kind font */   /* bodyLarge 16/24 */
+  --sf-leading-snug:20px; /* @kind font */
+  --sf-leading-tight:18px; /* @kind font */
+  --sf-leading-caption:15px; /* @kind font */
+
+  --sf-tracking-body:.5px; /* @kind font */  /* bodyLarge letterSpacing */
+  --sf-tracking-label:1px; /* @kind font */  /* SectionLabel uppercase */
+  --sf-tracking-brand:.8px; /* @kind font */ /* STREAMFOLIO FM 99.9 */
+}

@@ -1,0 +1,15 @@
+/* Every animation in the app is a tween with a duration in ms; no springs, no bounces. */
+:root{
+  --sf-dur-40:40ms; /* @kind other */    /* placeholder typewriter delete step */
+  --sf-dur-80:80ms; /* @kind other */    /* placeholder typewriter type step */
+  --sf-dur-150:150ms; /* @kind other */  /* mini-player snap back */
+  --sf-dur-200:200ms; /* @kind other */  /* card snap back, indicator fade */
+  --sf-dur-250:250ms; /* @kind other */  /* toast exit */
+  --sf-dur-300:300ms; /* @kind other */  /* swipe fling, toast enter */
+  --sf-dur-1000:1000ms; /* @kind other *//* shimmer sweep, looping */
+  --sf-ease-linear:linear; /* @kind other */      /* shimmer + equalizer bars use LinearEasing */
+  --sf-ease-standard:cubic-bezier(.2,0,0,1); /* @kind other */
+  --sf-scale-pager-off:.85; /* @kind other */     /* off-centre pager page */
+  --sf-alpha-pager-off:.5; /* @kind other */
+  --sf-alpha-read:.55; /* @kind other */          /* read article card */
+}

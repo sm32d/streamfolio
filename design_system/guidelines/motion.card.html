@@ -1,0 +1,9 @@
+<!-- @dsCard group="Motion" viewport="700x170" name="Durations &amp; behaviour" subtitle="Tweens only — no springs, no bounce, no overshoot" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{padding:16px 20px;background:var(--sf-background);font-family:var(--sf-font-sans)}.g{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font:400 11px/1.9 var(--sf-font-sans);color:var(--sf-text-secondary)}.g b{color:var(--sf-text-strong);font-weight:600;font-variant-numeric:tabular-nums}</style></head><body><div class="g">
+<div><b>150ms</b> — mini-player snap back</div><div><b>1000ms</b> — shimmer sweep, linear, looping</div>
+<div><b>200ms</b> — card snap back, indicator fade</div><div><b>280–420ms</b> — equalizer bars, linear, alternating</div>
+<div><b>250ms</b> — toast exit (slide down + fade)</div><div><b>80ms / 40ms</b> — search placeholder type / delete</div>
+<div><b>300ms</b> — swipe fling, toast enter</div><div><b>scale 0.85 · alpha 0.5</b> — off-centre pager page</div>
+</div>
+<div style="margin-top:14px;font:400 11px/1.7 var(--sf-font-sans);color:var(--sf-text-secondary);max-width:600px">Shared-element transitions carry the thumbnail and title from the feed into the reader. Every state change fires a <b style="color:var(--sf-text-strong)">LongPress haptic</b> — taps on pills, switches, bookmarks, refresh and swipe thresholds all buzz.</div></body></html>
