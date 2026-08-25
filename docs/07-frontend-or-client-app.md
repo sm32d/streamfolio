@@ -98,6 +98,7 @@ graph TD
 - **Multi-Collection Organization:** Displays default `"Saved"` collection alongside custom user-created lists.
 - **Layout Switching:** Toggle between 2-column grid tiles (`CollectionGridCard`) and compact list rows (`CollectionListRow`).
 - **Collection Management:** Create, rename, delete collections, with safe reassignment of articles into the default list upon deletion.
+- **Naming:** the page header reads "Saved" (matching the `GlassmorphicNavBar` tab label and the default list's own name) — it previously said "Bookmarks", inconsistent with the rest of the save/collection terminology used everywhere else in the app.
 
 ---
 
@@ -133,6 +134,7 @@ graph TD
 The application design system is defined in `ui/theme/` and mirrored in `design_system/`:
 
 - **Primary Colors:** Cobalt Blue (`#1E88E5`), Navy Surface (`#0E1A33`), Deep Background (`#060D1E`), Cyan Accent (`#00B0FF`).
-- **Dynamic Theming:** Supports Android 12+ Material You Dynamic Color extraction when `useDynamicColors` is toggled.
+- **Container/outline tones:** [Theme.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/theme/Theme.kt)'s `darkColorScheme()`/`lightColorScheme()` calls explicitly set `primaryContainer`/`onPrimaryContainer`/`secondaryContainer`/`onSecondaryContainer`/`tertiaryContainer`/`onTertiaryContainer`/`outline`/`outlineVariant` (defined in [Color.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/theme/Color.kt)) in the same blue family as the rest of the brand palette. Compose Material3's `darkColorScheme()`/`lightColorScheme()` factories silently default any slot you don't pass to the stock M3 baseline **purple** palette — since these container/outline slots were never set, selected-row backgrounds (e.g. `SaveToListBottomSheet`'s checked list row, using `colorScheme.primaryContainer`) and various card borders across `BookmarkScreen` and the Settings screens rendered purple/gray instead of on-brand blue, verified visually against a real device before and after.
+- **Dynamic Theming:** Supports Android 12+ Material You Dynamic Color extraction when `useDynamicColors` is toggled — note dynamic color derives its own full tonal palette from the device wallpaper and is unaffected by the container/outline fix above, which only applies to the static `DarkColorScheme`/`LightColorScheme`.
 - **Typography:** Custom `Roboto Flex` / `Roboto Serif` scale spanning `display` (34sp), `brand` (28sp), `card-title` (16sp), down to `nano` (9sp).
 - **Corner Radii:** Strict hierarchy — Chrome pills (32dp), Cards (20–24dp), Chips/Buttons (12–16dp), Micro badges (6–8dp).

@@ -148,6 +148,8 @@ Room migrations are configured in [Migrations.kt](file:///d:/News/app/src/main/j
 | **`MIGRATION_6_7`** | 6 | 7 | `ALTER TABLE articles ADD COLUMN groupId TEXT DEFAULT NULL` | Supports multi-publisher story clustering and deduplication. |
 | **`MIGRATION_7_8`** | 7 | 8 | `CREATE TABLE bookmark_lists`, `CREATE TABLE article_bookmark_lists`, seeds default list (`id=1, name='Saved'`), migrates existing bookmarked articles. | Introduces customizable multi-collection bookmark management. |
 
+> **Fresh-install gap (fixed):** `MIGRATION_7_8`'s default-list seed only runs for installs that were *upgraded* through schema v7→v8. A fresh install creates the v8 schema directly from the `@Entity` annotations and never executes that migration, so `bookmark_lists` started out with zero rows — `SaveToListBottomSheet` then had no list to show and silently failed to bookmark anything (confirmed on a real device: `bookmark_lists` was empty despite the article having `isBookmarked = 1` articles from before the multi-list feature). [AppDatabase.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/data/local/AppDatabase.kt) now adds a `RoomDatabase.Callback.onOpen()` that runs the same `INSERT OR IGNORE ... VALUES (1, 'Saved', 1, ...)` idempotently on every database open (not just `onCreate`), which seeds it for fresh installs and self-heals any existing install already stuck in that empty state.
+
 ---
 
 ## 4. Data Lifecycle, Retention & Integrity
