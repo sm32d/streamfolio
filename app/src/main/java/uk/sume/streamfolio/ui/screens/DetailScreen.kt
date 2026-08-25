@@ -505,21 +505,20 @@ fun DetailScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            with(sharedTransitionScope) {
-                                val titleSize = (fontSize * 1.3f).sp
-                                Text(
-                                    text = translatedTitle.ifEmpty { article.title },
-                                    fontSize = titleSize,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = (fontSize * 1.3f * 1.25f).sp,
-                                    fontFamily = if (fontFamily == "serif") FontFamily(android.graphics.Typeface.SERIF) else FontFamily(android.graphics.Typeface.SANS_SERIF),
-                                    modifier = Modifier.sharedElement(
-                                        rememberSharedContentState(key = "title_${article.link}"),
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                    )
-                                )
-                            }
+                            // Title is intentionally not a sharedElement: only the image flies from its
+                            // list position/size. The title just fades in with the rest of the screen
+                            // (see the detail_screen enter/exit transitions in NavRoutes.kt) instead of
+                            // interpolating between two very different font sizes/weights/families, which
+                            // either reflows text every frame or pops visibly the instant it settles.
+                            val titleSize = (fontSize * 1.3f).sp
+                            Text(
+                                text = translatedTitle.ifEmpty { article.title },
+                                fontSize = titleSize,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = (fontSize * 1.3f * 1.25f).sp,
+                                fontFamily = if (fontFamily == "serif") FontFamily(android.graphics.Typeface.SERIF) else FontFamily(android.graphics.Typeface.SANS_SERIF)
+                            )
 
                             if (isAiEnabled && isSmartTagsEnabled && !article.tags.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(10.dp))

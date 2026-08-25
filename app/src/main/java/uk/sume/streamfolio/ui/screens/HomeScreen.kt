@@ -918,20 +918,15 @@ fun TrendingCard(
                     color = Color.White.copy(alpha = 0.8f)
                 )
             }
-            with(sharedTransitionScope) {
-                Text(
-                    text = article.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.sharedElement(
-                        rememberSharedContentState(key = "title_${article.link}"),
-                        animatedVisibilityScope = animatedVisibilityScope
-                    )
-                )
-            }
+            // Title is not a sharedElement (only the image flies) — see DetailScreen.kt.
+            Text(
+                text = article.title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1322,20 +1317,15 @@ fun ArticleListItem(
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        with(sharedTransitionScope) {
-                            Text(
-                                text = article.title,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.sharedElement(
-                                    rememberSharedContentState(key = "title_${article.link}"),
-                                    animatedVisibilityScope = animatedVisibilityScope
-                                )
-                            )
-                        }
+                        // Title is not a sharedElement (only the image flies) — see DetailScreen.kt.
+                        Text(
+                            text = article.title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
 
                         Spacer(modifier = Modifier.height(10.dp))
 
