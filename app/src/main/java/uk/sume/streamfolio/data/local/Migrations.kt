@@ -69,4 +69,17 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
     }
 }
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+/**
+ * Indexes articles.groupId so DetailScreen can look up "also covered by" articles with a
+ * direct row lookup instead of a live Jaccard-similarity scan across the whole table.
+ * NewsRepository.assignGroupIds() already computes and persists groupId on every refresh
+ * (that's how the Home feed's "Also covered by" grouping works without opening an article) —
+ * DetailScreen just wasn't reusing it.
+ */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_articles_groupId` ON `articles` (`groupId`)")
+    }
+}
+
+val ALL_MIGRATIONS = arrayOf(MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)

@@ -104,6 +104,12 @@ interface ArticleDao {
     @Query("SELECT * FROM articles WHERE tags IS NULL AND isBookmarked = 0 ORDER BY pubDate DESC LIMIT :limit")
     suspend fun getArticlesWithoutTags(limit: Int): List<Article>
 
+    // NewsRepository.assignGroupIds() persists groupId on every refresh, so this is a cheap
+    // indexed lookup instead of a live similarity scan across the whole table (see DetailScreen's
+    // similar-articles panel in NewsViewModel.loadSimilarArticles).
+    @Query("SELECT * FROM articles WHERE groupId = :groupId AND link != :excludeLink ORDER BY pubDate DESC")
+    suspend fun getArticlesByGroupIdSync(groupId: String, excludeLink: String): List<Article>
+
     @Query("SELECT * FROM articles ORDER BY pubDate DESC LIMIT 50")
     fun getAllArticles(): Flow<List<Article>>
 

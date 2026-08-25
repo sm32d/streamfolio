@@ -82,6 +82,7 @@ graph TD
 - **On-Device AI Summary:** Triggers Gemini Nano inference, displaying bulleted key takeaways in an interactive sheet.
 - **ML Kit Translation:** Translates headline and body in real-time, displaying source and target language badges.
 - **Audio Toolbar:** Immediate launch of TTS speech engine for current article text.
+- **"Also Covered By" Panel:** Collapsible list of other sources reporting the same story, reusing the `groupId` already computed at ingest time (see [Flow 1](file:///d:/News/docs/01-architecture.md) in `01-architecture.md`) via a single indexed lookup — `NewsViewModel.loadSimilarArticles()` is deliberately deferred until the shared-element open animation finishes (`animatedVisibilityScope.transition.isRunning`), so it never competes with that transition.
 
 ---
 

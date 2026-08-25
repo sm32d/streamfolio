@@ -587,6 +587,9 @@ class NewsRepository(private val context: Context) {
 
     suspend fun getArticleByLink(link: String): Article? = articleDao.getArticleByLink(link)
 
+    suspend fun getArticlesByGroupId(groupId: String, excludeLink: String): List<Article> =
+        withContext(Dispatchers.IO) { articleDao.getArticlesByGroupIdSync(groupId, excludeLink) }
+
     suspend fun resolveThumbnailIfNeeded(link: String) = withContext(Dispatchers.IO) {
         val article = articleDao.getArticleByLink(link) ?: return@withContext
         if (article.thumbnailUrl.isNullOrBlank() || article.thumbnailUrl == "failed") {

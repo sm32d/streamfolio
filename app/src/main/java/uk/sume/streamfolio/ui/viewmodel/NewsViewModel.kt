@@ -633,25 +633,10 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
             clearTranslation()
         }
         viewModelScope.launch(Dispatchers.IO) {
-            _similarArticlesForDetail.value = emptyList()
-            
             var art = _currentArticleDetail.value
             if (art == null || art.link != url) {
                 art = repository.getArticleByLink(url)
                 _currentArticleDetail.value = art
-            }
-
-            if (art != null) {
-                try {
-                    val allArticles = repository.getAllArticlesUnlimitedSync()
-                    val similar = allArticles.filter { other ->
-                        other.link != art.link && calculateJaccardSimilarity(art.title, other.title) >= 0.35f
-                    }
-                    android.util.Log.d("NewsViewModel", "Detail similar articles for ${art.title}: ${similar.size}")
-                    _similarArticlesForDetail.value = similar
-                } catch (e: Exception) {
-                    android.util.Log.e("NewsViewModel", "Error loading similar articles: ${e.message}")
-                }
             }
 
             // Check if this article is already active in the reader/speech playlist.
@@ -753,6 +738,42 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
             }
+        }
+    }
+
+    // A plain suspend function (not a viewModelScope.launch) so it runs as part of the caller's
+    // own coroutine. DetailScreen calls this from a LaunchedEffect(url) gated on
+    // animatedVisibilityScope.transition.isRunning, so this both (a) never competes with the
+    // open-article animation, since it only starts once that finishes, and (b) is genuinely
+    // cancelled — not just superseded — if the user navigates away before it completes, since
+    // cancelling the LaunchedEffect cancels this suspend call with it. That fixes a real race
+    // where a stale scan for a previous article could otherwise overwrite the results for
+    // whichever one is showing now.
+    suspend fun loadSimilarArticles(url: String) {
+        try {
+            val art = _currentArticleDetail.value?.takeIf { it.link == url }
+                ?: repository.getArticleByLink(url)
+            if (art == null) return
+
+            // NewsRepository.assignGroupIds() persists groupId on every refresh, so this is
+            // normally a cheap indexed lookup. The live Jaccard scan is only a fallback for
+            // articles that predate that feature and were never assigned a groupId at all — a
+            // genuinely unique article still gets its own non-null groupId (see assignGroupIds'
+            // "group of one" fallback), so this isn't hit for ordinary unique stories, only for
+            // stale pre-migration rows.
+            val similar = if (!art.groupId.isNullOrBlank()) {
+                repository.getArticlesByGroupId(art.groupId, art.link)
+            } else {
+                val allArticles = repository.getAllArticlesUnlimitedSync()
+                allArticles.filter { other ->
+                    other.link != art.link && calculateJaccardSimilarity(art.title, other.title) >= 0.35f
+                }
+            }
+            if (_currentArticleDetail.value?.link == url) {
+                _similarArticlesForDetail.value = similar
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NewsViewModel", "Error loading similar articles: ${e.message}")
         }
     }
 

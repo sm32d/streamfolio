@@ -31,6 +31,8 @@ import androidx.compose.material.icons.outlined.Hearing
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -132,6 +134,15 @@ fun DetailScreen(
     // Trigger load of article body for Reader mode
     LaunchedEffect(url) {
         viewModel.loadArticleBody(url)
+    }
+
+    // Wait for the shared-element open animation to finish before running the (cheap, but not
+    // free) "also covered by" lookup, so it never competes with that transition. Being a
+    // LaunchedEffect keyed on url means it's cancelled outright if the user backs out or opens
+    // a different article before the transition even settles.
+    LaunchedEffect(url) {
+        snapshotFlow { animatedVisibilityScope.transition.isRunning }.filter { !it }.first()
+        viewModel.loadSimilarArticles(url)
     }
 
     Box(

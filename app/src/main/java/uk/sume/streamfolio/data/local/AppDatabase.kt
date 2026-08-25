@@ -13,7 +13,7 @@ import uk.sume.streamfolio.data.model.TtsPlaylistState
 
 @Database(
     entities = [Article::class, CustomFeed::class, TtsPlaylistState::class, BookmarkList::class, ArticleBookmarkListCrossRef::class],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

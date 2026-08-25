@@ -1,9 +1,10 @@
 package uk.sume.streamfolio.data.model
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "articles")
+@Entity(tableName = "articles", indices = [Index(value = ["groupId"])])
 data class Article(
     @PrimaryKey
     val link: String,
