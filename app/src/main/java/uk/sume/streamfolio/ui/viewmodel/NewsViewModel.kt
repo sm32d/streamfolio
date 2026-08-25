@@ -208,7 +208,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
         category
     }
         .flatMapLatest { category ->
-            val flow = if (category.startsWith("#")) {
+            val rawFlow = if (category.startsWith("#")) {
                 repository.getAllArticlesUnlimited().map { list ->
                     list.filter { article ->
                         article.tags?.lowercase()?.contains(category.lowercase()) == true
@@ -222,12 +222,19 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                         disabledFeedUrls = prefs.disabledFeedUrls,
                         enabledCrossRegionFeeds = prefs.enabledCrossRegionFeeds
                     ).toSet()
-                    
+
                     list.filter { article ->
                         article.customFeedId != null || enabledUrls.contains(article.sourceUrl)
                     }
                 }
             }
+            // After a refresh, thumbnail/tag/body enrichment (NewsRepository.fetchDefaultFeeds)
+            // writes each article's row individually as its own network fetch completes — up to
+            // ~100 separate DB writes trickling in over several seconds. Room re-queries this
+            // Flow on every single one, and each re-query re-runs groupSimilarArticles and rebuilds
+            // the whole list, which is what was showing up as scroll stutter "as new items load".
+            // Debouncing collapses a burst of near-simultaneous writes into one recomposition.
+            val flow = rawFlow.debounce(300)
             combine(flow, groupSimilarStories) { list, groupEnabled ->
                 val groups = if (groupEnabled) {
                     groupSimilarArticles(list)

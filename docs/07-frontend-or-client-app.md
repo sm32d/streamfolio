@@ -6,6 +6,12 @@
 
 ---
 
+## 0. High Refresh Rate Handling
+
+[MainActivity.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/MainActivity.kt) calls `requestHighestRefreshRate()` in `onCreate()`, which sets `window.attributes.preferredDisplayModeId` to whichever `Display.Mode` has the highest `refreshRate`. Without this, some OEM display stacks auto-classify third-party app rendering into a refresh-rate category (Android's `FrameRateCategoryRate` mechanism) that maps to less than the display's peak rate even on a 120Hz-capable panel — verified via `adb shell dumpsys display` on a MediaTek device where `high` activity mapped to only 90Hz, capping this app there while system apps reached 120Hz. Setting the preferred display mode explicitly populates the `PRIORITY_APP_REQUEST_BASE_MODE_REFRESH_RATE` vote directly instead of leaving it to that per-device default guess (confirmed via the same `dumpsys` command: `mActiveModeId` moved from the 90Hz mode to the 120Hz one after this change).
+
+---
+
 ## 1. Client App Architecture & Navigation Graph
 
 StreamFolio's UI is built entirely using **declarative Jetpack Compose**, governed by Unidirectional Data Flow (UDF). Navigation is orchestrated by `AppNavigation` in [NavRoutes.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/navigation/NavRoutes.kt), which hosts **two independent `NavController`/`NavHost` pairs** behind a single `GlassmorphicNavBar`:

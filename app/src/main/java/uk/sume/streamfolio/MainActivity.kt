@@ -1,5 +1,6 @@
 package uk.sume.streamfolio
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,6 +24,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        requestHighestRefreshRate()
 
         viewModel = ViewModelProvider(this)[NewsViewModel::class.java]
 
@@ -37,6 +39,22 @@ class MainActivity : ComponentActivity() {
             val useDynamicColors by viewModel.useDynamicColors.collectAsState()
             NewsTheme(dynamicColor = useDynamicColors) {
                 AppNavigation(viewModel = viewModel)
+            }
+        }
+    }
+
+    // Without this, some OEM display stacks (observed on a MediaTek device whose
+    // FrameRateCategoryRate maps "high" activity to only 90Hz) auto-classify third-party
+    // apps into a refresh-rate category below the display's actual peak, capping this app
+    // below the 120Hz other apps reach. Explicitly requesting the highest-refresh-rate mode
+    // sets the app-request vote directly instead of leaving it to that default guess.
+    @Suppress("DEPRECATION")
+    private fun requestHighestRefreshRate() {
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
+        val bestMode = display?.supportedModes?.maxByOrNull { it.refreshRate }
+        if (bestMode != null) {
+            window.attributes = window.attributes.apply {
+                preferredDisplayModeId = bestMode.modeId
             }
         }
     }

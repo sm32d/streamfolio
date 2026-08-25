@@ -143,6 +143,8 @@ sequenceDiagram
     VM-->>HomeScreen: Render Updated Article Feed
 ```
 
+After the initial batched insert above, `NewsRepository` also fans out background enrichment for the freshly-fetched articles — up to ~40 concurrent thumbnail resolutions, 30 Straits Times thumbnail retries, 10 article-body pre-scrapes, and 20 AI tagging calls (`triggerThumbnailResolution`/`triggerStraitsTimesThumbnailRetry`/`triggerArticleBodyPreScrape`/`triggerArticleTagging` in [NewsRepository.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/data/network/NewsRepository.kt#L320-L420)). Each of those writes its own row individually as its network call completes, so the DB can emit dozens of Flow re-queries over the following several seconds — not one clean update. `NewsViewModel.categoryArticlesState` ([NewsViewModel.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/viewmodel/NewsViewModel.kt#L207-L245)) applies `.debounce(300)` to that Flow specifically to collapse this trickle into far fewer `groupSimilarArticles` recomputations / `LazyColumn` recompositions, since without it this showed up as scroll stutter for several seconds after every refresh as enrichment results landed one at a time.
+
 ---
 
 ### Flow 2: On-Device GenAI Summarization & Offline Translation
