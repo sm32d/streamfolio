@@ -172,6 +172,7 @@ d:/News/
 │   │   └── androidTest/                # Instrumented Android UI tests
 │   ├── build.gradle.kts                # Application module build configuration
 │   └── proguard-rules.pro              # R8 minification and keep rules
+├── baselineprofile/                    # com.android.test module: generates app/src/main/generated/baselineProfiles/baseline-prof.txt
 ├── design_system/                      # Brand assets, React/HTML UI kit, CSS design tokens
 ├── docs/                               # Comprehensive project documentation suite
 ├── gradle/                             # Gradle wrapper files & version catalog (libs.versions.toml)

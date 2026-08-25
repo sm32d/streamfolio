@@ -77,11 +77,33 @@ buildTypes {
 ```
 
 - **Keep Rules ([proguard-rules.pro](file:///d:/News/app/proguard-rules.pro)):** Preserves Room database entities, DAOs, and ML Kit GenAI model reflection classes from obfuscation.
-- **Baseline Profiles:** Baseline profiles are included under `app/release/baselineProfiles/` to pre-compile critical DEX code paths for fast startup.
 
 ---
 
-## 4. App Signing Process (Play Store & Direct APK)
+## 4. Baseline Profile Generation
+
+> **Correction:** this section previously claimed a baseline profile was already shipped under `app/release/baselineProfiles/`; that directory exists but was empty — no profile was actually being generated or installed. The infrastructure below is what actually exists as of this doc's last verification, and has been run end-to-end against a physical device.
+
+A **[`:baselineprofile`](file:///d:/News/baselineprofile/build.gradle.kts)** module (`com.android.test`, using the `androidx.baselineprofile` Gradle plugin) generates a real one. `:app` depends on it via `baselineProfile(project(":baselineprofile"))` and installs `androidx.profileinstaller` at runtime so ART actually uses the checked-in profile to precompile hot paths ahead-of-time instead of interpreting/JIT-warming them on first run — this is what "esp on load" perf work targets.
+
+```powershell
+# Runs against whatever device `adb devices` sees — a physical phone (USB debugging on) or a
+# manually started emulator. No Gradle Managed Device / virtualization needed.
+./gradlew :app:generateReleaseBaselineProfile
+
+# Writes the human-readable profile to:
+# app/src/release/generated/baselineProfiles/baseline-prof.txt
+# Commit that file (it's real source, not build output — nothing in .gitignore excludes it)
+# so release builds ship it.
+```
+
+Last generated against a CPH2651 (Android 16 / API 36) physical device: ~26,000 profile rule lines covering the app's cold-start path.
+
+[`BaselineProfileGenerator.kt`](file:///d:/News/baselineprofile/src/main/java/uk/sume/streamfolio/baselineprofile/BaselineProfileGenerator.kt) currently profiles **cold app start only**. Extending it to also cover opening an article (the other perf-sensitive path worked on this session) needs a stable UiAutomator selector for the first list card — e.g. a `Modifier.testTag(...)` on `ArticleListItem` in [HomeScreen.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/HomeScreen.kt), since there's currently nothing else to reliably target it from outside Compose.
+
+---
+
+## 5. App Signing Process (Play Store & Direct APK)
 
 To sign an unsigned APK for testing or direct distribution:
 
@@ -98,7 +120,7 @@ apksigner verify app-release-signed.apk
 
 ---
 
-## 5. Recommended GitHub Actions CI/CD Pipeline
+## 6. Recommended GitHub Actions CI/CD Pipeline
 
 To automate pull request validation and automated release builds, add the following workflow at `.github/workflows/android-ci.yml`:
 
