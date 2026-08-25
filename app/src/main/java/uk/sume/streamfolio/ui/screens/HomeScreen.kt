@@ -101,7 +101,8 @@ fun HomeScreen(
     navController: NavController,
     viewModel: NewsViewModel,
     sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    onNavigateToSettingsRoute: (String) -> Unit = {}
 ) {
     val categoryArticlesState by viewModel.categoryArticlesState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
@@ -400,7 +401,7 @@ fun HomeScreen(
                                     AiSpotlightBanner(
                                         onEnable = {
                                             viewModel.setHasSeenAiSpotlight(true)
-                                            navController.navigate("settings_ai")
+                                            onNavigateToSettingsRoute("settings_ai")
                                         },
                                         onDismiss = { viewModel.setHasSeenAiSpotlight(true) }
                                     )
@@ -628,7 +629,7 @@ fun HomeScreen(
                                             Button(
                                                 onClick = {
                                                     viewModel.filterCategoryOnSettings = targetCategory
-                                                    navController.navigate("settings_providers")
+                                                    onNavigateToSettingsRoute("settings_providers")
                                                 },
                                                 colors = ButtonDefaults.buttonColors(
                                                     containerColor = MaterialTheme.colorScheme.primary
@@ -650,7 +651,7 @@ fun HomeScreen(
                                             }
                                             Spacer(modifier = Modifier.height(12.dp))
                                             OutlinedButton(
-                                                onClick = { navController.navigate("settings_feeds") },
+                                                onClick = { onNavigateToSettingsRoute("settings_feeds") },
                                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                                                 shape = RoundedCornerShape(12.dp),
                                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),

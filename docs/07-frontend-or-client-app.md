@@ -8,7 +8,10 @@
 
 ## 1. Client App Architecture & Navigation Graph
 
-StreamFolio's UI is built entirely using **declarative Jetpack Compose**, governed by Unidirectional Data Flow (UDF). Navigation is orchestrated by `AppNavigation` in [NavRoutes.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/navigation/NavRoutes.kt) with animated page transitions and shared element transitions (`SharedTransitionLayout`).
+StreamFolio's UI is built entirely using **declarative Jetpack Compose**, governed by Unidirectional Data Flow (UDF). Navigation is orchestrated by `AppNavigation` in [NavRoutes.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/navigation/NavRoutes.kt), which hosts **two independent `NavController`/`NavHost` pairs** behind a single `GlassmorphicNavBar`:
+
+- A **core `NavHost`** (Onboarding, Home, Search, Bookmarks, `DetailScreen`, `BookmarkCollectionDetailScreen`) wrapped in `SharedTransitionLayout`, since these are the only screens that participate in shared-element (image/title) transitions.
+- A **Settings `NavHost`** (`SettingsMainScreen` + its 7 sub-pages) kept **outside** `SharedTransitionLayout`. Settings never uses a shared element, so isolating it avoids paying for `SharedTransitionLayout`'s lookahead layout pass while a Settings screen is active. A `showSettings` boolean (in `AppNavigation`) toggles which of the two hosts is visible; tapping the Settings tab does not use the core controller's `popUpTo`/`saveState` mechanism used for Home/Search/Bookmarks — it just flips `showSettings`, and the Settings `NavController`'s own back stack is preserved for free since the controller instance is hoisted above the toggle. System/gesture back while `showSettings` is true pops the Settings stack first, falling back to `showSettings = false` at its root. A deep-link from Home (e.g. the AI spotlight banner) into a specific settings sub-screen is queued as `pendingSettingsRoute` and consumed by a `LaunchedEffect` once the Settings `NavHost` has mounted and set its graph, since navigating that controller before it composes would crash.
 
 ```mermaid
 graph TD
@@ -18,24 +21,24 @@ graph TD
 
     OnboardingScreen -->|Finished| MainScaffold
 
-    subgraph "Bottom Tab Destinations"
+    subgraph "Core NavHost (inside SharedTransitionLayout)"
         HomeScreen["HomeScreen<br/>(Hero Trending, Category Pills, Grouped Articles)"]
         SearchScreen["SearchScreen<br/>(Live Search, History Chips, Online News)"]
         BookmarkScreen["BookmarkScreen<br/>(Collection Tiles, Grid/List Mode)"]
-        SettingsScreen["SettingsMainScreen<br/>(Hub for Configuration)"]
     end
 
     MainScaffold --> HomeScreen
     MainScaffold --> SearchScreen
     MainScaffold --> BookmarkScreen
-    MainScaffold --> SettingsScreen
+    MainScaffold -->|showSettings = true| SettingsScreen
 
     HomeScreen -->|Tap Article| DetailScreen["DetailScreen<br/>(Reader Mode, Web View, AI Summary, Translation)"]
     SearchScreen -->|Tap Article| DetailScreen
     BookmarkScreen -->|Tap Collection| BookmarkDetailScreen["BookmarkCollectionDetailScreen"]
     BookmarkDetailScreen -->|Tap Article| DetailScreen
 
-    subgraph "Settings Sub-Pages (Slide Transitions)"
+    subgraph "Settings NavHost (outside SharedTransitionLayout)"
+        SettingsScreen["SettingsMainScreen<br/>(Hub for Configuration)"]
         SettingsPrefs["SettingsPreferencesScreen"]
         SettingsAi["SettingsAiScreen"]
         SettingsFeeds["SettingsFeedsScreen"]
