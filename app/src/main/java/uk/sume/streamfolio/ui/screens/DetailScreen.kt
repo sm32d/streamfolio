@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import okhttp3.Headers
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
 
 
@@ -450,8 +452,29 @@ fun DetailScreen(
 
                         if (hasValidThumbnail) {
                             with(sharedTransitionScope) {
+                                // Same User-Agent header as the list/trending requests (some publishers
+                                // block the default OkHttp UA), and a placeholderMemoryCacheKey pointing
+                                // at whichever card this article was opened from (see the matching
+                                // memoryCacheKey("thumb_${article.link}") in HomeScreen.kt) so the hero
+                                // starts from that already-decoded bitmap instead of a blank/skeleton
+                                // flash, then crossfades to this screen's higher-resolution decode.
+                                val heroRequest = remember(thumbnail) {
+                                    ImageRequest.Builder(context)
+                                        .data(thumbnail)
+                                        .headers(
+                                            Headers.Builder()
+                                                .add(
+                                                    "User-Agent",
+                                                    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                                                )
+                                                .build()
+                                        )
+                                        .placeholderMemoryCacheKey("thumb_${article.link}")
+                                        .crossfade(true)
+                                        .build()
+                                }
                                 AsyncImage(
-                                    model = thumbnail,
+                                    model = heroRequest,
                                     contentDescription = null,
                                     modifier = Modifier
                                         .fillMaxWidth()

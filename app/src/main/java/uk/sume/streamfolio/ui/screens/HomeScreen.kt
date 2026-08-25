@@ -834,6 +834,7 @@ fun TrendingCard(
                                 .build()
                         )
                         .size(600, 400)
+                        .memoryCacheKey("thumb_${article.link}")
                         .build()
                 }
                 AsyncImage(
@@ -1247,6 +1248,7 @@ fun ArticleListItem(
                                                 .build()
                                         )
                                         .size(256, 256)
+                                        .memoryCacheKey("thumb_${article.link}")
                                         .build()
                                 }
                                 AsyncImage(
