@@ -106,7 +106,7 @@ fun BookmarkScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Bookmarks",
+                            text = "Saved",
                             fontSize = 34.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface

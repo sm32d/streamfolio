@@ -128,6 +128,15 @@ fun SaveToListBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            if (allLists.isEmpty()) {
+                Text(
+                    text = "No collections yet. Create one below to save this article.",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
             // Scrollable List of Collections
             LazyColumn(
                 modifier = Modifier

@@ -21,6 +21,29 @@ val LightSurfaceVariant = Color(0xFFE1EBF5)
 val AccentCoral = Color(0xFFF43F5E)
 val AccentAmber = Color(0xFFF59E0B)
 
+// Container/outline tones for the M3 ColorScheme slots the app actually uses
+// (selected-row backgrounds, card borders, etc.). darkColorScheme()/lightColorScheme()
+// silently default any slot you don't pass to Material3's baseline purple palette, which is
+// why selected rows (e.g. the Save-to-Collection sheet) showed up purple instead of blue —
+// these keep every container/outline in the same blue family as the rest of the brand palette.
+val PrimaryContainerDark = Color(0xFF12386B)
+val OnPrimaryContainerDark = Color(0xFFD3E4FA)
+val SecondaryContainerDark = Color(0xFF0D2B57)
+val OnSecondaryContainerDark = Color(0xFFCFE0F5)
+val TertiaryContainerDark = Color(0xFF00364D)
+val OnTertiaryContainerDark = Color(0xFFB3E5FC)
+val OutlineDark = Color(0xFF3A537A)
+val OutlineVariantDark = Color(0xFF26385C)
+
+val PrimaryContainerLight = Color(0xFFD3E4FA)
+val OnPrimaryContainerLight = Color(0xFF0B2E5E)
+val SecondaryContainerLight = Color(0xFFDCE9FB)
+val OnSecondaryContainerLight = Color(0xFF0D2B57)
+val TertiaryContainerLight = Color(0xFFDFF4FF)
+val OnTertiaryContainerLight = Color(0xFF00364D)
+val OutlineLight = Color(0xFF8DA3C2)
+val OutlineVariantLight = Color(0xFFC3D3EA)
+
 // Soft dynamic gradients for background and cards (blue-tinted cool gradients)
 val LightGradient = Brush.verticalGradient(
     colors = listOf(Color(0xFFE0F2FE), Color(0xFFF0F9FF), Color(0xFFF8FAFC))
