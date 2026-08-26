@@ -14,12 +14,12 @@
 
 ## 1. Client App Architecture & Navigation Graph
 
-StreamFolio's UI is built entirely using **declarative Jetpack Compose**, governed by Unidirectional Data Flow (UDF). Navigation is orchestrated by `AppNavigation` in [NavRoutes.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/navigation/NavRoutes.kt), which hosts **two independent `NavController`/`NavHost` pairs** behind a single `GlassmorphicNavBar`:
+StreamFolio's UI is built entirely using **declarative Jetpack Compose**, governed by Unidirectional Data Flow (UDF). Navigation is orchestrated by `AppNavigation` in [NavRoutes.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/navigation/NavRoutes.kt), a single `NavHost`/`NavController` wrapped entirely in `SharedTransitionLayout` behind one `GlassmorphicNavBar` — Onboarding, Home, Search, Bookmarks, Settings and its 7 sub-pages, `DetailScreen`, and `BookmarkCollectionDetailScreen` are all routes on the same graph. Only the article **thumbnail image** is a `sharedElement` (it flies from its list/card position into the detail hero image); the **title is intentionally not** — interpolating a `Text` between very different font sizes/weights/families either reflows text every animation frame or pops visibly the instant the transition settles, so the title just fades in with the rest of the screen instead.
 
-- A **core `NavHost`** (Onboarding, Home, Search, Bookmarks, `DetailScreen`, `BookmarkCollectionDetailScreen`) wrapped in `SharedTransitionLayout`, since these are the only screens that participate in a shared-element transition. Only the article **thumbnail image** is a `sharedElement` (it flies from its list/card position into the detail hero image); the **title is intentionally not** — interpolating a `Text` between very different font sizes/weights/families either reflows text every animation frame or pops visibly the instant the transition settles, so the title just fades in with the rest of the screen instead.
-  - The list card (`ArticleListItem`, 256×256) and trending carousel (`TrendingCard`, 600×400) requests each set an explicit Coil `memoryCacheKey` of `"thumb_" + article.link`. `DetailScreen`'s hero image (which needs a larger decode to stay sharp at its bigger display size, so it can't just reuse the list's small request as-is) sets `placeholderMemoryCacheKey` to that same key plus `crossfade(true)`, so it paints instantly from whichever thumbnail bitmap is already cached instead of a blank flash, then crossfades to its own higher-resolution decode. All three requests also share the same custom `User-Agent` header (some publishers block the default OkHttp UA).
-  - The app-wide default Coil `ImageLoader` (used by every `AsyncImage` that doesn't pass its own `imageLoader`) is supplied by [StreamFolioApplication.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/StreamFolioApplication.kt) implementing `ImageLoaderFactory`, registered via `android:name=".StreamFolioApplication"` in `AndroidManifest.xml`. It sets `crossfade(true)` (so every image — favicons, thumbnails, everything — fades in instead of popping), a 25%-of-app-memory memory cache, a 100 MB disk cache, and the same custom `User-Agent` header as above applied globally via an OkHttp interceptor. `SettingsMainScreen`'s promo GIF still builds its own local `ImageLoader` (for GIF decoder support) and is unaffected by this default.
-- A **Settings `NavHost`** (`SettingsMainScreen` + its 7 sub-pages) kept **outside** `SharedTransitionLayout`. Settings never uses a shared element, so isolating it avoids paying for `SharedTransitionLayout`'s lookahead layout pass while a Settings screen is active. A `showSettings` boolean (in `AppNavigation`) toggles which of the two hosts is visible; tapping the Settings tab does not use the core controller's `popUpTo`/`saveState` mechanism used for Home/Search/Bookmarks — it just flips `showSettings`, and the Settings `NavController`'s own back stack is preserved for free since the controller instance is hoisted above the toggle. System/gesture back while `showSettings` is true pops the Settings stack first, falling back to `showSettings = false` at its root. A deep-link from Home (e.g. the AI spotlight banner) into a specific settings sub-screen is queued as `pendingSettingsRoute` and consumed by a `LaunchedEffect` once the Settings `NavHost` has mounted and set its graph, since navigating that controller before it composes would crash.
+> **Tried and reverted:** a later change split Settings into a second, separately-mounted `NavHost` outside `SharedTransitionLayout`, since Settings never uses a shared element and paying for `SharedTransitionLayout`'s lookahead layout pass while a Settings screen is active is pure overhead. In practice, Navigation-Compose's `NavHost` isn't designed to be one of several permanently co-mounted siblings: every technique tried to keep two of them alive at once without tearing one down broke something else — conditionally composing/decomposing it destroyed its back-stack entries' lifecycle (blank screen returning to Settings via system back); hiding the inactive one by collapsing its layout size didn't actually stop it from drawing (both surfaces stayed visibly overlapped, from the very first frame, regardless of navigation state — reproduced even on the Onboarding screen); and hiding it by consuming its touch input broke input for the *other*, visible surface too, since Compose's pointer-consumption state is shared across the whole gesture rather than scoped to one subtree (Onboarding's Continue button stopped responding). Given two rounds of that breaking the app on a real device, the split was reverted back to the single-`NavHost` architecture described above. The performance concern it was chasing turned out to be minor compared to the actual bottleneck (see the "Similar Articles Lookup" note below), which is fixed independently of this.
+
+- The list card (`ArticleListItem`, 256×256) and trending carousel (`TrendingCard`, 600×400) requests each set an explicit Coil `memoryCacheKey` of `"thumb_" + article.link`. `DetailScreen`'s hero image (which needs a larger decode to stay sharp at its bigger display size, so it can't just reuse the list's small request as-is) sets `placeholderMemoryCacheKey` to that same key plus `crossfade(true)`, so it paints instantly from whichever thumbnail bitmap is already cached instead of a blank flash, then crossfades to its own higher-resolution decode. All three requests also share the same custom `User-Agent` header (some publishers block the default OkHttp UA).
+- The app-wide default Coil `ImageLoader` (used by every `AsyncImage` that doesn't pass its own `imageLoader`) is supplied by [StreamFolioApplication.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/StreamFolioApplication.kt) implementing `ImageLoaderFactory`, registered via `android:name=".StreamFolioApplication"` in `AndroidManifest.xml`. It sets `crossfade(true)` (so every image — favicons, thumbnails, everything — fades in instead of popping), a 25%-of-app-memory memory cache, a 100 MB disk cache, and the same custom `User-Agent` header as above applied globally via an OkHttp interceptor. `SettingsMainScreen`'s promo GIF still builds its own local `ImageLoader` (for GIF decoder support) and is unaffected by this default.
 
 ```mermaid
 graph TD
@@ -29,23 +29,10 @@ graph TD
 
     OnboardingScreen -->|Finished| MainScaffold
 
-    subgraph "Core NavHost (inside SharedTransitionLayout)"
+    subgraph "Single NavHost (entirely inside SharedTransitionLayout)"
         HomeScreen["HomeScreen<br/>(Hero Trending, Category Pills, Grouped Articles)"]
         SearchScreen["SearchScreen<br/>(Live Search, History Chips, Online News)"]
         BookmarkScreen["BookmarkScreen<br/>(Collection Tiles, Grid/List Mode)"]
-    end
-
-    MainScaffold --> HomeScreen
-    MainScaffold --> SearchScreen
-    MainScaffold --> BookmarkScreen
-    MainScaffold -->|showSettings = true| SettingsScreen
-
-    HomeScreen -->|Tap Article| DetailScreen["DetailScreen<br/>(Reader Mode, Web View, AI Summary, Translation)"]
-    SearchScreen -->|Tap Article| DetailScreen
-    BookmarkScreen -->|Tap Collection| BookmarkDetailScreen["BookmarkCollectionDetailScreen"]
-    BookmarkDetailScreen -->|Tap Article| DetailScreen
-
-    subgraph "Settings NavHost (outside SharedTransitionLayout)"
         SettingsScreen["SettingsMainScreen<br/>(Hub for Configuration)"]
         SettingsPrefs["SettingsPreferencesScreen"]
         SettingsAi["SettingsAiScreen"]
@@ -55,6 +42,16 @@ graph TD
         SettingsBackup["SettingsBackupScreen"]
         SettingsGestures["SettingsGesturesScreen"]
     end
+
+    MainScaffold --> HomeScreen
+    MainScaffold --> SearchScreen
+    MainScaffold --> BookmarkScreen
+    MainScaffold --> SettingsScreen
+
+    HomeScreen -->|Tap Article| DetailScreen["DetailScreen<br/>(Reader Mode, Web View, AI Summary, Translation)"]
+    SearchScreen -->|Tap Article| DetailScreen
+    BookmarkScreen -->|Tap Collection| BookmarkDetailScreen["BookmarkCollectionDetailScreen"]
+    BookmarkDetailScreen -->|Tap Article| DetailScreen
 
     SettingsScreen --> SettingsPrefs & SettingsAi & SettingsFeeds & SettingsProviders & SettingsReorder & SettingsBackup & SettingsGestures
 
