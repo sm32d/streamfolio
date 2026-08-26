@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import android.content.Intent
 import android.widget.Toast
@@ -379,7 +380,7 @@ fun HomeScreen(
                         description = "Please enable default feeds or add a custom RSS feed in Settings to start reading."
                     )
                 } else if (currentCategoryArticles.isEmpty() && isRefreshing) {
-                    SkeletonLoader(modifier = Modifier.fillMaxSize())
+                    SkeletonLoader(modifier = Modifier.fillMaxSize().testTag("home_skeleton_loader"))
                 } else {
                     val pullToRefreshState = rememberPullToRefreshState()
                     Box(modifier = Modifier.fillMaxSize()) {
@@ -388,11 +389,11 @@ fun HomeScreen(
                             onRefresh = { viewModel.refreshCurrentFeed() },
                             state = pullToRefreshState,
                             indicator = {},
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize().testTag("home_pull_to_refresh")
                         ) {
                         LazyColumn(
                             state = currentScrollState,
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().testTag("home_article_list"),
                             contentPadding = PaddingValues(bottom = 96.dp)
                         ) {
                             if (!hasSeenAiSpotlight && !isAiEnabled) {
@@ -815,6 +816,7 @@ fun TrendingCard(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("article_item_${article.link}")
             .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onTap)
     ) {
@@ -1185,6 +1187,7 @@ fun ArticleListItem(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag("article_item_${article.link}")
                     .padding(
                         start = 24.dp,
                         end = 24.dp,

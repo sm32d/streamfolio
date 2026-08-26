@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -118,7 +119,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     value = addTitle,
                     onValueChange = { addTitle = it },
                     label = { Text("Feed Name  e.g. Wired Tech") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("add_feed_title_field"),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
@@ -127,7 +128,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     value = addUrl,
                     onValueChange = { addUrl = it },
                     label = { Text("RSS Feed URL") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("add_feed_url_field"),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
@@ -136,7 +137,7 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     value = addCategory,
                     onValueChange = { addCategory = it },
                     label = { Text("Tab Label  e.g. Tech, Finance") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("add_feed_category_field"),
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
@@ -164,7 +165,8 @@ fun SettingsFeedsScreen(navController: NavController, viewModel: NewsViewModel) 
                     enabled = canAdd,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp),
+                        .height(50.dp)
+                        .testTag("confirm_add_feed_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,

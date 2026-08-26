@@ -1,13 +1,13 @@
 # 09 — Testing & Quality Assurance Strategy
 
-> **Last verified commit:** `ab6006967a8179f7bbee19a2e0d89c9ec248ba0a` (P0 + partial P1 backlog implemented on top of this)
+> **Last verified commit:** `ab6006967a8179f7bbee19a2e0d89c9ec248ba0a` (P0 + P1 + most of P2 implemented on top of this)
 > **Analysis Date:** 2026-08-26
 
 ---
 
 ## 1. Current State
 
-The P0 and P1 backlogs are both fully implemented (§1a, §1c, §1d) — 88 tests, all passing via `./gradlew testDebugUnitTest` (stable across repeated `--rerun` runs). Compose UI tests, screenshot tests, and E2E journeys (P2/P3) remain as described in §5 onward — still a recommendation, not yet built.
+P0 and P1 are fully implemented (§1a, §1c, §1d) — 86 JVM unit tests (Robolectric-backed where noted), passing via `./gradlew testDebugUnitTest` except the pre-existing, inherently-flaky live-network `DefaultFeedsTest`. P2 (Compose UI tests) is now also substantially implemented (§1e) — 26 instrumented tests covering every screen and the shared components actually in use, passing via `./gradlew connectedDebugAndroidTest` against a real device (verified stable across repeated `--rerun` runs). Screenshot tests and full E2E journeys (P3) remain as described in §5 onward — still a recommendation, not yet built.
 
 ```
 app/src/
@@ -27,11 +27,18 @@ app/src/
 │   ├── playback/TtsPlaybackManagerTest.kt           # Robolectric: playlist/index bookkeeping + restore (P1, scoped - see §1c)
 │   ├── ui/viewmodel/NewsViewModelTest.kt            # Robolectric: category selection, refresh, loadSimilarArticles (P1, see §1d)
 │   └── testutil/FakeAndroidPrefs.kt                 # Shared fake SharedPreferences/Context for JVM tests
-└── androidTest/java/uk/sume/news/                   # Instrumented Device Tests (Requires physical device or AVD)
+└── androidTest/java/uk/sume/streamfolio/            # New P2 tests: real on-device Compose UI tests (see §1e)
+    ├── testutil/BaseAndroidUiTest.kt                # Shared launch/teardown for every P2 test class
+    ├── testutil/AndroidTestSupport.kt               # Fixture seeding, prefs/DB reset
+    ├── ui/screens/HomeScreenTest.kt                 # Category tabs, article tap-through, pull-to-refresh
+    ├── ui/screens/DetailScreenTest.kt                # Reader/Web toggle, back nav, "also covered by" panel
+    ├── ui/screens/SearchScreenTest.kt                # Local search, trending topics, recent searches
+    ├── ui/screens/BookmarkScreenTest.kt              # Collections grid/list, create collection, article detail
+    ├── ui/screens/settings/SettingsScreensTest.kt   # Hub + all 7 settings sub-screens
+    └── ui/components/SharedComponentsTest.kt         # Bookmark-via-Save flow, TTS mini-player
+(legacy) androidTest/java/uk/sume/news/
     └── ExampleInstrumentedTest.kt                    # Android context & package verification
 ```
-
-There are still **no Compose UI tests, no NewsViewModel tests, and no screenshot tests** — those layers are unaffected by this pass and remain as described in §5 onward.
 
 **Housekeeping note:** existing legacy test files stay under package `uk.sume.news` (left as-is, out of scope to rename); all new tests added in this pass use the correct `uk.sume.streamfolio` package, per the recommendation this doc made previously.
 
@@ -91,6 +98,40 @@ Four Robolectric-specific behaviors had to be understood by trial and error whil
 4. **`NewsViewModel.init{}` runs a real, destructive one-time migration on every fresh instance.** `if (!prefs.hasClearedOldTags) { repository.clearAllTags(); prefs.hasClearedOldTags = true }` runs unconditionally for a fresh `PreferencesHelper` (default `false`), and `clearAllTags()` sets **every** article's `tags` column to `NULL` — silently wiping tag fixtures a test had just inserted, if the ViewModel is constructed afterward. Discovered by literally reading the value back as `null` after insert with no exception anywhere; the fix is pre-setting `prefs.hasClearedOldTags = true` before constructing the ViewModel in tests, so this irrelevant legacy cleanup path is skipped.
 
 **What's covered:** `selectCategory()` updating `selectedCategory` synchronously; `categoryArticlesState` reactively reflecting locally-tagged articles for a hashtag ("#tag") category — chosen specifically because `refreshCurrentFeed()`'s `currentCat.startsWith("#")` branch and hashtag `categoryArticlesState` both read from local Room data only, letting this be tested without a `NewsRepository` fake (out of scope, see above); `refreshCurrentFeed()` leaving `isRefreshing` false (not stuck true) for both `silent = true` and `silent = false`; `loadSimilarArticles()`'s indexed-`groupId` lookup and its live-Jaccard-scan fallback for articles predating `groupId` assignment.
+
+### 1e. P2 completed: on-device Compose UI tests — device/SDK setup and six gotchas
+
+P2 targets a **real physical device**, not an emulator (`adb devices` was invoked against a real Oppo/OnePlus-family device, package `uk.sume.streamfolio`, device model `CPH2651`, ColorOS). Two setup facts worth recording since they weren't obvious going in:
+
+- **`adb` is not on `ANDROID_HOME`/`PATH` in this environment** — the actual SDK location is whatever [local.properties](file:///d:/News/local.properties)'s `sdk.dir` says (a machine-local, gitignored file), not a global environment variable. `adb.exe` lives under `<sdk.dir>/platform-tools/`.
+- **`connectedDebugAndroidTest` has no `--tests` flag** (that's a `testDebugUnitTest`-only Gradle test filter). To target a single class or the whole package on-device, use `-Pandroid.testInstrumentationRunnerArguments.class=<FQCN>` or `.package=uk.sume.streamfolio` instead, e.g.:
+  ```powershell
+  ./gradlew.bat :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.package=uk.sume.streamfolio --console=plain
+  ```
+
+**Launch pattern:** every P2 test extends [BaseAndroidUiTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/testutil/BaseAndroidUiTest.kt), which uses `createEmptyComposeRule()` plus a manual `ActivityScenario.launch(MainActivity::class.java)` called from inside the test body — **not** `createAndroidComposeRule<MainActivity>()`. The reason: `MainActivity`/`AppNavigation` reads `viewModel.prefs.isCompletedOnboarding` once, synchronously, to pick `NavHost`'s `startDestination`, and `createAndroidComposeRule`'s rule launches the activity as part of its own `apply()` — before any `@Before` method (and therefore before [AndroidTestSupport.resetAppState()](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/testutil/AndroidTestSupport.kt)) has run. Deferring the launch to inside the test body, after `resetAppState()`, avoids racing against the app's own real, non-test-aware startup logic.
+
+**Fixture/state isolation gotchas found (all in [AndroidTestSupport.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/testutil/AndroidTestSupport.kt) unless noted):**
+
+1. **Instrumented tests share one real app process/SharedPreferences file across every test method in a run** — unlike Robolectric's per-test sandbox. `resetAppState()` fully clears the `"news_prefs"` file (not just individual keys) before re-setting only what's needed; a `recentSearches` entry left over from an earlier test method produced a real, reproducible spurious duplicate-node match in a later, unrelated test before this was fixed.
+2. **`isDefaultFeedsEnabled = false` is required to kill real background network activity.** With it on, `NewsViewModel.init{}` fires `refreshCurrentFeed()` + `syncAllCategoriesInBackground()` for all 8 default categories on every single app launch — pure timing-flakiness noise for tests that seed their own fixtures directly into Room. Category tabs a test needs still appear via `customFeeds.map { it.category }`, independent of this flag.
+3. **A fixture article's `sourceUrl` must belong to a registered `CustomFeed` row to appear in a real category.** `HomeScreen`'s category filter is `article.customFeedId != null || enabledUrls.contains(article.sourceUrl)`; a fixture URL like `"https://example.com/feed.xml"` matches neither, so `seedCustomFeedArticle()` registers a real `CustomFeed` row and sets `customFeedId` on the fixture, mirroring how a user's own added RSS feed behaves.
+4. **`HomeScreen` renders an article via `TrendingCard`, not `ArticleListItem`, for the first 3 articles in a category.** The same `testTag("article_item_${article.link}")` convention had to be applied to both composables (see [HomeScreen.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/HomeScreen.kt)) — a test tagging only `ArticleListItem` would silently fail to find a single seeded article.
+5. **`CustomFeedDao.getAllFeeds()` orders by `id DESC`**, not insertion order — a reorder test seeding "Alpha" then "Beta" sees `[Beta, Alpha]` as the actual initial on-screen order (Beta = higher id = sorts first), not `[Alpha, Beta]`. Confirmed via `printToLog` diagnostics after an initially-backwards assertion failed.
+6. **`AppDatabase.clearAllTables()` doesn't restore the "there's always a Saved list" invariant** — that's normally seeded idempotently by `AppDatabase`'s `onOpen` callback, which only fires when the connection is first opened, not on `clearAllTables()`. `resetAppState()` re-inserts the default `BookmarkList(name = "Saved", isDefault = true)` row by hand after clearing.
+
+**Compose-test-API gotchas found (all confirmed via direct experimentation against the real device):**
+
+- **`hasText`/`onNodeWithText` default to an *exact* string match, not substring.** A toast/label asserted with the visible substring (e.g. `"Saved to"` when the real text is `Saved to "Saved"`) silently fails to match until `substring = true` is passed explicitly.
+- **Material3's `SwipeToDismissBox` (used inline in `HomeScreen.ArticleListItem` for swipe-to-bookmark/share) is not reliably triggered by `performTouchInput`'s synthetic gestures** when nested inside a vertically-scrolling `LazyColumn`, even with an explicit multi-step `swipe()` past its `positionalThreshold = 0.75f`. [SharedComponentsTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/components/SharedComponentsTest.kt) documents this as a known environment limitation and instead exercises `DetailScreen`'s plain "Save" `IconButton`, which calls the identical downstream `NewsViewModel.toggleBookmark()` flow via a simple, reliable click.
+- **`SaveToListBottomSheet`'s list-selection state initializes asynchronously.** Its `selectedListIds` populates via a `LaunchedEffect(assignedListIds, allLists)`; clicking "Done" before that effect resolves leaves `selectedListIds` empty, which `NewsViewModel.saveArticleToLists()` silently no-ops on (`if (targetListIds.isNotEmpty())`) — no exception, no toast, no DB write. Fixed by waiting for `isOn()` on the pre-selected checkbox before clicking "Done".
+- **`ui/components/SwipeableCard.kt` is dead code** — defined but never referenced from anywhere in the app (confirmed by search, not assumption). It is intentionally *not* tested in [SharedComponentsTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/components/SharedComponentsTest.kt) despite being named in this doc's original P2 backlog; the real swipe-to-bookmark/share mechanism is `SwipeToDismissBox` as described above. `GlassmorphicNavBar` also has no dedicated test file — every P2 screen test already navigates through it by tapping its tab labels, equivalent coverage of its actual behavior (tab-selection routing) without a redundant separate test.
+- **One-off `"No compose hierarchies found in the app"` failures were traced to real OEM background-process killing** (ColorOS aggressively kills backgrounded app processes; confirmed via `adb logcat` showing `System.exit called, status: 0` / `PACKAGE_REMOVED` entries at the failure timestamps), not a test or app bug — non-reproducible on immediate rerun of the same test.
+- Compose's `waitUntilAtLeastOneExists` requires `-opt-in=androidx.compose.ui.test.ExperimentalTestApi`; added once, globally, via `kotlinOptions.freeCompilerArgs` in [app/build.gradle.kts](file:///d:/News/app/build.gradle.kts), rather than a per-file `@OptIn` on every test class.
+
+**Diagnostic technique used throughout:** `composeRule.onRoot().printToLog("TAG")` combined with `adb logcat -c` (clear) then `adb logcat -d | grep <TAG>` (dump + filter) — this is how gotchas 1, 4, 5, and the search-screen duplicate-node issue below were actually root-caused, rather than guessed at.
+
+**Scope note — settings sub-screens:** [SettingsScreensTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/settings/SettingsScreensTest.kt) covers one or two representative interactions per sub-screen (a toggle round-trip, a header/navigation check, one add-item flow) rather than exhaustively covering every control on all 7 screens — see the P2 backlog table below for exactly what each row covers.
 
 ### Why this matters concretely
 
@@ -173,18 +214,22 @@ No production code dependencies changed beyond the test-only additions above, an
 | [`TtsPlaybackManager.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/playback/TtsPlaybackManager.kt) | Playlist add/next/remove/move index bookkeeping; restoration of playlist + active index from a persisted `TtsPlaylistState` across a fresh instance (process-death simulation) | Robolectric (see §1c for `@SQLiteMode(NATIVE)` requirement) | [TtsPlaybackManagerTest.kt](file:///d:/News/app/src/test/java/uk/sume/streamfolio/playback/TtsPlaybackManagerTest.kt) — **scope note:** `playTtsPlaylist()`/`resumePlayback()`/`setSleepTimer()` are not covered (they start the real `TtsPlaybackService` and hit `NewsRepository`'s network client — would need a `NewsRepository` fake/interface seam, which does not exist and was not introduced this pass) |
 | [`NewsViewModel.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/viewmodel/NewsViewModel.kt) | `selectCategory()`'s immediate `StateFlow` update; `categoryArticlesState` reactively reflecting Room data for a hashtag category; `refreshCurrentFeed()` leaving `isRefreshing` false (silent and non-silent); `loadSimilarArticles()`'s indexed-`groupId` lookup and live-Jaccard-scan fallback | Robolectric, after adding an `IAiSummaryHelper`/`IAiTranslateHelper` constructor-injection seam (`@JvmOverloads`, see §1d) | [NewsViewModelTest.kt](file:///d:/News/app/src/test/java/uk/sume/streamfolio/ui/viewmodel/NewsViewModelTest.kt) — **scope note:** category-selection/refresh coverage deliberately uses a hashtag category to stay network-free, since a `NewsRepository` fake was not introduced this pass (same limitation as `TtsPlaybackManager` above); Turbine was not needed, `.value` polling with `ShadowLooper.idleMainLooper()` sufficed (§1d) |
 
-### P2 — Compose UI tests (per-screen/component, `createComposeRule`/`createAndroidComposeRule`)
+### P2 — Compose UI tests (per-screen/component, real device via `connectedDebugAndroidTest`) — ✅ Implemented
 
-Each of these needs `Modifier.testTag(...)` added to key elements first (no `testTag` usage exists anywhere in the codebase today), scoped narrowly to the elements each test actually needs to target — this is a small, low-risk source change to make alongside writing each test, not a separate pass.
+`Modifier.testTag(...)` was added to key elements as each test needed it (no `testTag` usage existed anywhere in the codebase before this pass) — see §1e for the full list of production files touched. Coverage below is one-or-a-few representative interactions per screen (the behaviors that most directly exercise real state/persistence), not an exhaustive enumeration of every control — see §1e for gotchas and known gaps.
 
-| Screen/Component | Behaviors to cover |
-| :--- | :--- |
-| [`HomeScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/HomeScreen.kt) | Category pill switching, swipe actions (bookmark/share/mark-read), pull-to-refresh, skeleton loader, offline banner, empty state |
-| [`DetailScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/DetailScreen.kt) | Reader-mode/web-mode toggle, AI summary sheet states (via fake `AiSummaryHelper`), translation badge display, "also covered by" panel |
-| [`SearchScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/SearchScreen.kt) | Local vs online result rendering, recent-search chip persistence (up to 10) |
-| [`BookmarkScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/BookmarkScreen.kt) / `BookmarkCollectionDetailScreen` | Create/rename/delete collection, grid/list toggle, safe article reassignment on collection delete |
-| `ui/screens/settings/*` (7 sub-screens) | `SettingsPreferencesScreen` toggles, `SettingsAiScreen` AI master toggle, `SettingsFeedsScreen` custom feed add + OPML import/export, `SettingsProvidersScreen` per-publisher enable/disable, `SettingsReorderScreen` drag/arrow reorder, `SettingsBackupScreen` export/restore, `SettingsGesturesScreen` swipe-action customization |
-| `ui/components/SwipeableCard.kt`, `GlassmorphicNavBar.kt`, `TtsMiniPlayer.kt` (`TtsLyricsVisualizer`), `BookmarkToastBanner.kt` | Gesture thresholds, tab-switch + active-indicator state, scrub/speed-picker/sleep-timer controls, undo-action dispatch |
+| Target | Behavior Covered | Test File |
+| :--- | :--- | :--- |
+| [`HomeScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/HomeScreen.kt) | Article list rendering (both `ArticleListItem` and `TrendingCard` paths), tap-through to `DetailScreen`, category tab switching, pull-to-refresh | [HomeScreenTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/HomeScreenTest.kt) |
+| [`DetailScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/DetailScreen.kt) | Reader/web-mode toggle, back navigation, "also covered by" related-articles panel | [DetailScreenTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/DetailScreenTest.kt) |
+| [`SearchScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/SearchScreen.kt) | Local search-result rendering, trending-topic tap, recent-search persistence | [SearchScreenTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/SearchScreenTest.kt) |
+| [`BookmarkScreen.kt`](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/screens/BookmarkScreen.kt) | Collections grid/list toggle, create-collection flow, tap-through into a collection's articles | [BookmarkScreenTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/BookmarkScreenTest.kt) |
+| `ui/screens/settings/*` (hub + 7 sub-screens) | Hub menu-section rendering; `SettingsPreferencesScreen`'s "Group Similar Stories" toggle round-trip; `SettingsGesturesScreen` header; `SettingsAiScreen` AI master-switch toggle round-trip; `SettingsFeedsScreen` navigation + custom-feed add flow; `SettingsProvidersScreen`/`SettingsReorderScreen` header + arrow-based reorder (`categoryOrder` preference update); `SettingsBackupScreen` header | [SettingsScreensTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/settings/SettingsScreensTest.kt) |
+| `ui/components/TtsMiniPlayer.kt`, `SaveToListBottomSheet` (bookmark-via-Save flow) | Save-to-collection flow from `DetailScreen` bookmarks the article in Room; queuing an article for playback shows the mini-player on `HomeScreen` | [SharedComponentsTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/components/SharedComponentsTest.kt) |
+| `ui/components/SwipeableCard.kt` | **Not tested — confirmed dead code** (defined, never referenced anywhere in the app); see §1e | — |
+| `ui/components/GlassmorphicNavBar.kt` | **No dedicated test** — every screen test above already exercises its tab-selection routing by tapping its labels; see §1e | — |
+
+**Not covered by this pass** (narrower than the original backlog scoping above, per findings in §1e): `HomeScreen`'s swipe-to-bookmark/share/mark-read gesture itself (Material3 `SwipeToDismissBox` proved unreliable to simulate — the identical downstream logic is instead covered via `DetailScreen`'s "Save" button in `SharedComponentsTest`), `HomeScreen`'s offline banner and empty state, `DetailScreen`'s AI summary sheet states and translation badge (would need a fake `AiSummaryHelper`/`AiTranslateHelper` injected at the UI-test level — the §1d seam is constructor-level and exercised by `NewsViewModelTest`, not wired into an instrumented-test fake yet), `BookmarkCollectionDetailScreen` rename/delete and reassignment-on-delete, `SettingsFeedsScreen`'s OPML import/export, `SettingsProvidersScreen`'s per-publisher enable/disable, `SettingsBackupScreen`'s actual export/restore action, `SettingsGesturesScreen`'s swipe-action customization controls, and `TtsLyricsVisualizer`/`BookmarkToastBanner` undo. These remain open backlog items, same status as before this pass.
 
 ### P3 — Regression prevention & end-to-end
 
@@ -234,6 +279,7 @@ Each of these needs `Modifier.testTag(...)` added to key elements first (no `tes
 - **Network fixtures:** `SsrfProtectionInterceptorTest` uses a hand-rolled fake `Interceptor.Chain` instead of MockWebServer (§4) — no MockWebServer dependency was needed for P0. `MockWebServer` remains recommended for future `NewsRepository`-level network-flow tests.
 - **`android.util.Log`/`android.util.Xml` stubs:** MockK's `mockkStatic(...)` is used to make these real Android calls behave in a plain JVM test — `Log.w()` is stubbed to a no-op return value (`BackupHelperMalformedInputTest`), `Xml.newPullParser()` is stubbed to delegate to a real `XmlPullParserFactory`-created parser (`OpmlHelperTest`, reusing the `xmlpull`/`xpp3` jars already present for `RssParser`).
 - **AI/TTS fakes:** ML Kit GenAI/AICore and platform TTS voices are not reliably available in CI or most emulators. `NewsViewModel` tests that exercise AI-summary or TTS state transitions need a fake/interface substitute for `AiSummaryHelper`/`AiTranslateHelper`/`TtsHelper` — introducing that seam is a small prerequisite refactor tracked in §5's P1 row, not performed by this document.
+- **On-device UI fixtures/state reset:** [AndroidTestSupport.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/testutil/AndroidTestSupport.kt) is the P2 equivalent of `FakeAndroidPrefs` — `resetAppState()` for full prefs/DB isolation between test methods sharing one real app process, plus `seedArticle`/`seedCustomFeed`/`seedCustomFeedArticle` fixture builders. See §1e for why each exists. [BaseAndroidUiTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/testutil/BaseAndroidUiTest.kt) is the shared `@Before`/launch boilerplate every P2 test class extends.
 
 ---
 
@@ -242,3 +288,5 @@ Each of these needs `Modifier.testTag(...)` added to key elements first (no `tes
 - Whether to actually introduce the `AiSummaryHelper`/`AiTranslateHelper`/`TtsHelper` interface seams needed for true `NewsViewModel` unit tests is a product/architecture decision beyond this doc's scope — `Unknown / Requires Confirmation`.
 - Whether CI should run on GitHub Actions specifically (as sketched in `docs/10-ci-cd-and-release.md`) or another provider is `Unknown / Requires Confirmation` — no CI vendor decision exists in the repo today.
 - Robolectric `4.14.1` pinned to `@Config(sdk = [34])` is now verified working (4 test classes, 26 tests, stable across repeated runs) — its support for `compileSdk = 36` (Android 16 preview) itself remains unverified and untested, since every test class pins to 34 rather than 36.
+- P2 was run against one specific physical device (Oppo/OnePlus-family, ColorOS, `CPH2651`) — behavior on other OEM skins, screen sizes, or an emulator is `Unknown / Requires Confirmation`. The transient "No compose hierarchies found" failures traced to this device's aggressive background-process killing (§1e) may not reproduce, or may manifest differently, elsewhere.
+- Whether to close the "Not covered by this pass" gaps listed under the P2 backlog table (§5) — AI summary sheet states, OPML import/export, per-publisher enable/disable, backup export/restore, gesture customization, swipe-gesture simulation — in a future pass is a scoping decision for the user, not assumed here.

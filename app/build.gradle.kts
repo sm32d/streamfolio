@@ -43,6 +43,10 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        // Compose UI test's waitUntilAtLeastOneExists/waitUntilExactlyOneExists (used throughout
+        // app/src/androidTest for P2) require this opt-in; scoped here instead of on every test
+        // class since only test code references it.
+        freeCompilerArgs += "-opt-in=androidx.compose.ui.test.ExperimentalTestApi"
     }
     buildFeatures {
         compose = true
