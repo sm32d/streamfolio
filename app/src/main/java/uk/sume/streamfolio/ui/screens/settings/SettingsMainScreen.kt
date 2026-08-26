@@ -303,7 +303,7 @@ fun SettingsMainScreen(navController: NavController, viewModel: NewsViewModel) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Version 1.3.1 · Free forever",
+                            text = "Version 1.3.2 · Free forever",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )

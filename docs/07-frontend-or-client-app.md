@@ -97,6 +97,7 @@ graph TD
 - **Layout Switching:** Toggle between 2-column grid tiles (`CollectionGridCard`) and compact list rows (`CollectionListRow`).
 - **Collection Management:** Create, rename, delete collections, with safe reassignment of articles into the default list upon deletion.
 - **Naming:** the page header reads "Saved" (matching the `GlassmorphicNavBar` tab label and the default list's own name) — it previously said "Bookmarks", inconsistent with the rest of the save/collection terminology used everywhere else in the app.
+- **Card colors:** `CollectionGridCard`'s empty-state gradient (no preview thumbnail yet) uses the saturated `primary`/`secondary` brand colors, not their `*Container` counterparts — this card renders a plain white icon/badge/text directly on top, which needs a vivid background for contrast. `primaryContainer`/`secondaryContainer` are intentionally pale tints in light theme (correct for a subtle highlight elsewhere, e.g. `SaveToListBottomSheet`'s selected-row background), and washed the card out to near-invisibility against the equally pale light-theme page background when used here.
 
 ---
 
