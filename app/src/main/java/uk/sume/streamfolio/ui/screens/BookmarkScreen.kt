@@ -502,14 +502,20 @@ private fun CollectionGridCard(
                         )
                 )
             } else {
+                // Uses the saturated primary/secondary brand colors, not their *Container
+                // counterparts — this card puts a plain white icon/badge/text directly on top
+                // (below), which needs a vivid background for contrast. primaryContainer /
+                // secondaryContainer are intentionally pale tints (correct for e.g. the
+                // save-to-collection sheet's selected-row highlight) and washed out to near
+                // invisibility here against the light theme's equally pale page background.
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.linearGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
-                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.secondary
                                 )
                             )
                         )
