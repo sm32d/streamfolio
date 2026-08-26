@@ -1,13 +1,13 @@
 # 09 — Testing & Quality Assurance Strategy
 
-> **Last verified commit:** `ab6006967a8179f7bbee19a2e0d89c9ec248ba0a` (P0 + P1 + most of P2 implemented on top of this)
+> **Last verified commit:** `6004c44` (P0 + P1 + P2 + partial P3 implemented on top of this)
 > **Analysis Date:** 2026-08-26
 
 ---
 
 ## 1. Current State
 
-P0 and P1 are fully implemented (§1a, §1c, §1d) — 86 JVM unit tests (Robolectric-backed where noted), passing via `./gradlew testDebugUnitTest` except the pre-existing, inherently-flaky live-network `DefaultFeedsTest`. P2 (Compose UI tests) is now also substantially implemented (§1e) — 26 instrumented tests covering every screen and the shared components actually in use, passing via `./gradlew connectedDebugAndroidTest` against a real device (verified stable across repeated `--rerun` runs). Screenshot tests and full E2E journeys (P3) remain as described in §5 onward — still a recommendation, not yet built.
+P0 and P1 are fully implemented (§1a, §1c, §1d) — 85 JVM unit tests (Robolectric-backed where noted), passing via `./gradlew testDebugUnitTest` except the pre-existing, inherently-flaky live-network `DefaultFeedsTest`. P2 (Compose UI tests) is fully implemented (§1e) — 26 instrumented tests covering every screen and the shared components actually in use. P3's critical end-to-end journeys are now also implemented (§1f) — 5 more instrumented tests spanning multiple screens each. All 31 instrumented tests pass via `./gradlew connectedDebugAndroidTest` against a real device (verified stable across repeated `--rerun` runs). P3's other half, Paparazzi screenshot testing, was attempted and is currently **blocked by an unresolved upstream compatibility gap** — see §1f for the specific finding and what would unblock it. That is the only backlog item left open; see §5's P3 table for exact status per item.
 
 ```
 app/src/
@@ -35,7 +35,8 @@ app/src/
     ├── ui/screens/SearchScreenTest.kt                # Local search, trending topics, recent searches
     ├── ui/screens/BookmarkScreenTest.kt              # Collections grid/list, create collection, article detail
     ├── ui/screens/settings/SettingsScreensTest.kt   # Hub + all 7 settings sub-screens
-    └── ui/components/SharedComponentsTest.kt         # Bookmark-via-Save flow, TTS mini-player
+    ├── ui/components/SharedComponentsTest.kt         # Bookmark-via-Save flow, TTS mini-player
+    └── e2e/CriticalJourneysTest.kt                   # P3: 5 multi-screen journeys (see §1f)
 (legacy) androidTest/java/uk/sume/news/
     └── ExampleInstrumentedTest.kt                    # Android context & package verification
 ```
@@ -133,6 +134,24 @@ P2 targets a **real physical device**, not an emulator (`adb devices` was invoke
 
 **Scope note — settings sub-screens:** [SettingsScreensTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/ui/screens/settings/SettingsScreensTest.kt) covers one or two representative interactions per sub-screen (a toggle round-trip, a header/navigation check, one add-item flow) rather than exhaustively covering every control on all 7 screens — see the P2 backlog table below for exactly what each row covers.
 
+### 1f. P3: critical E2E journeys implemented; Paparazzi screenshot testing blocked (confirmed, not guessed)
+
+**End-to-end journeys — implemented.** [CriticalJourneysTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/e2e/CriticalJourneysTest.kt) adds the 5 journeys named in this doc's original P3 backlog, reusing the same `BaseAndroidUiTest`/`AndroidTestSupport` infra as P2 but with each test deliberately spanning two or more screens/navigation hops (the thing per-screen P2 tests structurally can't catch — a broken hand-off between screens/state, not just a broken screen):
+
+- `onboardingWizardCompletesAndReachesHomeScreen` — overrides `resetAppState()`'s `isCompletedOnboarding = true` baseline back to `false` for this one test, then clicks through `OnboardingScreen`'s wizard (`"Continue"` repeated, then `"Start Reading"`) without hardcoding a step count, since `showPreferences = isDefaultFeedsEnabled || (isAiEnabled && isTranslationEnabled)` makes the wizard's own total step count conditional on in-wizard choices. Confirms both that Home is actually reached (the bottom nav's "Home" icon appears — `GlassmorphicNavBar` is absent from the `"onboarding"` route per `NavRoutes.kt`, so this only becomes true post-navigation) and that `isCompletedOnboarding` persists.
+- `pullToRefreshThenOpeningAnArticleDoesNotCrashTheSharedElementTransition` — chains HomeScreen's pull-to-refresh gesture directly into tapping an article, the exact sequence that would surface a stale/cancelled refresh coroutine leaving the shared-element transition into `DetailScreen` in a bad state.
+- `bookmarkingFromDetailScreenMakesItAppearUnderSavedCollections` — bookmarks from `DetailScreen` (the same flow `SharedComponentsTest` already unit-covers), then separately navigates to the Bookmarks tab and confirms the article is actually visible there, closing the loop P2's screen-scoped test couldn't.
+- `searchingForAnArticleAndOpeningItReachesDetailScreen` — `SearchScreen` query → tap result → `DetailScreen`, as one chain.
+- `withAiDisabledDetailScreenNeverShowsTheAiKeyInsightsCard` — turns `resetAppState()`'s existing `isAiEnabled = false` baseline (already relied on implicitly by every other P2/P3 test) into an explicit regression guard: asserts the "AI Key Insights" card (`DetailScreen.kt`'s `isAiEnabled && isSummaryEnabled && ...` gate) never renders, waiting a real 2-second settle window first so the assertion isn't just "hasn't rendered yet in this frame."
+
+**Screenshot testing (Paparazzi) — attempted, currently blocked.** Applying `app.cash.paparazzi` and writing swatch tests for every M3 color-scheme slot Theme.kt assigns (plus a reproduction of `SaveToListBottomSheet`'s selected-row styling, the exact pattern that regressed to stock purple before, see §1) surfaced a confirmed, version-specific incompatibility rather than a project-side mistake:
+
+1. **Paparazzi 1.3.5 (latest stable) crashes outright on this project's `compileSdk = 36`.** `java.util.NoSuchElementException: Array contains no element matching the predicate` at `Renderer.configureBuildProperties` — this is [cashapp/paparazzi#1877](https://github.com/cashapp/paparazzi/issues/1877), an open, already-reported upstream bug (Android 16/"Baklava," released after Paparazzi 1.3.5), not something fixable from this repo's side.
+2. **The fix only exists in the `2.0.0-alpha` line**, and every alpha tried needs a toolchain bump beyond what a test-only addition should force through: `2.0.0-alpha02` requires Kotlin ≥2.1.21 (this project pins `2.0.21`) and has its own known incremental-compilation bug; `2.0.0-alpha05` additionally requires JDK 21 to even resolve its Gradle plugin artifact (confirmed directly: `Dependency requires at least JVM runtime version 21. This build uses a Java 17 JVM`, using the project's own `Corretto-17.0.20`), and its published binary is compiled against Kotlin `2.3.0`'s metadata format, which the project's Kotlin `2.0.21` compiler cannot read (`Module was compiled with an incompatible version of Kotlin`) — confirmed even after pointing `JAVA_HOME` at Android Studio's bundled JBR (JDK 21) to clear the first error.
+3. Since every viable path requires bumping the project's Kotlin plugin version (and possibly its JDK), both project-wide decisions well outside the scope of adding tests, the plugin application was **reverted** rather than forced through. No trace remains in `app/build.gradle.kts`/`gradle/libs.versions.toml`; the swatch test file was deleted rather than left in a broken, non-compiling state.
+
+**Unknown / Requires Confirmation:** whether to bump the project's Kotlin plugin (to ≥2.1.21 at minimum, knowingly taking on `2.0.0-alpha02`'s incremental-compilation bug, or further to whatever pairs with a non-alpha Paparazzi release once one ships) specifically to unblock screenshot testing is a toolchain decision for the user, not assumed here. Once Paparazzi ships a stable release supporting `compileSdk = 36` without requiring a Kotlin/JDK bump this project hasn't already made for other reasons, the swatch-test approach validated during this investigation (color-scheme slot swatches + a `SaveToListBottomSheet`-style selected-row reproduction) is ready to reapply as-is.
+
 ### Why this matters concretely
 
 `docs/07-frontend-or-client-app.md` documents two UI regressions that already shipped and were caught only by manual visual inspection on a device: Material3's `darkColorScheme()`/`lightColorScheme()` silently defaulting unset container/outline slots to the stock purple palette, and `CollectionGridCard`'s empty-state gradient washing out against the light-theme background. Both are exactly the class of bug that a Compose screenshot test would catch automatically and cheaply, before merge. That gap motivates the screenshot-testing recommendation in §4.
@@ -185,8 +204,8 @@ P0 was achievable without Robolectric or MockWebServer by (a) hand-rolling a min
 - `app.cash.turbine:turbine` — assert `StateFlow`/`Flow` emission *sequences* (not just final values) from `NewsViewModel`; not needed for what §1d covers, since polling `.value` after idling the looper was sufficient for those specific assertions.
 - `androidx.arch.core:core-testing` — `InstantTaskExecutorRule` for synchronous LiveData/architecture-components execution (not currently needed — this app uses `StateFlow` throughout, not `LiveData`).
 
-**Optional, specifically to prevent regressions like the ones in §1 (original color-palette bugs):**
-- `app.cash.paparazzi` — JVM-only Compose screenshot tests (no emulator required) for `ui/theme/Theme.kt` / `Color.kt` across light, dark, and dynamic-color variants.
+**Attempted, currently blocked (see §1f) — would prevent regressions like the ones in §1 (original color-palette bugs):**
+- `app.cash.paparazzi` — JVM-only Compose screenshot tests (no emulator required) for `ui/theme/Theme.kt` / `Color.kt` across light, dark, and dynamic-color variants. Stable 1.3.5 crashes on this project's `compileSdk = 36` ([cashapp/paparazzi#1877](https://github.com/cashapp/paparazzi/issues/1877)); the fix line (`2.0.0-alpha02`+) requires a Kotlin/JDK bump this pass didn't force through. Not currently applied to `app/build.gradle.kts`/`gradle/libs.versions.toml`.
 
 No production code dependencies changed beyond the test-only additions above, and no DI framework was introduced — kept deliberately minimal in line with this repo's "prefer small, precise edits" convention.
 
@@ -233,10 +252,10 @@ No production code dependencies changed beyond the test-only additions above, an
 
 ### P3 — Regression prevention & end-to-end
 
-| Target | Test Type | Rationale |
-| :--- | :--- | :--- |
-| `ui/theme/Theme.kt` / `Color.kt` — light/dark/dynamic-color container & outline slots | Paparazzi screenshot test | Directly targets the purple-palette and washed-out-card bug class from §1 |
-| ~5 critical journeys: onboarding→home; pull-to-refresh→open article (shared-element transition doesn't crash); bookmark→appears in Saved; search→open result; disable AI→Detail hides AI affordances | Instrumented E2E | Broadest real-user-flow confidence without enumerating every screen combination |
+| Target | Test Type | Status | Rationale |
+| :--- | :--- | :--- | :--- |
+| `ui/theme/Theme.kt` / `Color.kt` — light/dark/dynamic-color container & outline slots | Paparazzi screenshot test | ❌ **Blocked** — see §1f. Stable Paparazzi crashes on this project's `compileSdk = 36` ([cashapp/paparazzi#1877](https://github.com/cashapp/paparazzi/issues/1877)); the only fix requires a Kotlin/JDK toolchain bump beyond this pass's scope | Directly targets the purple-palette and washed-out-card bug class from §1 |
+| 5 critical journeys: onboarding→home; pull-to-refresh→open article (shared-element transition doesn't crash); bookmark→appears in Saved; search→open result; disable AI→Detail hides AI affordances | Instrumented E2E | ✅ Implemented — [CriticalJourneysTest.kt](file:///d:/News/app/src/androidTest/java/uk/sume/streamfolio/e2e/CriticalJourneysTest.kt), see §1f | Broadest real-user-flow confidence without enumerating every screen combination |
 
 ---
 
@@ -288,5 +307,6 @@ No production code dependencies changed beyond the test-only additions above, an
 - Whether to actually introduce the `AiSummaryHelper`/`AiTranslateHelper`/`TtsHelper` interface seams needed for true `NewsViewModel` unit tests is a product/architecture decision beyond this doc's scope — `Unknown / Requires Confirmation`.
 - Whether CI should run on GitHub Actions specifically (as sketched in `docs/10-ci-cd-and-release.md`) or another provider is `Unknown / Requires Confirmation` — no CI vendor decision exists in the repo today.
 - Robolectric `4.14.1` pinned to `@Config(sdk = [34])` is now verified working (4 test classes, 26 tests, stable across repeated runs) — its support for `compileSdk = 36` (Android 16 preview) itself remains unverified and untested, since every test class pins to 34 rather than 36.
-- P2 was run against one specific physical device (Oppo/OnePlus-family, ColorOS, `CPH2651`) — behavior on other OEM skins, screen sizes, or an emulator is `Unknown / Requires Confirmation`. The transient "No compose hierarchies found" failures traced to this device's aggressive background-process killing (§1e) may not reproduce, or may manifest differently, elsewhere.
+- P2/P3 were run against one specific physical device (Oppo/OnePlus-family, ColorOS, `CPH2651`) — behavior on other OEM skins, screen sizes, or an emulator is `Unknown / Requires Confirmation`. The transient "No compose hierarchies found" failures traced to this device's aggressive background-process killing (§1e) may not reproduce, or may manifest differently, elsewhere.
 - Whether to close the "Not covered by this pass" gaps listed under the P2 backlog table (§5) — AI summary sheet states, OPML import/export, per-publisher enable/disable, backup export/restore, gesture customization, swipe-gesture simulation — in a future pass is a scoping decision for the user, not assumed here.
+- **Whether to bump the project's Kotlin plugin version (and possibly JDK) specifically to unblock Paparazzi screenshot testing** (§1f) is a toolchain decision for the user, not assumed here. Confirmed during this pass, not guessed: stable Paparazzi 1.3.5 crashes on `compileSdk = 36` ([cashapp/paparazzi#1877](https://github.com/cashapp/paparazzi/issues/1877)); the fix (`2.0.0-alpha02`+) requires Kotlin ≥2.1.21, and later alphas require JDK 21 and Kotlin ≥2.3.0, all beyond this project's current pins (`Kotlin 2.0.21`, `Corretto 17`).
