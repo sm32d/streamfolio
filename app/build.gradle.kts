@@ -47,6 +47,27 @@ android {
     buildFeatures {
         compose = true
     }
+
+    sourceSets {
+        // Exposes the Room-exported schema JSON files (app/schemas, written via the
+        // room.schemaLocation kapt arg above) as assets so MigrationTestHelper can look up each
+        // version's schema when running Robolectric-backed migration tests (testDebugUnitTest
+        // only ever runs against the "debug" build type, so this never reaches a release APK).
+        // Room/Robolectric's local-unit-test integration (testOptions.unitTests below) reads
+        // Robolectric's assets from the same merged-assets output as the app's own debug
+        // variant (see generateDebugUnitTestConfig's test_config.properties) - there is no
+        // separate "test source set assets" concept for local JVM unit tests the way there is
+        // for instrumented androidTest assets, so this can't be scoped any narrower than debug.
+        getByName("debug") {
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -92,6 +113,21 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation("xmlpull:xmlpull:1.1.3.4a")
     testImplementation("xpp3:xpp3:1.1.4c")
+    // Real org.json implementation for JVM unit tests: the Android SDK's unit-test stub jar
+    // throws "not mocked" for every org.json.* method (put/get/opt included), same class of
+    // issue xmlpull/xpp3 above solve for XmlPullParser. Without this, any test that calls
+    // BackupHelper.generateBackupJson()/parseBackupJson() fails immediately on the first
+    // JSONObject call.
+    testImplementation("org.json:json:20231013")
+    testImplementation(libs.mockk)
+    // Robolectric: runs Android-framework-coupled code (SharedPreferences-backed
+    // PreferencesHelper, Room migrations) as a fast JVM unit test instead of requiring an
+    // emulator. compileSdk is 36 (Android 16 preview); tests pin @Config(sdk = [34]) since
+    // Robolectric's support for 36 has not been verified.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.junit)
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

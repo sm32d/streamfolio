@@ -53,18 +53,52 @@ object UrlSecurityValidator {
         return if (isUrlSafe(normalized, requireHttps)) normalized else null
     }
 
+    // Matches a leading "token:" (RFC 3986 scheme syntax: letter, then letters/digits/+/./-)
+    // whether or not it's followed by "//", e.g. "ftp://", "javascript://", "file://",
+    // "mailto:", "data:". Also matches a bare "host:port" like "example.com:8080" or
+    // "localhost:8080" though, which must NOT be rejected - disambiguated in
+    // hasExplicitNonHttpScheme() below by checking what follows the colon.
+    private val LEADING_TOKEN_COLON = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*:(.*)$", RegexOption.DOT_MATCHES_ALL)
+
     /**
-     * Prepends https:// if the URL has no scheme. Returns null for blank input.
+     * True if [trimmed] starts with an explicit URI scheme other than http/https - as opposed
+     * to a bare "host:port" the user typed for a custom feed (e.g. "example.com:8080/feed").
+     * A URI scheme's colon is never immediately followed by a run of digits that ends at '/' or
+     * end-of-string (that shape is specific to a port number); anything else after the colon -
+     * an authority ("//..."), an opaque part ("someone@example.com"), digits with a non-digit
+     * tail, etc. - means the leading token was an actual scheme, not a hostname label.
+     */
+    private fun hasExplicitNonHttpScheme(trimmed: String): Boolean {
+        val rest = LEADING_TOKEN_COLON.find(trimmed)?.groupValues?.get(1) ?: return false
+        val looksLikePort = rest.takeWhile { it != '/' }.let { it.isNotEmpty() && it.all(Char::isDigit) }
+        return !looksLikePort
+    }
+
+    /**
+     * Prepends https:// if the URL has no scheme. Returns null for blank input, and null for a
+     * URL that already declares a non-http(s) scheme (e.g. "ftp://...", "javascript://...",
+     * "file://...", "mailto:...") rather than treating it as a bare hostname.
+     *
+     * A prior version of this function prepended "https://" to *any* string not already
+     * starting with "http://"/"https://", including strings with their own explicit scheme.
+     * "ftp://example.com/feed.xml" became "https://ftp://example.com/feed.xml", which OkHttp's
+     * HttpUrl parser then parsed leniently as host "ftp" with the rest folded into the path;
+     * "mailto:someone@example.com" became "https://mailto:someone@example.com", parsed as
+     * userinfo "mailto:someone" at a perfectly legitimate host "example.com". Either way
+     * isUrlSafe() reported these as "safe" despite the ALLOWED_SCHEMES check below, since by
+     * the time that check ran the URL had already been mangled into something with scheme
+     * "https". Rejecting any other explicit scheme upfront closes that gap while still allowing
+     * bare hostnames - with or without an explicit port - like "example.com/feed" or
+     * "example.com:8080/feed" to fall through to the https:// prepend.
      */
     fun normalizeUrl(url: String): String? {
         val trimmed = url.trim()
         if (trimmed.isBlank()) return null
-        return if (trimmed.startsWith("http://", ignoreCase = true) ||
-            trimmed.startsWith("https://", ignoreCase = true)
-        ) {
-            trimmed
-        } else {
-            "https://$trimmed"
+        return when {
+            trimmed.startsWith("http://", ignoreCase = true) ||
+                trimmed.startsWith("https://", ignoreCase = true) -> trimmed
+            hasExplicitNonHttpScheme(trimmed) -> null
+            else -> "https://$trimmed"
         }
     }
 

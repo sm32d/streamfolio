@@ -19,6 +19,9 @@ import java.net.URLEncoder
 import uk.sume.streamfolio.util.OpmlFeed
 import uk.sume.streamfolio.util.UrlSecurityValidator
 import uk.sume.streamfolio.playback.TtsPlaybackManager
+import uk.sume.streamfolio.data.network.AiHelperFactory
+import uk.sume.streamfolio.data.network.IAiSummaryHelper
+import uk.sume.streamfolio.data.network.IAiTranslateHelper
 
 data class CategoryArticlesState(
     val category: String = "",
@@ -32,8 +35,23 @@ sealed class ToastEvent {
 
 typealias BookmarkToastEvent = ToastEvent.Bookmark
 
+/**
+ * [aiSummaryHelperOverride]/[aiTranslateHelperOverride] let tests inject a fake in place of the
+ * real ML Kit GenAI/Translate-backed helpers [AiHelperFactory] would otherwise construct - those
+ * are Play-Services-adjacent SDKs Robolectric doesn't shadow, so exercising them for real in a
+ * JVM test risks hanging on a callback that never fires (e.g. checkGeminiSupport() in init{}
+ * unconditionally calls aiSummaryHelper.checkFeatureStatus()). `@JvmOverloads` keeps the
+ * single-arg `Application` constructor `ViewModelProvider`'s default `AndroidViewModelFactory`
+ * needs (see MainActivity's `ViewModelProvider(this)[NewsViewModel::class.java]`) - without it,
+ * adding these parameters would compile to one Java constructor requiring all of them, breaking
+ * that reflection-based lookup.
+ */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-class NewsViewModel(application: Application) : AndroidViewModel(application) {
+class NewsViewModel @JvmOverloads constructor(
+    application: Application,
+    private val aiSummaryHelperOverride: IAiSummaryHelper? = null,
+    private val aiTranslateHelperOverride: IAiTranslateHelper? = null
+) : AndroidViewModel(application) {
 
     private val repository = NewsRepository(application)
     val prefs = PreferencesHelper(application)
@@ -45,7 +63,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     private val requestedThumbnailRetries = mutableSetOf<String>()
 
     // AI Translation States & Logic
-    private val aiTranslateHelper by lazy { uk.sume.streamfolio.data.network.AiHelperFactory.createTranslateHelper(getApplication()) }
+    private val aiTranslateHelper by lazy { aiTranslateHelperOverride ?: AiHelperFactory.createTranslateHelper(getApplication()) }
 
     private val _translatedTitle = MutableStateFlow("")
     val translatedTitle: StateFlow<String> = _translatedTitle.asStateFlow()
@@ -60,7 +78,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val translationError: StateFlow<String?> = _translationError.asStateFlow()
 
     // On-Device AI Summarization
-    private val aiSummaryHelper by lazy { uk.sume.streamfolio.data.network.AiHelperFactory.createSummaryHelper(getApplication()) }
+    private val aiSummaryHelper by lazy { aiSummaryHelperOverride ?: AiHelperFactory.createSummaryHelper(getApplication()) }
     
     private val _isGeminiSupported = MutableStateFlow<Boolean?>(null)
     val isGeminiSupported: StateFlow<Boolean?> = _isGeminiSupported.asStateFlow()

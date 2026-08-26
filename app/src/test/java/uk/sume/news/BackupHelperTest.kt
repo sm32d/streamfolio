@@ -14,7 +14,7 @@ import org.json.JSONObject
 
 class BackupHelperTest {
 
-    private class MockEditor : SharedPreferences.Editor {
+    private class MockEditor(private val target: HashMap<String, Any>) : SharedPreferences.Editor {
         val map = HashMap<String, Any>()
         override fun putString(key: String, value: String?): SharedPreferences.Editor {
             if (value != null) map[key] = value else map.remove(key)
@@ -48,13 +48,23 @@ class BackupHelperTest {
             map.clear()
             return this
         }
-        override fun commit(): Boolean = true
-        override fun apply() {}
+        // Real SharedPreferences.Editor.apply()/commit() persist pending changes into the
+        // backing store immediately; this mock previously no-op'd both, so only the last of
+        // several sequential prefs.someField = x writes (each its own edit()/apply() pair)
+        // survived until the test's manual save() call clobbered the rest. Fixed to write
+        // through to `target` immediately, matching real semantics.
+        override fun commit(): Boolean {
+            target.putAll(map)
+            return true
+        }
+        override fun apply() {
+            target.putAll(map)
+        }
     }
 
     private class MockSharedPreferences : SharedPreferences {
         val map = HashMap<String, Any>()
-        val editor = MockEditor()
+        val editor = MockEditor(map)
 
         override fun getAll(): Map<String, *> = map
         override fun getString(key: String, defValue: String?): String? = (map[key] as? String) ?: defValue
