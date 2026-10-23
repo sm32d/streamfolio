@@ -95,8 +95,8 @@ The following critical application paths currently lack automated unit test cove
 [LinkOnlySourcesTest.kt](file:///d:/News/app/src/test/java/uk/sume/news/LinkOnlySourcesTest.kt) (offline, no network):
 - Host matching for `LinkOnlySources.forUrl` / `isLinkOnlyArticle`.
 - `RssParser` on a feed shaped like the publisher's: only title, link, date and short description survive; `content:encoded`, `media:content`, `enclosure` and embedded images are ignored; description is truncated at 500 characters; other feeds still read images.
-- `LinkOnlyFetchPolicy`: the 30-minute floor, longer `max-age` / `ttl` / `Retry-After` honored, 24-hour cap.
-- `SourceConfig.parseEnabledIds`: missing/disabled means off; unreadable file means keep last known state.
+- `LinkOnlyFetchPolicy`: the 30-minute floor, longer `max-age` / `ttl` / `Retry-After` honored, no 24-hour ceiling (48 h and 72 h instructions honored, one-year overflow bound), stored `ttl` still applied after a 304.
+- `SourceConfig.parseEnabledIds`: missing/disabled means off; unreadable file is not validated.
 
 ```powershell
 ./gradlew testDebugUnitTest --tests "uk.sume.news.LinkOnlySourcesTest"

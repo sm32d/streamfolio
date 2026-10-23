@@ -101,26 +101,43 @@ class LinkOnlySourcesTest {
     @Test
     fun fetchPolicy_neverFetchesMoreOftenThanThirtyMinutes() {
         val now = 1_000_000L
-        assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, null, null))
-        assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=60", null))
-        assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterNotModified(now, null))
+        assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, null, 0L))
+        assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=60", 0L))
+        assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterNotModified(now, null, 0L))
         assertEquals(now + LinkOnlyFetchPolicy.MIN_INTERVAL_MS, LinkOnlyFetchPolicy.nextFetchAfterFailure(now))
     }
 
     @Test
     fun fetchPolicy_obeysLongerServerInstructions() {
         val now = 1_000_000L
-        assertEquals(now + 7_200_000L, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=7200", null))
-        assertEquals(now + 7_200_000L, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, null, "<rss><channel><ttl>120</ttl>"))
+        assertEquals(now + 7_200_000L, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=7200", 0L))
+        assertEquals(now + 7_200_000L, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, null, LinkOnlyFetchPolicy.parseTtlMs("<rss><channel><ttl>120</ttl>")))
         assertEquals(now + 10_800_000L, LinkOnlyFetchPolicy.nextFetchAfterBackoff(now, "10800"))
         assertEquals(now + LinkOnlyFetchPolicy.DEFAULT_BACKOFF_MS, LinkOnlyFetchPolicy.nextFetchAfterBackoff(now, null))
     }
 
     @Test
-    fun fetchPolicy_capsWaitAtOneDay() {
+    fun fetchPolicy_doesNotShortenLongServerInstructionsToADay() {
         val now = 0L
-        val farFuture = LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=99999999", null)
-        assertEquals(LinkOnlyFetchPolicy.MAX_WAIT_MS, farFuture)
+        val twoDays = 48L * 60L * 60L * 1000L
+        assertEquals(now + twoDays, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=172800", 0L))
+        assertEquals(now + twoDays, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, null, twoDays))
+        assertEquals(now + 3 * 24L * 60L * 60L * 1000L, LinkOnlyFetchPolicy.nextFetchAfterBackoff(now, "259200"))
+        assertEquals(twoDays, LinkOnlyFetchPolicy.parseRetryAfterMs("172800", 0L))
+    }
+
+    @Test
+    fun fetchPolicy_notModifiedStillHonoursStoredTtl() {
+        val now = 1_000L
+        val twoHours = 2L * 60L * 60L * 1000L
+        assertEquals(now + twoHours, LinkOnlyFetchPolicy.nextFetchAfterNotModified(now, "max-age=300", twoHours))
+    }
+
+    @Test
+    fun fetchPolicy_onlyAYearSanityBoundAgainstOverflow() {
+        val now = 0L
+        assertEquals(LinkOnlyFetchPolicy.MAX_WAIT_MS, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, "max-age=99999999999", 0L))
+        assertEquals(LinkOnlyFetchPolicy.MAX_WAIT_MS, LinkOnlyFetchPolicy.parseMaxAgeMs("max-age=9223372036854775807"))
     }
 
     @Test

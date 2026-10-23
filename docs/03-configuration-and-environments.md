@@ -84,7 +84,7 @@ Kept in a separate private SharedPreferences file, `link_only_state`, managed by
 | Key | Type | Default | Purpose |
 | :--- | :--- | :--- | :--- |
 | `enabled_ids` | `Set<String>` | empty | Source ids the remote list currently enables (`joho-todai-en`). Empty means every link-only source is off. |
-| `config_checked_at` | `Long` (ms) | `0` | Last successful download of the remote list; re-checked after 1 hour. |
+| `config_checked_at` | `Long` (ms) | `0` | Time of the last validated download of the remote list. A link-only feed is fetched only if this is within the last 60 seconds (`SourceConfig.FRESHNESS_MS`); the list is downloaded at the start of every feed refresh. |
 | `next_fetch:<feedUrl>` | `Long` (ms) | `0` | Earliest time this device may fetch the feed again. |
 | `etag:<feedUrl>`, `last_modified:<feedUrl>` | `String` | none | Validators for conditional requests. |
 

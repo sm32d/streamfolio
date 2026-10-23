@@ -104,7 +104,7 @@ adb logcat -c
   adb shell run-as uk.sume.streamfolio.debug cat shared_prefs/link_only_state.xml   # debug build only
   ```
   Check `https://raw.githubusercontent.com/sm32d/streamfolio/master/source-config/sources.json` opens in a browser.
-- **Remediation:** Publish the file with `"joho-todai-en": { "enabled": true }` (see [11](file:///d:/News/docs/11-deployment-and-operations.md)); wait for the next refresh (up to 1 hour for the list, then the feed limit).
+- **Remediation:** Publish the file with `"joho-todai-en": { "enabled": true }` (see [11](file:///d:/News/docs/11-deployment-and-operations.md)); wait for the next refresh (the list is downloaded at the start of every refresh, then the feed limit applies).
 
 ### Runbook 6: Crash `NullPointerException: Parameter specified as non-null is null: method ...Article.<init>, parameter link`
 - **Observed:** Once, on release 1.3.2 (versionCode 23) on a physical device, 2026-10-23. Decoded with `app/build/outputs/mapping/release/mapping.txt` (same `pg_map_id`): `CoroutinesRoom.createFlow` → `ArticleDao_Impl.getArticlesByCategory` (`SELECT * FROM articles WHERE category = ?`) read a row whose `link` was `NULL`, although the schema declares `link TEXT NOT NULL`.

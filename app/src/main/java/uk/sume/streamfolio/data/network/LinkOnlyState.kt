@@ -12,8 +12,13 @@ import org.json.JSONObject
 object SourceConfig {
     const val URL = "https://raw.githubusercontent.com/sm32d/streamfolio/master/source-config/sources.json"
 
-    /** How often a device re-checks the file (a launch/refresh inside this window reuses the last result). */
-    const val CHECK_INTERVAL_MS = 60L * 60L * 1000L
+    /**
+     * How long one validated download of the file stays fresh. The file is downloaded before a
+     * link-only feed is fetched; this short window only coalesces a burst of refreshes (e.g. the
+     * background worker syncing several categories in a row) into one download. A link-only feed is
+     * never fetched unless the file was validated within this window.
+     */
+    const val FRESHNESS_MS = 60L * 1000L
 
     /**
      * Returns the ids of enabled sources, or null when [json] is not a valid source list
@@ -57,11 +62,33 @@ class LinkOnlyStateStore(context: Context) {
 
     fun isEnabled(sourceId: String): Boolean = enabledIds.contains(sourceId)
 
-    /** Whether the feed or article URL may be fetched at all. Non link-only URLs always may. */
+    /** Whether the source list was validated recently enough to rely on it (a clock set back counts as stale). */
+    fun isConfigFresh(nowMs: Long): Boolean {
+        val checked = configCheckedAt
+        return checked != 0L && nowMs >= checked && nowMs - checked < SourceConfig.FRESHNESS_MS
+    }
+
+    /**
+     * Whether the source is listed as enabled by the last validated list. Used for display
+     * (Settings > Providers). Non link-only URLs always pass.
+     */
     fun isUrlAllowed(url: String?): Boolean {
         val source = LinkOnlySources.forUrl(url) ?: return true
         return isEnabled(source.id)
     }
+
+    /**
+     * Whether a link-only feed may be fetched right now: its source must be enabled by a source
+     * list that was validated within [SourceConfig.FRESHNESS_MS]. If the list has expired and could
+     * not be refreshed, fetching is suspended until a fresh list is validated.
+     */
+    fun mayFetch(url: String?, nowMs: Long): Boolean {
+        val source = LinkOnlySources.forUrl(url) ?: return true
+        return isEnabled(source.id) && isConfigFresh(nowMs)
+    }
+
+    fun ttlMs(feedUrl: String): Long = prefs.getLong(KEY_TTL + feedUrl, 0L)
+    fun setTtlMs(feedUrl: String, value: Long) = prefs.edit().putLong(KEY_TTL + feedUrl, value).apply()
 
     fun nextFetchAt(feedUrl: String): Long = prefs.getLong(KEY_NEXT + feedUrl, 0L)
     fun setNextFetchAt(feedUrl: String, value: Long) = prefs.edit().putLong(KEY_NEXT + feedUrl, value).apply()
@@ -80,7 +107,7 @@ class LinkOnlyStateStore(context: Context) {
     fun clearFeedState() {
         val editor = prefs.edit()
         prefs.all.keys
-            .filter { it.startsWith(KEY_NEXT) || it.startsWith(KEY_ETAG) || it.startsWith(KEY_LAST_MODIFIED) }
+            .filter { it.startsWith(KEY_NEXT) || it.startsWith(KEY_ETAG) || it.startsWith(KEY_LAST_MODIFIED) || it.startsWith(KEY_TTL) }
             .forEach { editor.remove(it) }
         editor.apply()
     }
@@ -89,6 +116,7 @@ class LinkOnlyStateStore(context: Context) {
         const val KEY_ENABLED = "enabled_ids"
         const val KEY_CHECKED_AT = "config_checked_at"
         const val KEY_NEXT = "next_fetch:"
+        const val KEY_TTL = "ttl_ms:"
         const val KEY_ETAG = "etag:"
         const val KEY_LAST_MODIFIED = "last_modified:"
     }

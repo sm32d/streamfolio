@@ -90,16 +90,19 @@ class NewsRepository(private val context: Context) {
     }
 
     /**
-     * Downloads the remote source list (a static JSON file in the project repo) at most once per
-     * [SourceConfig.CHECK_INTERVAL_MS], and applies it: link-only sources that are missing or
-     * disabled are no longer fetched and their cached articles are deleted from this device.
-     * If the file cannot be fetched or parsed, the last known state is kept.
+     * Downloads the remote source list (a static JSON file in the project repo) and applies it:
+     * link-only sources that are missing or disabled are no longer fetched and their cached
+     * articles are deleted from this device. Called at the start of every feed refresh (foreground,
+     * background sync and widget), before any link-only feed is fetched. A download validated within
+     * [SourceConfig.FRESHNESS_MS] is reused, only to coalesce a burst of refreshes into one download.
+     * If the file cannot be fetched or parsed, it is not validated, and link-only fetching stays
+     * suspended (see [LinkOnlyStateStore.mayFetch]) until a fresh list is validated.
      */
     suspend fun refreshSourceConfigIfDue(force: Boolean = false) = withContext(Dispatchers.IO) {
         sourceConfigMutex.withLock {
             val now = System.currentTimeMillis()
             val last = linkOnlyState.configCheckedAt
-            if (!force && last != 0L && now >= last && now - last < SourceConfig.CHECK_INTERVAL_MS) {
+            if (!force && last != 0L && now >= last && now - last < SourceConfig.FRESHNESS_MS) {
                 return@withLock
             }
             try {
@@ -110,12 +113,12 @@ class NewsRepository(private val context: Context) {
                     .build()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
-                        Log.w("NewsRepository", "Source list unavailable (HTTP ${response.code}); keeping last known state")
+                        Log.w("NewsRepository", "Source list unavailable (HTTP ${response.code}); link-only fetching suspended until it is validated")
                         return@withLock
                     }
                     val enabled = SourceConfig.parseEnabledIds(response.body?.string().orEmpty())
                     if (enabled == null) {
-                        Log.w("NewsRepository", "Source list unreadable; keeping last known state")
+                        Log.w("NewsRepository", "Source list unreadable; link-only fetching suspended until it is validated")
                         return@withLock
                     }
                     linkOnlyState.enabledIds = enabled
@@ -127,7 +130,7 @@ class NewsRepository(private val context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.w("NewsRepository", "Could not refresh source list; keeping last known state", e)
+                Log.w("NewsRepository", "Could not refresh source list; link-only fetching suspended until it is validated", e)
             }
         }
     }
@@ -157,8 +160,9 @@ class NewsRepository(private val context: Context) {
         synchronized(linkOnlyFetchLock) { fetchLinkOnlyFeedXmlLocked(url) }
 
     private fun fetchLinkOnlyFeedXmlLocked(url: String): String? {
-        if (!linkOnlyState.isUrlAllowed(url)) return null
         val now = System.currentTimeMillis()
+        // Only with a source list validated just now that enables this source.
+        if (!linkOnlyState.mayFetch(url, now)) return null
         val nextAllowed = linkOnlyState.nextFetchAt(url)
         if (now < nextAllowed && nextAllowed - now <= LinkOnlyFetchPolicy.MAX_WAIT_MS) return null
 
@@ -173,7 +177,7 @@ class NewsRepository(private val context: Context) {
             val cacheControl = response.header("Cache-Control")
             when {
                 response.code == 304 -> {
-                    linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterNotModified(now, cacheControl))
+                    linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterNotModified(now, cacheControl, linkOnlyState.ttlMs(url)))
                     return null
                 }
                 response.code == 429 || response.code == 503 -> {
@@ -191,7 +195,9 @@ class NewsRepository(private val context: Context) {
             }
             val xml = response.body?.string() ?: ""
             linkOnlyState.saveValidators(url, response.header("ETag"), response.header("Last-Modified"))
-            linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, cacheControl, xml))
+            val ttlMs = LinkOnlyFetchPolicy.parseTtlMs(xml)
+            linkOnlyState.setTtlMs(url, ttlMs)
+            linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, cacheControl, ttlMs))
             return xml
         }
     }

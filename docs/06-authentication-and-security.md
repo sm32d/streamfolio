@@ -97,7 +97,7 @@ graph TD
 - **Link-only exclusion:** articles from link-only sources are neither exported nor restored, so a backup cannot bring back data after a publisher withdraws a source.
 
 ### 4a. Remote Source List Trust
-- The remote source list is public static JSON fetched over HTTPS from the project repository. Anyone who can push to that branch can enable or withdraw link-only sources on installed apps. It carries no secrets and can only toggle sources the app already knows (`LinkOnlySources.all`); unknown ids are ignored. It is parsed defensively (`SourceConfig.parseEnabledIds`): invalid content keeps the last known state.
+- The remote source list is public static JSON fetched over HTTPS from the project repository. Anyone who can push to that branch can enable or withdraw link-only sources on installed apps. It carries no secrets and can only toggle sources the app already knows (`LinkOnlySources.all`); unknown ids are ignored. It is parsed defensively (`SourceConfig.parseEnabledIds`): invalid content is not validated, so link-only fetching stays suspended.
 - Link-only feed requests identify themselves honestly (`StreamFolio/<version> ...` User-Agent) instead of the browser User-Agent used for other feeds.
 
 ### 5. Sensitive Data & Logcat Redaction
