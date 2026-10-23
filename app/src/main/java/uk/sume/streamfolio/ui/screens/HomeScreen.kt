@@ -77,6 +77,7 @@ import uk.sume.streamfolio.ui.components.SkeletonLoader
 import uk.sume.streamfolio.ui.components.SwipeableCard
 import uk.sume.streamfolio.ui.theme.getThemeBackgroundBrush
 import uk.sume.streamfolio.util.NetworkMonitor
+import uk.sume.streamfolio.util.ShareLinks
 import uk.sume.streamfolio.util.UrlSecurityValidator
 
 
@@ -1058,8 +1059,7 @@ fun ArticleListItem(
                 handleBookmarkToggle()
             }
             "share" -> {
-                val shareUrl = UrlSecurityValidator.normalizeToHttps(currentArticle.link) ?: currentArticle.link
-                val shareText = "${currentArticle.title}\n\nRead more: $shareUrl\n\nShared via StreamFolio: https://play.google.com/store/apps/details?id=uk.sume.streamfolio"
+                val shareText = ShareLinks.buildShareText(currentArticle.title, currentArticle.link)
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, currentArticle.title)
@@ -1593,8 +1593,7 @@ fun ArticleListItem(
                     subtitle = "Send this article link to other apps",
                     onClick = {
                         showLongPressModal = false
-                        val shareUrl = UrlSecurityValidator.normalizeToHttps(article.link) ?: article.link
-                        val shareText = "${article.title}\n\nRead more: $shareUrl\n\nShared via StreamFolio: https://play.google.com/store/apps/details?id=uk.sume.streamfolio"
+                        val shareText = ShareLinks.buildShareText(article.title, article.link)
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
                             putExtra(Intent.EXTRA_SUBJECT, article.title)

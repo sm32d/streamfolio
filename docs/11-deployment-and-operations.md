@@ -60,7 +60,10 @@ landing/
 ├── changelog.html          # Release history and release notes
 ├── privacy.html            # Privacy policy (100% on-device data guarantee)
 ├── terms.html              # Terms of service
-├── index.css               # Dark/light themed styling system
+├── open.html               # Share-link landing page (open in app / download / open in browser); same navbar, drawer, footer and card styling as privacy.html
+├── 404.html                # Custom not-found page, same shell as open.html (Vercel serves it automatically; uses absolute asset paths so it renders at any URL)
+├── vercel.json             # Rewrites /open to /open.html
+├── index.css               # Dark/light themed styling system (incl. `.action-card` styles for open/404)
 └── app.js                  # Theme toggle & responsive mobile navbar scripts
 ```
 
@@ -81,3 +84,8 @@ Source list file: [source-config/sources.json](file:///d:/News/source-config/sou
 - **Withdraw (publisher request):** set `enabled` to `false` (or remove the entry), commit and push. On each device's next refresh with a connection it stops fetching the feed and deletes the cached articles, bookmark-list associations and throttle state from that source. Keep the commit as the record of when withdrawal took effect, and notify the publisher.
 - **Do not** rename the repository, the `master` branch or the file path without shipping an app update first; installs would stop seeing changes.
 - **Before the first enable:** confirm with the publisher that the version of the app they were promised (link-only handling, 30-minute per-device limit, conditional requests, User-Agent, withdrawal) is the one released.
+
+### Share-link hosting requirements
+The site is served by Vercel (a 404 page from Vercel was observed on `/open` before the rewrite existed). `landing/vercel.json` rewrites `/open` to `/open.html`; the Vercel project root directory must be `landing/` for it to apply (Unknown / Requires Confirmation).
+
+`landing/open.html` must be reachable at `https://streamfolio.sume.uk/open` (query `?url=`), and `landing/.well-known/assetlinks.json` (with `landing/.nojekyll` for GitHub Pages) must be served from that host for Android App Links verification. See [07](file:///d:/News/docs/07-frontend-or-client-app.md). Verified on a device: Unknown / Requires Confirmation.

@@ -190,7 +190,7 @@ d:/News/
 ## 6. Project Status, Assumptions & Known Gaps
 
 ### Current Status
-- **Release Version:** `1.3.4` (versionCode `25`).
+- **Release Version:** `1.3.5` (versionCode `26`).
 - **Production Status:** Distributed via Google Play Store (`uk.sume.streamfolio`).
 - **Core Architecture:** Clean MVVM with Room SQLite persistence, Jetpack Compose UI, and background playback.
 

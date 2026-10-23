@@ -14,6 +14,7 @@ import androidx.work.*
 import uk.sume.streamfolio.ui.navigation.AppNavigation
 import uk.sume.streamfolio.ui.theme.NewsTheme
 import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
+import uk.sume.streamfolio.util.ShareLinks
 import uk.sume.streamfolio.util.UrlSecurityValidator
 import uk.sume.streamfolio.worker.NewsSyncWorker
 import java.util.concurrent.TimeUnit
@@ -28,10 +29,7 @@ class MainActivity : ComponentActivity() {
 
         viewModel = ViewModelProvider(this)[NewsViewModel::class.java]
 
-        intent?.getStringExtra("article_url")?.let { url ->
-            val safeUrl = UrlSecurityValidator.normalizeToHttps(url)
-            viewModel.setPendingArticleUrl(safeUrl)
-        }
+        intent?.let { handleArticleIntent(it) }
 
         setupBackgroundSync()
 
@@ -77,9 +75,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.getStringExtra("article_url")?.let { url ->
-            val safeUrl = UrlSecurityValidator.normalizeToHttps(url)
-            viewModel.setPendingArticleUrl(safeUrl)
-        }
+        handleArticleIntent(intent)
+    }
+
+    // Article to open comes from a widget extra or from a shared https://streamfolio.sume.uk/open link.
+    private fun handleArticleIntent(intent: Intent) {
+        val url = intent.getStringExtra("article_url")?.let { UrlSecurityValidator.normalizeToHttps(it) }
+            ?: ShareLinks.parseArticleUrl(intent.data)
+        url?.let { viewModel.setPendingArticleUrl(it) }
     }
 }

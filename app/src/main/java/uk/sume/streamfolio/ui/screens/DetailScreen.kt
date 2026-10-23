@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import uk.sume.streamfolio.data.network.LinkOnlySources
 import uk.sume.streamfolio.util.NetworkMonitor
+import uk.sume.streamfolio.util.ShareLinks
 import androidx.compose.ui.draw.clipToBounds
 import uk.sume.streamfolio.ui.components.PublisherAvatar
 import uk.sume.streamfolio.ui.components.SaveToListBottomSheet
@@ -1366,8 +1367,7 @@ fun DetailScreen(
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val shareUrl = UrlSecurityValidator.normalizeToHttps(url) ?: url
-                                val shareText = "${article.title}\n\nRead more: $shareUrl\n\nShared via StreamFolio: https://play.google.com/store/apps/details?id=uk.sume.streamfolio"
+                                val shareText = ShareLinks.buildShareText(article.title, url)
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_SUBJECT, article.title)
