@@ -3,7 +3,10 @@ package uk.sume.streamfolio.data.network
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.withContext
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
@@ -12,6 +15,8 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jsoup.Jsoup
 import uk.sume.streamfolio.data.local.AppDatabase
 import uk.sume.streamfolio.data.local.PreferencesHelper
@@ -26,6 +31,14 @@ class NewsRepository(private val context: Context) {
     companion object {
         private const val THUMBNAIL_RESOLUTION_BATCH_SIZE = 40
         private const val STRAITS_TIMES_THUMBNAIL_RETRY_BATCH_SIZE = 30
+
+        // Shared across NewsRepository instances (UI, worker, widget) so the remote source list is
+        // checked by one caller at a time.
+        private val sourceConfigMutex = Mutex()
+
+        // Serialises link-only feed fetches across all NewsRepository instances (UI, worker, widget) so
+        // two refreshes starting together cannot both pass the 30-minute check and hit the publisher twice.
+        private val linkOnlyFetchLock = Any()
     }
 
     private val db = AppDatabase.getDatabase(context)
@@ -35,6 +48,7 @@ class NewsRepository(private val context: Context) {
     private val prefs = PreferencesHelper(context)
     private val parser = RssParser()
     private val aiSummaryHelper by lazy { AiHelperFactory.createSummaryHelper(context) }
+    private val linkOnlyState = LinkOnlyStateStore(context)
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
@@ -65,6 +79,123 @@ class NewsRepository(private val context: Context) {
         return UrlSecurityValidator.normalizeUrl(url)?.toHttpUrlOrNull()?.host ?: "[invalid]"
     }
 
+    /** Identifies StreamFolio to publishers of link-only feeds so they can recognise (or block) the traffic. */
+    private val linkOnlyUserAgent: String by lazy {
+        val version = try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        } catch (_: Exception) {
+            null
+        } ?: "unknown"
+        "StreamFolio/$version (Android feed reader; headline-and-link only)"
+    }
+
+    /**
+     * Downloads the remote source list (a static JSON file in the project repo) at most once per
+     * [SourceConfig.CHECK_INTERVAL_MS], and applies it: link-only sources that are missing or
+     * disabled are no longer fetched and their cached articles are deleted from this device.
+     * If the file cannot be fetched or parsed, the last known state is kept.
+     */
+    suspend fun refreshSourceConfigIfDue(force: Boolean = false) = withContext(Dispatchers.IO) {
+        sourceConfigMutex.withLock {
+            val now = System.currentTimeMillis()
+            val last = linkOnlyState.configCheckedAt
+            if (!force && last != 0L && now >= last && now - last < SourceConfig.CHECK_INTERVAL_MS) {
+                return@withLock
+            }
+            try {
+                val request = Request.Builder()
+                    .url(SourceConfig.URL)
+                    .header("User-Agent", linkOnlyUserAgent)
+                    .header("Cache-Control", "no-cache")
+                    .build()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) {
+                        Log.w("NewsRepository", "Source list unavailable (HTTP ${response.code}); keeping last known state")
+                        return@withLock
+                    }
+                    val enabled = SourceConfig.parseEnabledIds(response.body?.string().orEmpty())
+                    if (enabled == null) {
+                        Log.w("NewsRepository", "Source list unreadable; keeping last known state")
+                        return@withLock
+                    }
+                    linkOnlyState.enabledIds = enabled
+                    linkOnlyState.configCheckedAt = now
+                    for (source in LinkOnlySources.all) {
+                        if (!enabled.contains(source.id)) {
+                            purgeLinkOnlySource(source)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("NewsRepository", "Could not refresh source list; keeping last known state", e)
+            }
+        }
+    }
+
+    /** Stops fetching [source] and removes everything cached from it on this device. */
+    private suspend fun purgeLinkOnlySource(source: LinkOnlySource) {
+        for (pattern in LinkOnlySources.likePatterns(source)) {
+            bookmarkListDao.deleteCrossRefsMatching(pattern)
+            articleDao.deleteArticlesMatching(pattern)
+        }
+        linkOnlyState.clearFeedState()
+    }
+
+    /**
+     * Fetches a feed document. Returns null when the feed must not be (re)fetched right now or
+     * has not changed. Link-only feeds are only fetched while the remote list enables them, at
+     * most once per 30 minutes per device, with conditional requests and a StreamFolio User-Agent.
+     */
+    private fun fetchFeedXml(url: String): String? {
+        if (LinkOnlySources.isLinkOnlyUrl(url)) return fetchLinkOnlyFeedXml(url)
+        client.newCall(buildBrowserRequest(url)).execute().use { response ->
+            return if (response.isSuccessful) response.body?.string() ?: "" else null
+        }
+    }
+
+    private fun fetchLinkOnlyFeedXml(url: String): String? =
+        synchronized(linkOnlyFetchLock) { fetchLinkOnlyFeedXmlLocked(url) }
+
+    private fun fetchLinkOnlyFeedXmlLocked(url: String): String? {
+        if (!linkOnlyState.isUrlAllowed(url)) return null
+        val now = System.currentTimeMillis()
+        val nextAllowed = linkOnlyState.nextFetchAt(url)
+        if (now < nextAllowed && nextAllowed - now <= LinkOnlyFetchPolicy.MAX_WAIT_MS) return null
+
+        val requestBuilder = Request.Builder()
+            .url(url)
+            .header("User-Agent", linkOnlyUserAgent)
+            .header("Accept", "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8")
+        linkOnlyState.etag(url)?.let { requestBuilder.header("If-None-Match", it) }
+        linkOnlyState.lastModified(url)?.let { requestBuilder.header("If-Modified-Since", it) }
+
+        client.newCall(requestBuilder.build()).execute().use { response ->
+            val cacheControl = response.header("Cache-Control")
+            when {
+                response.code == 304 -> {
+                    linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterNotModified(now, cacheControl))
+                    return null
+                }
+                response.code == 429 || response.code == 503 -> {
+                    linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterBackoff(now, response.header("Retry-After")))
+                    return null
+                }
+                response.code == 404 || response.code == 410 -> {
+                    linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterGone(now))
+                    return null
+                }
+                !response.isSuccessful -> {
+                    linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterFailure(now))
+                    return null
+                }
+            }
+            val xml = response.body?.string() ?: ""
+            linkOnlyState.saveValidators(url, response.header("ETag"), response.header("Last-Modified"))
+            linkOnlyState.setNextFetchAt(url, LinkOnlyFetchPolicy.nextFetchAfterSuccess(now, cacheControl, xml))
+            return xml
+        }
+    }
+
     // Fetch Default Curated RSS Feeds
     suspend fun fetchDefaultFeeds(
         category: String,
@@ -73,20 +204,17 @@ class NewsRepository(private val context: Context) {
         disabledFeedUrls: Set<String> = emptySet(),
         enabledCrossRegionFeeds: Set<String> = emptySet()
     ) = withContext(Dispatchers.IO) {
+        refreshSourceConfigIfDue()
         val feedUrls = DefaultFeedsConfig.getFeedsFor(region, category, disabledFeedUrls, enabledCrossRegionFeeds)
         val allArticles = mutableListOf<Article>()
-        
+
         val jobs = feedUrls.map { url ->
             async {
                 val feedArticles = mutableListOf<Article>()
                 try {
-                    val request = buildBrowserRequest(url)
-                    client.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val xml = response.body?.string() ?: ""
-                            val parsed = parser.parse(xml, category, feedUrl = url)
-                            feedArticles.addAll(parsed)
-                        }
+                    fetchFeedXml(url)?.let { xml ->
+                        val parsed = parser.parse(xml, category, feedUrl = url)
+                        feedArticles.addAll(parsed)
                     }
                 } catch (e: Exception) {
                     Log.e("NewsRepository", "Error fetching default feed: ${safeHost(url)}", e)
@@ -109,6 +237,7 @@ class NewsRepository(private val context: Context) {
 
     // Fetch multiple Custom RSS Feeds for a single category/tab in parallel
     suspend fun fetchCustomFeeds(feeds: List<CustomFeed>, category: String) = withContext(Dispatchers.IO) {
+        refreshSourceConfigIfDue()
         val allArticles = mutableListOf<Article>()
         val jobs = feeds.map { feed ->
             async {
@@ -119,39 +248,31 @@ class NewsRepository(private val context: Context) {
                         Log.w("NewsRepository", "Rejected unsafe custom feed URL: ${safeHost(feed.url)}")
                         return@async feedArticles
                     }
-                    val request = buildBrowserRequest(url)
 
-                    client.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val xml = response.body?.string() ?: ""
-                            val parsed = if (parser.isOpml(xml)) {
-                                val urls = parser.parseOpmlUrls(xml)
-                                val aggregated = mutableListOf<Article>()
-                                for (childUrl in urls) {
-                                    try {
-                                        val formattedChildUrl = UrlSecurityValidator.sanitizeUrl(childUrl, requireHttps = true)
-                                        if (formattedChildUrl == null) {
-                                            Log.w("NewsRepository", "Rejected unsafe OPML child feed URL: ${safeHost(childUrl)}")
-                                            continue
-                                        }
-                                        val childRequest = buildBrowserRequest(formattedChildUrl)
-                                        client.newCall(childRequest).execute().use { childResponse ->
-                                            if (childResponse.isSuccessful) {
-                                                val childXml = childResponse.body?.string() ?: ""
-                                                val childArticles = parser.parse(childXml, feed.category, feed.id, feedUrl = formattedChildUrl, customFeedTitle = feed.title)
-                                                aggregated.addAll(childArticles)
-                                            }
-                                        }
-                                    } catch (childEx: Exception) {
-                                        Log.e("NewsRepository", "Error fetching OPML child feed: ${safeHost(childUrl)}", childEx)
+                    fetchFeedXml(url)?.let { xml ->
+                        val parsed = if (parser.isOpml(xml)) {
+                            val urls = parser.parseOpmlUrls(xml)
+                            val aggregated = mutableListOf<Article>()
+                            for (childUrl in urls) {
+                                try {
+                                    val formattedChildUrl = UrlSecurityValidator.sanitizeUrl(childUrl, requireHttps = true)
+                                    if (formattedChildUrl == null) {
+                                        Log.w("NewsRepository", "Rejected unsafe OPML child feed URL: ${safeHost(childUrl)}")
+                                        continue
                                     }
+                                    fetchFeedXml(formattedChildUrl)?.let { childXml ->
+                                        val childArticles = parser.parse(childXml, feed.category, feed.id, feedUrl = formattedChildUrl, customFeedTitle = feed.title)
+                                        aggregated.addAll(childArticles)
+                                    }
+                                } catch (childEx: Exception) {
+                                    Log.e("NewsRepository", "Error fetching OPML child feed: ${safeHost(childUrl)}", childEx)
                                 }
-                                aggregated
-                            } else {
-                                parser.parse(xml, feed.category, feed.id, feedUrl = url, customFeedTitle = feed.title)
                             }
-                            feedArticles.addAll(parsed)
+                            aggregated
+                        } else {
+                            parser.parse(xml, feed.category, feed.id, feedUrl = url, customFeedTitle = feed.title)
                         }
+                        feedArticles.addAll(parsed)
                     }
                 } catch (e: Exception) {
                     Log.e("NewsRepository", "Error fetching custom feed: ${safeHost(feed.url)}", e)
@@ -224,6 +345,9 @@ class NewsRepository(private val context: Context) {
                         Log.w("NewsRepository", "Rejected unsafe search URL: ${safeHost(url)}")
                         return@async matchingArticles
                     }
+                    // Link-only sources are never fetched on demand: a search must not bypass their
+                    // per-device fetch limit. Their cached headlines are found by the local search.
+                    if (LinkOnlySources.isLinkOnlyUrl(formattedUrl)) return@async matchingArticles
                     val request = buildBrowserRequest(formattedUrl)
                     client.newCall(request).execute().use { response ->
                         if (response.isSuccessful) {
@@ -238,6 +362,7 @@ class NewsRepository(private val context: Context) {
                                             Log.w("NewsRepository", "Rejected unsafe OPML child URL in search: ${safeHost(childUrl)}")
                                             continue
                                         }
+                                        if (LinkOnlySources.isLinkOnlyUrl(fc)) continue
                                         val childReq = buildBrowserRequest(fc)
                                         client.newCall(childReq).execute().use { childResp ->
                                             if (childResp.isSuccessful) {
@@ -320,7 +445,7 @@ class NewsRepository(private val context: Context) {
     private suspend fun triggerThumbnailResolution(articles: List<Article>) {
         withContext(Dispatchers.IO) {
             articles
-                .filter { it.thumbnailUrl.isNullOrBlank() }
+                .filter { it.thumbnailUrl.isNullOrBlank() && !LinkOnlySources.isLinkOnlyArticle(it) }
                 .take(THUMBNAIL_RESOLUTION_BATCH_SIZE)
                 .forEach { article ->
                     launch {
@@ -371,7 +496,7 @@ class NewsRepository(private val context: Context) {
     // Pre-scrape full text for the top 10 articles in parallel in the background
     private suspend fun triggerArticleBodyPreScrape(articles: List<Article>) {
         withContext(Dispatchers.IO) {
-            articles.take(10).forEach { article ->
+            articles.filter { !LinkOnlySources.isLinkOnlyArticle(it) }.take(10).forEach { article ->
                 val existing = articleDao.getArticleByLink(article.link)
                 if (existing == null || existing.fullText == null) {
                     launch {
@@ -401,7 +526,8 @@ class NewsRepository(private val context: Context) {
                         var aiSummary = ""
                         try {
                             val helper = aiSummaryHelper
-                            if (helper != null) {
+                            // No generated summaries for link-only sources; keyword tags only.
+                            if (helper != null && !LinkOnlySources.isLinkOnlyArticle(article)) {
                                 val status = helper.checkFeatureStatus()
                                 if (status != 0 && status != 1 && status != 2) {
                                     aiSummary = helper.summarizeText(article.title + "\n" + article.description)
@@ -659,6 +785,8 @@ class NewsRepository(private val context: Context) {
 
     // Scraping metadata for og:image
     suspend fun resolveThumbnail(articleLink: String) = withContext(Dispatchers.IO) {
+        // Link-only sources: never fetch their pages or images.
+        if (LinkOnlySources.isLinkOnlyUrl(articleLink)) return@withContext
         try {
             val realUrl = resolveGoogleNewsUrl(articleLink)
 
@@ -744,6 +872,10 @@ class NewsRepository(private val context: Context) {
 
     // Scrapes clean text for Reader mode and TTS player
     suspend fun fetchArticleBody(url: String): String = withContext(Dispatchers.IO) {
+        // Link-only sources: article bodies are never fetched; readers open the original page.
+        if (LinkOnlySources.isLinkOnlyUrl(url)) {
+            return@withContext "Unable to parse article text. Please open in WebView to read the full story."
+        }
         try {
             val realUrl = resolveGoogleNewsUrl(url)
             val safeUrl = UrlSecurityValidator.normalizeToHttps(realUrl)
@@ -792,6 +924,7 @@ class NewsRepository(private val context: Context) {
      * in the database. Returns null if the URL is unsafe or scraping fails.
      */
     suspend fun scrapeTransientArticle(url: String): Article? = withContext(Dispatchers.IO) {
+        if (LinkOnlySources.isLinkOnlyUrl(url)) return@withContext null
         try {
             val realUrl = resolveGoogleNewsUrl(url)
             val safeUrl = UrlSecurityValidator.normalizeToHttps(realUrl) ?: return@withContext null
@@ -830,11 +963,27 @@ class NewsRepository(private val context: Context) {
     }
 
     // Database flow readers
-    fun getArticlesByCategory(category: String): Flow<List<Article>> = articleDao.getArticlesByCategory(category)
-    fun getBookmarkedArticles(): Flow<List<Article>> = articleDao.getBookmarkedArticles()
-    fun searchArticlesLocal(query: String): Flow<List<Article>> = articleDao.searchArticles(query)
-    fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles()
-    fun getAllArticlesUnlimited(): Flow<List<Article>> = articleDao.getAllArticlesUnlimited()
+    /**
+     * A Room query Flow that throws (observed once in release 1.3.2: a row read back with a NULL
+     * `link` from `getArticlesByCategory`) would otherwise reach the ViewModel's `stateIn` and kill
+     * the process. Retry twice (a re-query normally succeeds), log, then fall back to an empty list.
+     */
+    private fun <T> Flow<List<T>>.resilientQuery(name: String): Flow<List<T>> =
+        retryWhen { cause, attempt ->
+            Log.e("NewsRepository", "Room query '$name' failed (attempt ${attempt + 1})", cause)
+            if (attempt < 2) {
+                delay(1_000)
+                true
+            } else {
+                false
+            }
+        }.catch { emit(emptyList()) }
+
+    fun getArticlesByCategory(category: String): Flow<List<Article>> = articleDao.getArticlesByCategory(category).resilientQuery("getArticlesByCategory")
+    fun getBookmarkedArticles(): Flow<List<Article>> = articleDao.getBookmarkedArticles().resilientQuery("getBookmarkedArticles")
+    fun searchArticlesLocal(query: String): Flow<List<Article>> = articleDao.searchArticles(query).resilientQuery("searchArticles")
+    fun getAllArticles(): Flow<List<Article>> = articleDao.getAllArticles().resilientQuery("getAllArticles")
+    fun getAllArticlesUnlimited(): Flow<List<Article>> = articleDao.getAllArticlesUnlimited().resilientQuery("getAllArticlesUnlimited")
 
     // Bookmark actions
     suspend fun toggleBookmark(articleLink: String, isBookmarked: Boolean) {
@@ -955,6 +1104,7 @@ class NewsRepository(private val context: Context) {
     }
 
     suspend fun fetchSingleFeed(url: String, category: String) = withContext(Dispatchers.IO) {
+        refreshSourceConfigIfDue()
         val allArticles = mutableListOf<Article>()
         try {
             val safeUrl = UrlSecurityValidator.sanitizeUrl(url, requireHttps = true)
@@ -962,13 +1112,9 @@ class NewsRepository(private val context: Context) {
                 Log.w("NewsRepository", "Rejected unsafe single feed URL: ${safeHost(url)}")
                 return@withContext
             }
-            val request = buildBrowserRequest(safeUrl)
-            client.newCall(request).execute().use { response ->
-                if (response.isSuccessful) {
-                    val xml = response.body?.string() ?: ""
-                    val parsed = parser.parse(xml, category, feedUrl = safeUrl)
-                    allArticles.addAll(parsed)
-                }
+            fetchFeedXml(safeUrl)?.let { xml ->
+                val parsed = parser.parse(xml, category, feedUrl = safeUrl)
+                allArticles.addAll(parsed)
             }
         } catch (e: Exception) {
             Log.e("NewsRepository", "Error fetching single feed: ${safeHost(url)}", e)

@@ -67,7 +67,7 @@ All test commands should be executed from the **project root directory** (`d:/Ne
   - Confirms state mutation and subsequent restoration via `applyPreferences`.
 
 ### 2. `DefaultFeedsTest.kt` ([DefaultFeedsTest.kt](file:///d:/News/app/src/test/java/uk/sume/news/DefaultFeedsTest.kt))
-- **Scope:** Live HTTP test validating all curated news feeds across all 14 regions (`US`, `GB`, `SG`, `IN`, `CA`, `AU`, `FR`, `DE`, `HK`, `KR`, `JP`, `BR`, `ZA`, `AE`).
+- **Scope:** Live HTTP test validating all curated news feeds across all 14 regions (link-only publishers are skipped by the live network tests via `liveTestProviders()`; they are still covered by the offline publisher-mapping test) (`US`, `GB`, `SG`, `IN`, `CA`, `AU`, `FR`, `DE`, `HK`, `KR`, `JP`, `BR`, `ZA`, `AE`).
 - **Validations:**
   - `allDefaultFeedsShouldReturnArticles`: Asserts every feed is reachable and returns $\ge 1$ parsed article.
   - `noFeedShouldRedirectToCleartextHttp`: Verifies no HTTPS feed silently redirects to unencrypted HTTP without being declared in `network_security_config.xml`.
@@ -87,3 +87,21 @@ The following critical application paths currently lack automated unit test cove
 | **`Room Migrations`** | Schema migration integrity across database versions 5 $\rightarrow$ 6 $\rightarrow$ 7 $\rightarrow$ 8. | AndroidX `MigrationTestHelper` instrumented tests verifying data retention on real SQLite migrations. | **Medium** |
 | **`TtsPlaybackManager`** | Audio playlist queue restoration from Room DB across process death. | Unit test verifying queue indexing and links JSON deserialization. | **Medium** |
 | **`NewsViewModel`** | StateFlow emissions during category selection and pull-to-refresh. | Coroutine `Turbine` test asserting UI state flows. | **Low** |
+
+---
+
+## 5. Link-Only Source Tests
+
+[LinkOnlySourcesTest.kt](file:///d:/News/app/src/test/java/uk/sume/news/LinkOnlySourcesTest.kt) (offline, no network):
+- Host matching for `LinkOnlySources.forUrl` / `isLinkOnlyArticle`.
+- `RssParser` on a feed shaped like the publisher's: only title, link, date and short description survive; `content:encoded`, `media:content`, `enclosure` and embedded images are ignored; description is truncated at 500 characters; other feeds still read images.
+- `LinkOnlyFetchPolicy`: the 30-minute floor, longer `max-age` / `ttl` / `Retry-After` honored, 24-hour cap.
+- `SourceConfig.parseEnabledIds`: missing/disabled means off; unreadable file means keep last known state.
+
+```powershell
+./gradlew testDebugUnitTest --tests "uk.sume.news.LinkOnlySourcesTest"
+```
+
+JVM tests use the real `org.json` (`testImplementation("org.json:json:20231013")`) because `android.jar` only provides non-functional stubs. Not covered by automated tests: the network fetch path, the purge on withdrawal, and the Detail screen behavior (these need manual verification on a device).
+
+**Known failing test:** `BackupHelperTest.testSerializationDeserialization` fails at `BackupHelperTest.kt:114` (`is_ai_enabled` read back as `false`) when run with the real `org.json`. Before `org.json` was added to the test classpath it could not run at all on the stubbed `JSONObject`. Whether it passed in any earlier setup is `Unknown / Requires Confirmation`.

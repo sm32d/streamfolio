@@ -25,7 +25,10 @@ object DefaultFeedsConfig {
             ),
             "Technology" to listOf(
                 "https://techcrunch.com/feed/",
-                "https://www.theverge.com/rss/index.xml"
+                "https://www.theverge.com/rss/index.xml",
+                // Link-only source (headline + link + short description). Fetched only while the
+                // remote source list enables it; see LinkOnlySources / docs/14.
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Science" to listOf(
                 "https://www.sciencedaily.com/rss/all.xml",
@@ -58,7 +61,8 @@ object DefaultFeedsConfig {
             ),
             "Technology" to listOf(
                 "https://feeds.bbci.co.uk/news/technology/rss.xml",
-                "https://www.techradar.com/rss"
+                "https://www.techradar.com/rss",
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Science" to listOf(
                 "https://www.newscientist.com/feed/",
@@ -92,7 +96,8 @@ object DefaultFeedsConfig {
                 "https://www.businesstimes.com.sg/rss.xml"
             ),
             "Technology" to listOf(
-                "https://www.techinasia.com/feed"
+                "https://www.techinasia.com/feed",
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Science" to listOf(
                 "https://www.sciencedaily.com/rss/all.xml"
@@ -126,7 +131,8 @@ object DefaultFeedsConfig {
             ),
             "Technology" to listOf(
                 "https://feeds.feedburner.com/gadgets360-latest",
-                "https://feeds.feedburner.com/ndtvnews-latest"
+                "https://feeds.feedburner.com/ndtvnews-latest",
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Science" to listOf(
                 "https://www.thehindu.com/sci-tech/feeder/default.rss"
@@ -148,7 +154,8 @@ object DefaultFeedsConfig {
                 "https://www.cbc.ca/webfeed/rss/rss-business"
             ),
             "Technology" to listOf(
-                "https://www.cbc.ca/webfeed/rss/rss-technology"
+                "https://www.cbc.ca/webfeed/rss/rss-technology",
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Science" to listOf(
                 "https://www.cbc.ca/webfeed/rss/rss-technology"
@@ -177,7 +184,8 @@ object DefaultFeedsConfig {
                 "https://www.smh.com.au/rss/business.xml"
             ),
             "Technology" to listOf(
-                "https://www.smh.com.au/rss/technology.xml"
+                "https://www.smh.com.au/rss/technology.xml",
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Science" to listOf(
                 "https://www.abc.net.au/news/feed/51120/rss.xml"
@@ -262,7 +270,8 @@ object DefaultFeedsConfig {
             ),
             "Technology" to listOf(
                 "https://www.scmp.com/rss/36/feed",
-                "https://fintechnews.hk/feed/"
+                "https://fintechnews.hk/feed/",
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             ),
             "Sports" to listOf(
                 "https://www.scmp.com/rss/95/feed",
@@ -286,12 +295,18 @@ object DefaultFeedsConfig {
             ),
             "Sports" to listOf(
                 "https://en.yna.co.kr/RSS/sports.xml"
+            ),
+            "Technology" to listOf(
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             )
         ),
         "JP" to mapOf(
             "Top Stories" to listOf(
                 "https://www.nhk.or.jp/rss/news/cat0.xml",
                 "https://www.japantimes.co.jp/feed/"
+            ),
+            "Technology" to listOf(
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             )
         ),
         "BR" to mapOf(
@@ -303,11 +318,17 @@ object DefaultFeedsConfig {
             "Top Stories" to listOf(
                 "https://www.dailymaverick.co.za/rss/",
                 "https://www.iol.co.za/rss"
+            ),
+            "Technology" to listOf(
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             )
         ),
         "AE" to mapOf(
             "Top Stories" to listOf(
                 "https://www.arabnews.com/rss.xml"
+            ),
+            "Technology" to listOf(
+                LinkOnlySources.JOHO_TODAI_EN_FEED
             )
         )
     )
@@ -352,6 +373,7 @@ object DefaultFeedsConfig {
             url.contains("bbc.co.uk") || url.contains("bbc.com") || url.contains("bbci.co.uk") -> "BBC News"
             url.contains("theguardian.com") -> "The Guardian"
             url.contains("cnbc.com") -> "CNBC"
+            url.contains("joho-todai.com") -> "Joho no Todai"
             url.contains("techcrunch.com") -> "TechCrunch"
             url.contains("theverge.com") -> "The Verge"
             url.contains("sciencedaily.com") -> "ScienceDaily"

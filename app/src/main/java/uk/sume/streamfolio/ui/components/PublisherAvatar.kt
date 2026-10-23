@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
+import uk.sume.streamfolio.data.network.LinkOnlySources
 
 @Composable
 fun PublisherAvatar(
@@ -29,7 +30,12 @@ fun PublisherAvatar(
     modifier: Modifier = Modifier
 ) {
     val initial = sourceName.trim().take(1).uppercase().ifEmpty { "N" }
+    // Link-only sources show a plain letter initial: no images are loaded for them.
+    val isLinkOnly = LinkOnlySources.isLinkOnlyUrl(url) ||
+        LinkOnlySources.isLinkOnlyUrl(logoUrl) ||
+        LinkOnlySources.all.any { it.displayName.equals(sourceName.trim(), ignoreCase = true) }
     val effectiveLogoUrl = when {
+        isLinkOnly -> null
         !logoUrl.isNullOrBlank() -> logoUrl
         !url.isNullOrBlank() || sourceName.isNotBlank() -> {
             val domain = extractPublisherDomain(sourceName, url ?: "")
@@ -59,12 +65,18 @@ fun PublisherAvatar(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
                 error = {
-                    Text(
-                        text = initial,
-                        fontSize = (size.value * 0.42f).sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    // The error slot is laid out top-start by default, so centre the initial explicitly.
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = initial,
+                            fontSize = (size.value * 0.42f).sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             )
         } else {

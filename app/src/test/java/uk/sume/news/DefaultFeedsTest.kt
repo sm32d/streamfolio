@@ -5,6 +5,7 @@ import okhttp3.Request
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
+import uk.sume.streamfolio.data.network.LinkOnlySources
 import uk.sume.streamfolio.data.network.RssParser
 import java.net.URI
 import java.util.concurrent.TimeUnit
@@ -46,11 +47,16 @@ class DefaultFeedsTest {
 
     private fun isKnownFlaky(url: String): Boolean = knownFlakyFeeds.any { url.contains(it) }
 
+    // Link-only publishers are only fetched by the app under its agreed per-device limit, so the live
+    // network tests skip them (the publisher-mapping test below still covers them offline).
+    private fun liveTestProviders() =
+        DefaultFeedsConfig.getAllCuratedProviders().filter { !LinkOnlySources.isLinkOnlyUrl(it.url) }
+
     @Test
     fun allDefaultFeedsShouldReturnArticles() {
         val results = mutableListOf<FeedResult>()
 
-        val providers = DefaultFeedsConfig.getAllCuratedProviders()
+        val providers = liveTestProviders()
         for (provider in providers) {
             val result = testFeed(provider.region, provider.category, provider.url)
             results.add(result)
@@ -94,7 +100,7 @@ class DefaultFeedsTest {
     fun noFeedShouldRedirectToCleartextHttp() {
         val cleartextRedirects = mutableListOf<FeedResult>()
 
-        val providers = DefaultFeedsConfig.getAllCuratedProviders()
+        val providers = liveTestProviders()
         for (provider in providers) {
             try {
                 val request = Request.Builder()
@@ -142,7 +148,7 @@ class DefaultFeedsTest {
     fun noFeedShouldBeEmpty() {
         val emptyFeeds = mutableListOf<FeedResult>()
 
-        val providers = DefaultFeedsConfig.getAllCuratedProviders()
+        val providers = liveTestProviders()
         for (provider in providers) {
             val result = testFeed(provider.region, provider.category, provider.url)
             if (result.status == "EMPTY") {

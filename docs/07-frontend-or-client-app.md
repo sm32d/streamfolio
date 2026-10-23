@@ -76,6 +76,8 @@ graph TD
 - **Dual Reading Modes:**
   - **Clean Reader Mode:** Distraction-free text view rendered using Jsoup extracted HTML, customizable font family (`sans_serif`/`serif`), font size slider (12sp–30sp), and line height.
   - **Embedded Web Mode:** Full webview for rich media or interactive paywalled articles.
+  - **Web Mode load failures:** the raw WebView error text (e.g. `net::ERR_ADDRESS_UNREACHABLE`) is never shown. A friendly state appears instead: "You're offline" (device has no network, per `NetworkMonitor`) or "Couldn't load this page" (online but the page failed), with a **Try again** button. The page reloads automatically when connectivity returns. Because WebView only reports fast network failures, a page that has made no progress (below 15%) after 20 seconds is also shown as failed (covers a VPN or network that accepts connections but passes no traffic). The web area uses `weight(1f)` + `clipToBounds()` so it stays below the header.
+  - **Link-only sources** (e.g. Joho no Todai): the Reader/Web tab switcher is hidden and the screen opens directly in Web Mode; Listen, queue, AI summary and Translate are unavailable (see [ADR-006](file:///d:/News/docs/14-decisions-and-known-limitations.md)).
 - **On-Device AI Summary:** Triggers Gemini Nano inference, displaying bulleted key takeaways in an interactive sheet.
 - **ML Kit Translation:** Translates headline and body in real-time, displaying source and target language badges.
 - **Audio Toolbar:** Immediate launch of TTS speech engine for current article text.
@@ -123,7 +125,7 @@ graph TD
 | **`GlassmorphicNavBar`** | [GlassmorphicNavBar.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/components/GlassmorphicNavBar.kt) | Floating blurred navigation pill with icon morphing and active tab indicator. |
 | **`TtsMiniPlayer`** | [TtsMiniPlayer.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/components/TtsMiniPlayer.kt) | Floating audio player bar with scrub progress, speed picker (0.5x–3.0x), and sleep timer. |
 | **`TtsLyricsVisualizer`** | [TtsMiniPlayer.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/components/TtsMiniPlayer.kt#L550) | Full-screen Apple Music-style lyrics visualizer with real-time sentence/paragraph highlighting. |
-| **`PublisherAvatar`** | [PublisherAvatar.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/components/PublisherAvatar.kt) | Publisher fallback badge rendering 2-letter initials with deterministic palette hashing. |
+| **`PublisherAvatar`** | [PublisherAvatar.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/components/PublisherAvatar.kt) | Publisher fallback badge rendering 2-letter initials with deterministic palette hashing. The initial is centred both when no logo exists and when a logo fails to load. Link-only sources always show the initial (no favicon request). |
 | **`BookmarkToastBanner`** | [BookmarkToastBanner.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/components/BookmarkToastBanner.kt) | Animated bottom banner with "Undo" action dispatching `ToastEvent`. |
 
 ---

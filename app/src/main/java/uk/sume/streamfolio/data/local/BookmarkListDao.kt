@@ -30,6 +30,10 @@ interface BookmarkListDao {
     @Query("DELETE FROM article_bookmark_lists WHERE articleLink = :articleLink")
     suspend fun deleteAllCrossRefsForArticle(articleLink: String)
 
+    /** Removes list associations for every article link matching [pattern]. Used when a source is withdrawn. */
+    @Query("DELETE FROM article_bookmark_lists WHERE articleLink LIKE :pattern")
+    suspend fun deleteCrossRefsMatching(pattern: String)
+
     @Query("SELECT listId FROM article_bookmark_lists WHERE articleLink = :articleLink")
     fun getListIdsForArticle(articleLink: String): Flow<List<Long>>
 

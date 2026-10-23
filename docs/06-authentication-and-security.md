@@ -94,6 +94,12 @@ graph TD
   - String fields are bounded with `.take(N)` (`title.take(500)`, `fullText.take(50_000)`, `aiSummary.take(10_000)`).
   - Numeric ranges (e.g. `cacheHistoryDays in 1..36500`, `readerFontSize in 12f..30f`) are validated before applying to `PreferencesHelper`.
 
+- **Link-only exclusion:** articles from link-only sources are neither exported nor restored, so a backup cannot bring back data after a publisher withdraws a source.
+
+### 4a. Remote Source List Trust
+- The remote source list is public static JSON fetched over HTTPS from the project repository. Anyone who can push to that branch can enable or withdraw link-only sources on installed apps. It carries no secrets and can only toggle sources the app already knows (`LinkOnlySources.all`); unknown ids are ignored. It is parsed defensively (`SourceConfig.parseEnabledIds`): invalid content keeps the last known state.
+- Link-only feed requests identify themselves honestly (`StreamFolio/<version> ...` User-Agent) instead of the browser User-Agent used for other feeds.
+
 ### 5. Sensitive Data & Logcat Redaction
 - Log statements in [NewsRepository.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/data/network/NewsRepository.kt#L64-L66) use `safeHost(url)`, redacting query parameters, auth tokens, and URL paths, logging only the scheme and hostname.
 

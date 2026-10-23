@@ -70,3 +70,14 @@ The `landing/` directory can be deployed directly to any static web host:
 # Example: Deploying to GitHub Pages or Netlify
 # Point the document root to d:/News/landing
 ```
+
+---
+
+## 5. Link-Only Source Operations (Joho no Todai)
+
+Source list file: [source-config/sources.json](file:///d:/News/source-config/sources.json), served to installed apps from `https://raw.githubusercontent.com/sm32d/streamfolio/master/source-config/sources.json` (requires a public repository; status `Unknown / Requires Confirmation`).
+
+- **Enable:** set `"joho-todai-en": { "enabled": true }`, commit and push to `master`. Installed apps pick it up on their next refresh (list cached up to 1 hour, plus a few minutes at `raw.githubusercontent.com`). The shipped value is `false`.
+- **Withdraw (publisher request):** set `enabled` to `false` (or remove the entry), commit and push. On each device's next refresh with a connection it stops fetching the feed and deletes the cached articles, bookmark-list associations and throttle state from that source. Keep the commit as the record of when withdrawal took effect, and notify the publisher.
+- **Do not** rename the repository, the `master` branch or the file path without shipping an app update first; installs would stop seeing changes.
+- **Before the first enable:** confirm with the publisher that the version of the app they were promised (link-only handling, 30-minute per-device limit, conditional requests, User-Agent, withdrawal) is the one released.

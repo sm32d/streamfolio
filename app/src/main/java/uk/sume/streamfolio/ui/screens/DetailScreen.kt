@@ -2,7 +2,9 @@ package uk.sume.streamfolio.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import kotlinx.coroutines.delay
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
@@ -40,6 +42,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import uk.sume.streamfolio.data.network.LinkOnlySources
+import uk.sume.streamfolio.util.NetworkMonitor
+import androidx.compose.ui.draw.clipToBounds
 import uk.sume.streamfolio.ui.components.PublisherAvatar
 import uk.sume.streamfolio.ui.components.SaveToListBottomSheet
 import androidx.compose.ui.platform.LocalContext
@@ -107,7 +112,10 @@ fun DetailScreen(
     val isDark = isSystemInDarkTheme()
     val bgBrush = getThemeBackgroundBrush()
 
-    var currentTab by remember { mutableStateOf("Reader") } // "Reader" or "Web"
+    // Link-only sources (headline + link): no Reader, audio, summary or translation. The original
+    // page is shown in the Web View instead.
+    val isLinkOnly = remember(url) { LinkOnlySources.isLinkOnlyUrl(url) }
+    var currentTab by remember(url) { mutableStateOf(if (isLinkOnly) "Web" else "Reader") } // "Reader" or "Web"
     
 
 
@@ -174,8 +182,8 @@ fun DetailScreen(
                     )
                 }
                 
-                // Reader / Web Switcher Tabs (Center aligned)
-                Row(
+                // Reader / Web Switcher Tabs (Center aligned). Hidden for link-only sources.
+                if (!isLinkOnly) Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -1147,22 +1155,90 @@ fun DetailScreen(
                 val secureUrl = remember(url) {
                     UrlSecurityValidator.normalizeToHttps(url) ?: url
                 }
-                Box(modifier = Modifier.fillMaxSize()) {
+                val isOnline by NetworkMonitor.observe(context).collectAsState(initial = NetworkMonitor.isOnline(context))
+                // Bumping this key recreates the WebView, which reloads the page.
+                var reloadKey by remember { mutableStateOf(0) }
+                // 0..100 from WebChromeClient; used to detect a page that never starts arriving.
+                var webProgress by remember { mutableStateOf(0) }
+                val retryLoad = {
+                    webViewError = null
+                    isWebViewLoading = true
+                    webProgress = 0
+                    reloadKey++
+                }
+                // WebView only reports an error when the network fails fast. With no real connection
+                // behind a VPN, or a black-holed network, requests just hang and no error ever fires
+                // (a spinner forever). If nothing has arrived after 20 s, show the failure state.
+                LaunchedEffect(reloadKey) {
+                    delay(20_000)
+                    if (webViewError == null && webProgress < 15) {
+                        webViewError = "load_timeout"
+                        isWebViewLoading = false
+                    }
+                }
+                // Reload automatically when the connection comes back after a failed load.
+                LaunchedEffect(isOnline) {
+                    if (isOnline && webViewError != null) retryLoad()
+                }
+                // weight(1f) + clipToBounds keep the page strictly below the header: the WebView is
+                // given exactly the space left under it and can never paint over the top bar.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .clipToBounds()
+                ) {
                     if (webViewError != null) {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(horizontal = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isOnline) Icons.Default.CloudOff else Icons.Default.WifiOff,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
                             Text(
-                                text = webViewError ?: "",
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                fontSize = 14.sp
+                                text = if (isOnline) "Couldn't load this page" else "You're offline",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center
                             )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = if (isOnline) {
+                                    "The site may be slow or unavailable, or your connection (or VPN) isn't passing traffic. Check it and try again."
+                                } else {
+                                    "Connect to the internet to read this article on the publisher's website. It will load automatically once you're back online."
+                                },
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                retryLoad()
+                            }) {
+                                Text("Try again")
+                            }
                         }
-                    } else {
+                    } else key(reloadKey) {
                         AndroidView(
                             factory = { ctx ->
                                 WebView(ctx).apply {
@@ -1184,7 +1260,8 @@ fun DetailScreen(
                                         ) {
                                             super.onReceivedError(view, errorCode, description, failingUrl)
                                             isWebViewLoading = false
-                                            webViewError = description ?: "Unable to load this article."
+                                            // The raw error text (e.g. net::ERR_...) is not shown to readers.
+                                            webViewError = description ?: "load_failed"
                                         }
 
                                         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -1196,6 +1273,11 @@ fun DetailScreen(
                                             }
                                             // Let the WebView handle http/https navigation normally
                                             return false
+                                        }
+                                    }
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                            webProgress = newProgress
                                         }
                                     }
                                     settings.javaScriptEnabled = true
@@ -1310,7 +1392,7 @@ fun DetailScreen(
                         )
                     }
 
-                    val showTranslateOption = isAiEnabled && isTranslationEnabled && (articleLanguage == null || articleLanguage != targetLang)
+                    val showTranslateOption = !isLinkOnly && isAiEnabled && isTranslationEnabled && (articleLanguage == null || articleLanguage != targetLang)
                     if (showTranslateOption) {
                         val isTranslated = translatedTitle.isNotEmpty()
                         Row(

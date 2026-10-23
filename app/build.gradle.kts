@@ -21,13 +21,18 @@ android {
         applicationId = "uk.sume.streamfolio"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.3.2"
+        versionCode = 24
+        versionName = "1.3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
+        debug {
+            // Installs next to the Play/release build (which is signed with a different key).
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -92,6 +97,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation("xmlpull:xmlpull:1.1.3.4a")
     testImplementation("xpp3:xpp3:1.1.4c")
+    // Real org.json for JVM unit tests (android.jar only ships non-functional stubs).
+    testImplementation("org.json:json:20231013")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))

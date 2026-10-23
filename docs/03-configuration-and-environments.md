@@ -77,6 +77,21 @@ All user preferences and operational toggles are persisted in private SharedPref
 | `bookmark_list_view_mode_is_grid` | `Boolean` | `true` | `true`, `false` | View layout toggle for Bookmark Collections (Grid vs List). |
 | `recent_searches` | `String` (Delimited) | `""` | Pipe-delimited string (`|||`) | Last 10 search queries persisted for search screen history. |
 
+### 4.1 Link-Only Source State (`link_only_state` SharedPreferences) and Remote List
+
+Kept in a separate private SharedPreferences file, `link_only_state`, managed by `LinkOnlyStateStore` in [LinkOnlyState.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/data/network/LinkOnlyState.kt). Not included in backups.
+
+| Key | Type | Default | Purpose |
+| :--- | :--- | :--- | :--- |
+| `enabled_ids` | `Set<String>` | empty | Source ids the remote list currently enables (`joho-todai-en`). Empty means every link-only source is off. |
+| `config_checked_at` | `Long` (ms) | `0` | Last successful download of the remote list; re-checked after 1 hour. |
+| `next_fetch:<feedUrl>` | `Long` (ms) | `0` | Earliest time this device may fetch the feed again. |
+| `etag:<feedUrl>`, `last_modified:<feedUrl>` | `String` | none | Validators for conditional requests. |
+
+The remote list itself is [source-config/sources.json](file:///d:/News/source-config/sources.json) in this repository (format and behavior: [04](file:///d:/News/docs/04-api-documentation.md), operations: [11](file:///d:/News/docs/11-deployment-and-operations.md)). No secrets are involved.
+
+**Debug builds** use `applicationIdSuffix ".debug"` (`uk.sume.streamfolio.debug`) so they install next to the Play/release build, which is signed with a different key.
+
 ---
 
 ## 5. Network Security Configuration (`network_security_config.xml`)

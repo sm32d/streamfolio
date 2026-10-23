@@ -10,6 +10,7 @@ import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.ArticleBookmarkListCrossRef
 import uk.sume.streamfolio.data.model.BookmarkList
 import uk.sume.streamfolio.data.model.CustomFeed
+import uk.sume.streamfolio.data.network.LinkOnlySources
 
 object BackupHelper {
 
@@ -65,7 +66,9 @@ object BackupHelper {
         backupObj.put("custom_feeds", feedsArr)
 
         val articlesArr = JSONArray()
-        for (article in articles) {
+        // Link-only sources (headline + link publishers) are never exported: their data stays in the
+        // device cache only and must not be restorable after the publisher withdraws the source.
+        for (article in articles.filter { !LinkOnlySources.isLinkOnlyArticle(it) }) {
             val articleObj = JSONObject().apply {
                 put("link", article.link)
                 put("title", article.title)
@@ -103,7 +106,7 @@ object BackupHelper {
         backupObj.put("bookmark_lists", listsArr)
 
         val crossRefsArr = JSONArray()
-        for (ref in crossRefs) {
+        for (ref in crossRefs.filter { !LinkOnlySources.isLinkOnlyUrl(it.articleLink) }) {
             val refObj = JSONObject().apply {
                 put("articleLink", ref.articleLink)
                 put("listId", ref.listId)
@@ -164,6 +167,7 @@ object BackupHelper {
                     Log.w("StreamFolioBackup", "Skipping unsafe article URL from backup: ${UrlSecurityValidator.normalizeUrl(rawLink)?.toHttpUrlOrNull()?.host ?: "[invalid]"}")
                     continue
                 }
+                if (LinkOnlySources.isLinkOnlyUrl(safeLink)) continue
                 restoredArticles.add(
                     Article(
                         link = safeLink,
@@ -212,7 +216,7 @@ object BackupHelper {
                 val refObj = crossRefsArr.getJSONObject(i)
                 val rawLink = refObj.getString("articleLink")
                 val safeLink = UrlSecurityValidator.sanitizeUrl(rawLink, requireHttps = false)
-                if (safeLink != null) {
+                if (safeLink != null && !LinkOnlySources.isLinkOnlyUrl(safeLink)) {
                     restoredCrossRefs.add(
                         ArticleBookmarkListCrossRef(
                             articleLink = safeLink,

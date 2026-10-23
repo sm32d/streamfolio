@@ -12,6 +12,7 @@ import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.CustomFeed
 import uk.sume.streamfolio.data.network.NewsRepository
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
+import uk.sume.streamfolio.data.network.LinkOnlySources
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -167,9 +168,22 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     val ttsArticleBody: StateFlow<String> = playbackManager.articleBody
     val isTtsLoadingBody: StateFlow<Boolean> = playbackManager.isLoadingBody
 
-    fun addToTtsPlaylist(article: Article) = playbackManager.addToTtsPlaylist(article)
+    /** Headline-and-link sources: no audio, summaries or translation. Returns true if [article] is one (and tells the user). */
+    private fun rejectLinkOnlyFeature(article: Article?): Boolean {
+        if (article == null || !LinkOnlySources.isLinkOnlyArticle(article)) return false
+        showInfoToast("Not available for ${article.sourceName}. Open the original article to read it.")
+        return true
+    }
 
-    fun playNextInTtsPlaylist(article: Article) = playbackManager.playNextInTtsPlaylist(article)
+    fun addToTtsPlaylist(article: Article) {
+        if (rejectLinkOnlyFeature(article)) return
+        playbackManager.addToTtsPlaylist(article)
+    }
+
+    fun playNextInTtsPlaylist(article: Article) {
+        if (rejectLinkOnlyFeature(article)) return
+        playbackManager.playNextInTtsPlaylist(article)
+    }
 
     fun removeFromTtsPlaylist(article: Article) = playbackManager.removeFromTtsPlaylist(article)
 
@@ -672,6 +686,25 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
                 _currentArticleDetail.value = cachedArticle.copy(isRead = true)
             }
 
+            // Link-only sources: never fetch, scrape, store or process the article. The detail
+            // screen shows the original page in its Web View instead.
+            LinkOnlySources.forUrl(url)?.let { source ->
+                if (cachedArticle == null) {
+                    _currentArticleDetail.value = Article(
+                        link = url,
+                        title = source.displayName,
+                        description = "",
+                        pubDate = "",
+                        sourceName = source.displayName,
+                        sourceUrl = url,
+                        category = "NEWS"
+                    )
+                }
+                _articleBody.value = ""
+                _isLoadingBody.value = false
+                return@launch
+            }
+
             if (cachedArticle != null && cachedArticle.fullText != null) {
                 _articleBody.value = cachedArticle.fullText
                 _isLoadingBody.value = false
@@ -778,6 +811,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun speakArticle(article: Article) {
+        if (rejectLinkOnlyFeature(article)) return
         playbackManager.speakArticle(article)
     }
 
@@ -1047,6 +1081,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun translateArticleText(title: String, body: String) {
+        if (rejectLinkOnlyFeature(_currentArticleDetail.value)) return
         _isTranslationLoading.value = true
         _translationError.value = null
         viewModelScope.launch {
@@ -1132,6 +1167,7 @@ class NewsViewModel(application: Application) : AndroidViewModel(application) {
 
 
     fun generateAiSummary(text: String) {
+        if (rejectLinkOnlyFeature(_currentArticleDetail.value)) return
         if (text.isBlank()) {
             _aiSummaryState.value = AiSummaryState.Error("Article content is empty or unavailable.")
             return

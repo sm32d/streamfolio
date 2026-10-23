@@ -166,5 +166,6 @@ Room migrations are configured in [Migrations.kt](file:///d:/News/app/src/main/j
    - Periodic worker and feed refreshes call `pruneOldArticles(expiryDate)`:
    - Deletes unbookmarked articles older than `cacheHistoryDays` (configurable in settings, default ~100 years).
    - Articles marked `isBookmarked = 1` or referenced in `article_bookmark_lists` are **never pruned**.
-3. **Transaction Safety:**
+3. **Link-only sources (no schema change):** articles from hosts in `LinkOnlySources` are stored with `thumbnailUrl`, `fullText`, `aiSummary`, `translated*` always `NULL` and a `description` of at most 500 characters. They are identified by host (`link` / `sourceUrl`), not by a column. When a source is withdrawn, `ArticleDao.deleteArticlesMatching()` and `BookmarkListDao.deleteCrossRefsMatching()` delete every matching article (bookmarked or not) and its list associations. They are excluded from backup export and skipped on restore. See [ADR-006](file:///d:/News/docs/14-decisions-and-known-limitations.md).
+4. **Transaction Safety:**
    - Bookmark list deletions provide optional migration of associated articles into the default `"Saved"` collection (`reassignListArticles()`).

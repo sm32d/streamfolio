@@ -117,14 +117,15 @@ The repository includes a PowerShell automation script to synchronize version co
 
 ### Installing via ADB (Command Line)
 ```powershell
-# Build and install debug APK directly onto the active device
+# Build and install the debug APK onto the active device. Debug builds use the package
+# uk.sume.streamfolio.debug, so they install next to (not over) the Play/release app.
 ./gradlew installDebug
 
 # Alternatively install an existing APK via ADB
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 # Launch MainActivity directly via ADB
-adb shell am start -n uk.sume.streamfolio/.MainActivity
+adb shell am start -n uk.sume.streamfolio.debug/uk.sume.streamfolio.MainActivity
 ```
 
 ---

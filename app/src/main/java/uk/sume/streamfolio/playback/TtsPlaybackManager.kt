@@ -19,6 +19,7 @@ import uk.sume.streamfolio.data.local.AppDatabase
 import uk.sume.streamfolio.data.local.PreferencesHelper
 import uk.sume.streamfolio.data.model.Article
 import uk.sume.streamfolio.data.model.TtsPlaylistState
+import uk.sume.streamfolio.data.network.LinkOnlySources
 import uk.sume.streamfolio.data.network.NewsRepository
 import uk.sume.streamfolio.ui.components.TtsHelper
 
@@ -143,6 +144,7 @@ class TtsPlaybackManager private constructor(
     }
 
     fun addToTtsPlaylist(article: Article) {
+        if (LinkOnlySources.isLinkOnlyArticle(article)) return
         val current = _ttsPlaylist.value.toMutableList()
         if (!current.any { it.link == article.link }) {
             current.add(article)
@@ -154,6 +156,7 @@ class TtsPlaybackManager private constructor(
     }
 
     fun playNextInTtsPlaylist(article: Article) {
+        if (LinkOnlySources.isLinkOnlyArticle(article)) return
         val current = _ttsPlaylist.value.toMutableList()
         val existingIndex = current.indexOfFirst { it.link == article.link }
         val activeIndex = _currentTtsArticleIndex.value
@@ -309,6 +312,7 @@ class TtsPlaybackManager private constructor(
     }
 
     fun speakArticle(article: Article) {
+        if (LinkOnlySources.isLinkOnlyArticle(article)) return
         val activeArticle = currentArticle.value
         if (activeArticle?.link == article.link) {
             togglePlayback()

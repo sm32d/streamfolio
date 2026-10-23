@@ -125,6 +125,10 @@ interface ArticleDao {
     @Query("DELETE FROM articles WHERE sourceUrl = :sourceUrl AND isBookmarked = 0")
     suspend fun deleteArticlesBySourceUrl(sourceUrl: String)
 
+    /** Removes every article (bookmarked or not) whose link or feed URL matches [pattern]. Used when a source is withdrawn. */
+    @Query("DELETE FROM articles WHERE link LIKE :pattern OR sourceUrl LIKE :pattern")
+    suspend fun deleteArticlesMatching(pattern: String)
+
     @Query("SELECT * FROM articles WHERE isBookmarked = 1 ORDER BY pubDate DESC LIMIT 50")
     suspend fun getBookmarkedArticlesSync(): List<Article>
 

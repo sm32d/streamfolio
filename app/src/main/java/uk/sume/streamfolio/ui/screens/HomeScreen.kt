@@ -478,13 +478,12 @@ fun HomeScreen(
                                                         .padding(6.dp),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    AsyncImage(
-                                                        model = "https://www.google.com/s2/favicons?sz=64&domain=$domain",
-                                                        contentDescription = name,
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .clip(CircleShape),
-                                                        contentScale = ContentScale.Crop
+                                                    // PublisherAvatar loads the favicon, falls back to a centred
+                                                    // initial, and never requests an icon for link-only sources.
+                                                    PublisherAvatar(
+                                                        sourceName = name,
+                                                        url = "https://$domain",
+                                                        size = 44.dp
                                                     )
                                                 }
                                                 Spacer(modifier = Modifier.height(4.dp))

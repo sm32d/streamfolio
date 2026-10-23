@@ -57,6 +57,7 @@ Comprehensive architectural, operational, security, and developer documentation 
 - 🌍 **On-Device Translation:** Offline headline and body translation powered by Google ML Kit NLP models.
 - 🎧 **Background TTS & Media Controls:** Native Android foreground audio playback with lockscreen controls, variable speeds (0.5x–3.0x), and synchronized lyrics-style visualizer.
 - 📑 **Custom Bookmark Collections:** Create customized bookmark lists with fluid 2-column grid and compact list view modes.
+- 🔗 **Link-Only Publisher Sources:** Some curated sources (e.g. Joho no Todai) are used as headline-and-link only, with a per-device fetch limit, no images/bodies/AI features, and remote withdrawal. See [ADR-006](docs/14-decisions-and-known-limitations.md).
 - 🛡️ **SSRF & Defensive Networking:** Hardened OkHttp client blocking private IP probes, loopback subnets, and DNS-rebinding attacks.
 - 📱 **Home Screen AppWidget:** Glassmorphic widget with configurable category filters and one-tap reading launch.
 - 🔄 **WorkManager Background Sync:** Automated 6-hour background sync ensuring cached feeds are ready for offline reading.

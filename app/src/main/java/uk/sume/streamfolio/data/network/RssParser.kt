@@ -69,6 +69,9 @@ class RssParser {
     fun parse(xmlContent: String, category: String, customFeedId: Int? = null, feedUrl: String? = null, customFeedTitle: String? = null): List<Article> {
         val articles = mutableListOf<Article>()
         var channelTitle = "Unknown Source"
+        // Link-only publishers: use headline, date, link and short description only. Article bodies
+        // (content / content:encoded) and every image field are ignored.
+        val linkOnly = LinkOnlySources.isLinkOnlyUrl(feedUrl)
         try {
             val parser = createParser()
             parser.setInput(StringReader(xmlContent))
@@ -83,6 +86,7 @@ class RssParser {
                         if (name.equals("item", ignoreCase = true) || name.equals("entry", ignoreCase = true)) {
                             currentArticleBuilder = ArticleBuilder().apply {
                                 sourceUrl = feedUrl
+                                this.linkOnly = linkOnly
                             }
                         } else if (currentArticleBuilder != null) {
                             when {
@@ -101,7 +105,17 @@ class RssParser {
                                 name.equals("summary", ignoreCase = true) -> {
                                     currentArticleBuilder.description = parser.nextText()?.trim()
                                 }
-                                name.equals("content", ignoreCase = true) || 
+                                linkOnly && (
+                                    name.equals("content", ignoreCase = true) ||
+                                    name.equals("content:encoded", ignoreCase = true) ||
+                                    name.equals("enclosure", ignoreCase = true) ||
+                                    name.equals("media:content", ignoreCase = true) ||
+                                    name.equals("media:thumbnail", ignoreCase = true) ||
+                                    name.equals("itunes:image", ignoreCase = true)
+                                ) -> {
+                                    // Intentionally ignored for link-only sources.
+                                }
+                                name.equals("content", ignoreCase = true) ||
                                 name.equals("content:encoded", ignoreCase = true) -> {
                                     val url = parser.getAttributeValue(null, "url")
                                     if (url != null) {
@@ -119,7 +133,7 @@ class RssParser {
                                 }
                                 name.equals("source", ignoreCase = true) -> {
                                     val attrUrl = parser.getAttributeValue(null, "url")
-                                    if (!attrUrl.isNullOrBlank()) {
+                                    if (!linkOnly && !attrUrl.isNullOrBlank()) {
                                         currentArticleBuilder.sourceUrl = attrUrl.trim()
                                     }
                                     currentArticleBuilder.sourceName = parser.nextText()?.trim()
@@ -177,6 +191,7 @@ class RssParser {
         var sourceName: String? = null
         var sourceUrl: String? = null
         var thumbnailUrl: String? = null
+        var linkOnly: Boolean = false
 
         private fun cleanPublisherName(rawName: String): String {
             val name = rawName.trim()
@@ -213,7 +228,9 @@ class RssParser {
                 cleanSource = channelFallback
             }
             
-            if (thumbnailUrl.isNullOrBlank()) {
+            if (linkOnly) {
+                thumbnailUrl = null
+            } else if (thumbnailUrl.isNullOrBlank()) {
                 thumbnailUrl = extractFirstImageUrlFromHtml(description.orEmpty(), articleLink)
             }
             
@@ -253,7 +270,10 @@ class RssParser {
             }
 
 
-            val cleanDesc = sanitizeHtml(description)
+            // sanitizeHtml strips all tags, so images embedded in the description are dropped too.
+            val cleanDesc = sanitizeHtml(description).let {
+                if (linkOnly && it.length > LinkOnlySources.MAX_DESCRIPTION_CHARS) it.take(LinkOnlySources.MAX_DESCRIPTION_CHARS) else it
+            }
             val safeTitle = sanitizeHtml(cleanTitle)
 
             return Article(

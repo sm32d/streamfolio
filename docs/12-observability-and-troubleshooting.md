@@ -92,3 +92,22 @@ adb logcat -c
   1. Tap the refresh icon on the top-right of the widget to trigger an immediate broadcast update.
   2. Remove and re-add the widget to the home screen.
   3. Open `WidgetConfigureActivity` to ensure the selected category or feed list contains cached articles.
+
+### Runbook 5: Link-Only Source (Joho no Todai) Does Not Appear
+- **Symptoms:** No *Joho no Todai* headlines in Technology; the source is missing from **Settings > Manage Content > Providers**.
+- **Likely Causes:**
+  1. The remote source list has the source missing or `enabled: false` (the shipped default), or has never been downloaded (device offline, repository not public, file not on `master`). Link-only sources are off until a list enabling them has been downloaded.
+  2. The per-device 30-minute limit, a server back-off (`429`/`503`) or a `404`/`410` back-off is active (see [04](file:///d:/News/docs/04-api-documentation.md)).
+- **Diagnostic Steps:**
+  ```powershell
+  adb logcat -d -s NewsRepository:W NewsRepository:E
+  adb shell run-as uk.sume.streamfolio.debug cat shared_prefs/link_only_state.xml   # debug build only
+  ```
+  Check `https://raw.githubusercontent.com/sm32d/streamfolio/master/source-config/sources.json` opens in a browser.
+- **Remediation:** Publish the file with `"joho-todai-en": { "enabled": true }` (see [11](file:///d:/News/docs/11-deployment-and-operations.md)); wait for the next refresh (up to 1 hour for the list, then the feed limit).
+
+### Runbook 6: Crash `NullPointerException: Parameter specified as non-null is null: method ...Article.<init>, parameter link`
+- **Observed:** Once, on release 1.3.2 (versionCode 23) on a physical device, 2026-10-23. Decoded with `app/build/outputs/mapping/release/mapping.txt` (same `pg_map_id`): `CoroutinesRoom.createFlow` → `ArticleDao_Impl.getArticlesByCategory` (`SELECT * FROM articles WHERE category = ?`) read a row whose `link` was `NULL`, although the schema declares `link TEXT NOT NULL`.
+- **Root cause:** `Unknown / Requires Confirmation`. The database of the affected install was not inspected (release builds are not debuggable). Only one crash was in the device log.
+- **Mitigation shipped:** Room-backed article Flows in `NewsRepository` (`resilientQuery`) now retry twice, log `Room query '<name>' failed`, then fall back to an empty list instead of crashing the process.
+- **If it recurs:** capture `adb logcat -d -s NewsRepository:E`; a repeated log line means a persistent bad row — consider a migration that deletes `articles` rows with `link IS NULL OR link = ''`.

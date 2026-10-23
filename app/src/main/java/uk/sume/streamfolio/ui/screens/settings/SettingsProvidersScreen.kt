@@ -21,12 +21,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import uk.sume.streamfolio.data.network.CuratedProvider
 import uk.sume.streamfolio.data.network.DefaultFeedsConfig
+import uk.sume.streamfolio.data.network.LinkOnlyStateStore
 import uk.sume.streamfolio.ui.components.HapticSwitch
 import uk.sume.streamfolio.ui.components.PublisherAvatar
 import uk.sume.streamfolio.ui.components.RegionUtils
@@ -37,7 +39,12 @@ import uk.sume.streamfolio.ui.viewmodel.NewsViewModel
 @Composable
 fun SettingsProvidersScreen(navController: NavController, viewModel: NewsViewModel) {
     val bgBrush = getThemeBackgroundBrush()
-    val allProviders = remember { DefaultFeedsConfig.getAllCuratedProviders() }
+    val appContext = LocalContext.current
+    // Link-only providers are listed only while the remote source list enables them.
+    val allProviders = remember {
+        val linkOnlyState = LinkOnlyStateStore(appContext)
+        DefaultFeedsConfig.getAllCuratedProviders().filter { linkOnlyState.isUrlAllowed(it.url) }
+    }
     val groupedProviders = remember(allProviders) {
         allProviders.groupBy { it.region }
     }
