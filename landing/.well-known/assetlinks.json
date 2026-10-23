@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "uk.sume.streamfolio",
+      "sha256_cert_fingerprints": [
+        "EB:66:B2:86:4E:50:AC:1F:B6:CF:02:86:BF:E8:B1:B6:7F:0A:79:23:8A:A2:22:05:3D:02:C3:DB:4E:2C:24:28",
+        "C2:C5:6D:19:26:E6:00:87:D4:C2:1D:CE:1A:DF:89:D7:6F:C0:85:F5:DF:41:C1:CC:A3:E7:95:88:81:0B:F0:33"
+      ]
+    }
+  }
+]

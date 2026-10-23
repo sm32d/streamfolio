@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open article — StreamFolio</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .open-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .open-card { max-width: 440px; width: 100%; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 32px 24px; box-shadow: var(--shadow-md); }
+        .open-card img { width: 64px; height: 64px; border-radius: 16px; }
+        .open-card h1 { font-family: var(--font-outfit); font-size: 1.5rem; margin: 16px 0 8px; }
+        .open-card p { color: var(--text-muted); margin: 0 0 24px; font-size: 0.95rem; }
+        .open-actions { display: flex; flex-direction: column; gap: 12px; }
+        .open-actions a { display: block; padding: 14px 16px; border-radius: var(--radius-sm); font-weight: 600; text-decoration: none; }
+        .open-secondary { color: var(--text-main); border: 1px solid var(--border-color); }
+        .open-secondary:hover { border-color: var(--border-hover); }
+        .open-hidden { display: none !important; }
+        .open-host { word-break: break-all; font-size: 0.8rem; color: var(--text-subtle); margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <main class="open-wrap">
+        <div class="open-card">
+            <img src="logo.png" alt="StreamFolio logo">
+            <h1>Read this article</h1>
+            <p id="open-msg">Open it in StreamFolio, or read it in your browser.</p>
+            <div class="open-actions">
+                <a id="open-app" class="btn-primary open-hidden" href="#">Open in StreamFolio</a>
+                <a id="open-install" class="btn-primary" href="https://play.google.com/store/apps/details?id=uk.sume.streamfolio" rel="noopener">Download StreamFolio</a>
+                <a id="open-browser" class="open-secondary open-hidden" href="#" rel="noopener noreferrer">Open in browser</a>
+            </div>
+            <div id="open-host" class="open-host"></div>
+        </div>
+    </main>
+    <script>
+        (function () {
+            var PLAY = 'https://play.google.com/store/apps/details?id=uk.sume.streamfolio';
+            var raw = new URLSearchParams(window.location.search).get('url');
+            var target = null;
+            try {
+                var u = new URL(raw);
+                if (u.protocol === 'https:' || u.protocol === 'http:') target = u;
+            } catch (e) { /* invalid or missing */ }
+
+            if (!target) {
+                document.getElementById('open-msg').textContent = 'This link is missing its article address.';
+                return;
+            }
+
+            var browserBtn = document.getElementById('open-browser');
+            browserBtn.href = target.href;
+            browserBtn.classList.remove('open-hidden');
+            document.getElementById('open-host').textContent = target.hostname;
+
+            // Android only: this page is reached when the app isn't set to open the link itself,
+            // so launch the app explicitly by package, falling back to the Play Store.
+            if (/Android/i.test(navigator.userAgent)) {
+                var here = window.location;
+                var intentUrl = 'intent://' + here.host + here.pathname + here.search +
+                    '#Intent;scheme=https;package=uk.sume.streamfolio;' +
+                    'S.browser_fallback_url=' + encodeURIComponent(PLAY) + ';end';
+                var appBtn = document.getElementById('open-app');
+                appBtn.href = intentUrl;
+                appBtn.classList.remove('open-hidden');
+                document.getElementById('open-install').classList.remove('btn-primary');
+                document.getElementById('open-install').classList.add('open-secondary');
+            }
+        })();
+    </script>
+</body>
+</html>
