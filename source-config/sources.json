@@ -1,6 +1,6 @@
 {
   "version": 1,
   "sources": {
-    "joho-todai-en": { "enabled": false }
+    "joho-todai-en": { "enabled": true }
   }
 }

@@ -96,7 +96,7 @@ adb logcat -c
 ### Runbook 5: Link-Only Source (Joho no Todai) Does Not Appear
 - **Symptoms:** No *Joho no Todai* headlines in Technology; the source is missing from **Settings > Manage Content > Providers**.
 - **Likely Causes:**
-  1. The remote source list has the source missing or `enabled: false` (the shipped default), or has never been downloaded (device offline, repository not public, file not on `master`). Link-only sources are off until a list enabling them has been downloaded.
+  1. The remote source list has the source missing or `enabled: false`, or has never been downloaded (device offline, repository not public, file not on `master`). Link-only sources are off until a list enabling them has been downloaded.
   2. The per-device 30-minute limit, a server back-off (`429`/`503`) or a `404`/`410` back-off is active (see [04](file:///d:/News/docs/04-api-documentation.md)).
 - **Diagnostic Steps:**
   ```powershell

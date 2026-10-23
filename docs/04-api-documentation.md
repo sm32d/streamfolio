@@ -89,7 +89,7 @@ Feeds on hosts registered in [LinkOnlySources.kt](file:///d:/News/app/src/main/j
   ```
 - **When:** at the start of a feed refresh (`fetchDefaultFeeds`, `fetchCustomFeeds`, `fetchSingleFeed`), at most once per hour (`SourceConfig.CHECK_INTERVAL_MS`).
 - **Effect:** a link-only source that is missing or `enabled: false` is not fetched, is hidden from Settings > Providers, and everything cached from it (articles, bookmark-list associations, throttle state) is deleted from the device. A failed download or unparsable file keeps the last known state. Before any successful download, link-only sources are disabled.
-- **Availability:** requires the repository to be public with the file on `master`. Public status: `Unknown / Requires Confirmation`.
+- **Availability:** requires the repository to be public with the file on `master` (public as of 2026-10-23).
 
 ---
 
