@@ -48,6 +48,7 @@ public struct SFSecondaryButton: View {
                 .foregroundStyle(SFColor.textSecondary)
                 .frame(minHeight: 52)
                 .padding(.horizontal, SFSpacing.s4)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
     }

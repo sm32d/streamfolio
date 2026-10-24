@@ -10,6 +10,8 @@ struct OnboardingScreen: View {
     @Environment(AppEnvironment.self) private var env
 
     @State private var step = 0
+    /// Which way the last step change went; decides the slide direction of the page transition.
+    @State private var movingForward = true
     @State private var defaultFeedsEnabled = true
     @State private var categories = Set(NewsCategory.all)
     @State private var cacheDays = 36_500
@@ -45,11 +47,10 @@ struct OnboardingScreen: View {
                 }
                 .padding(.horizontal, SFSpacing.gutter)
                 .padding(.bottom, SFSpacing.s12)
-                .id(step)
-                .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
-                                        removal: .move(edge: .leading).combined(with: .opacity)))
             }
             .scrollIndicators(.hidden)
+            .id(step)
+            .transition(pageTransition)
         }
         .background { SFBackdrop() }
         .safeAreaInset(edge: .bottom, spacing: 0) { navigation }
@@ -70,8 +71,21 @@ struct OnboardingScreen: View {
         .padding(.vertical, SFSpacing.s8)
     }
 
+    /// Forward pages enter from the trailing edge and the old page leaves to the leading edge; going
+    /// back mirrors that.
+    private var pageTransition: AnyTransition {
+        movingForward
+            ? .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+            : .asymmetric(insertion: .move(edge: .leading), removal: .move(edge: .trailing))
+    }
+
+    /// The direction is set first and the step changed on the next turn, because a leaving page keeps
+    /// the transition it was last rendered with.
     private func go(_ newStep: Int) {
-        withAnimation(.smooth) { step = newStep }
+        movingForward = newStep > step
+        Task { @MainActor in
+            withAnimation(.smooth) { step = newStep }
+        }
     }
 
     /// Persists every choice at once, then lets the root view swap to the app.
