@@ -171,6 +171,6 @@ swift test --package-path Packages/StreamFolioUI
 ```
 
 - Deployment target is iOS 26.0 (Liquid Glass first shipped in 26); iOS 27 APIs are gated with `#available`.
-- Apple Developer Team ID, signing and App Store Connect setup: `Unknown / Requires Confirmation`.
+- Apple Developer Team ID: set as `DEVELOPMENT_TEAM` in `ios/project.yml` (2026-10-24). Whether the team has an App Store Connect app record for `uk.sume.streamfolio` is `Unknown / Requires Confirmation`.
 - Xcode ships SwiftUI guidance for coding agents; export it with `xcrun mcpbridge run-agent skills export` (writes `./xcode-skills`, do not commit).
 - Foundation Models and Translation on the Simulator: `Unknown / Requires Confirmation` — plan on a physical device for Phase 5.

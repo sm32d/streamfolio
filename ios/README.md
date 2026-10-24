@@ -29,7 +29,7 @@ swift test --package-path Packages/StreamFolioCore
 swift test --package-path Packages/StreamFolioUI
 ```
 
-Signing / `DEVELOPMENT_TEAM`, App Store Connect record and final bundle ID are `Unknown / Requires Confirmation`; `project.yml` uses `uk.sume.streamfolio` as a placeholder.
+`DEVELOPMENT_TEAM` is set in `project.yml` (set it there, not in Xcode: the `.xcodeproj` is generated and a regenerate discards Xcode-side signing edits). The App Store Connect record and final bundle ID are `Unknown / Requires Confirmation`; `project.yml` uses `uk.sume.streamfolio` as a placeholder.
 
 ## Layout
 
