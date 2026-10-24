@@ -16,8 +16,9 @@ struct HomeScreen: View {
             content(feed)
                 .background { SFBackdrop() }
                 .navigationTitle("StreamFolio")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar { regionMenu }
-                .safeAreaInset(edge: .top, spacing: 0) {
+                .safeAreaBar(edge: .top, spacing: 0) {
                     SFCategoryChips(
                         items: feed.categories.map { .init(id: $0, title: LocalizedStringKey($0)) },
                         selection: Binding(get: { feed.category }, set: { feed.select($0) })
@@ -61,34 +62,38 @@ struct HomeScreen: View {
     private func storyList(_ feed: FeedStore) -> some View {
         List {
             if !feed.trending.isEmpty {
-                Section {
-                    trendingCarousel(feed.trending)
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                } header: {
-                    SFSectionHeader("Trending Highlights").padding(.leading, SFSpacing.gutter - SFSpacing.s8)
-                }
+                sectionHeader("Trending Highlights")
+                trendingCarousel(feed.trending)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
-            Section {
-                ForEach(feed.stories) { group in
-                    StoryRow(group: group, zoom: zoom, open: open)
-                }
-                if feed.hasMoreStories {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .onAppear { feed.loadMore() }
-                }
-            } header: {
-                SFSectionHeader("Latest Stories").padding(.leading, SFSpacing.gutter - SFSpacing.s8)
+            sectionHeader("Latest Stories")
+            ForEach(feed.stories) { group in
+                StoryRow(group: group, zoom: zoom, open: open)
+            }
+            if feed.hasMoreStories {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .onAppear { feed.loadMore() }
             }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .refreshable { await feed.refreshNow() }
         .reportsScrollAtTop()
+    }
+
+    /// A heading that scrolls away with the content. A `Section` header would pin under the category
+    /// chips on a translucent band, which looks like a rendering glitch next to the chips' own bar.
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        SFSectionHeader(title)
+            .listRowInsets(EdgeInsets(top: SFSpacing.s8, leading: SFSpacing.gutter, bottom: SFSpacing.s2, trailing: SFSpacing.gutter))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
     }
 
     private func trendingCarousel(_ groups: [ArticleGroup]) -> some View {
