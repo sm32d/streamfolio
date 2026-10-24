@@ -126,6 +126,8 @@ adb shell am start -n uk.sume.streamfolio/.MainActivity
 
 For comprehensive environment setup, refer to [docs/02-local-development.md](docs/02-local-development.md).
 
+> **iOS (in progress):** a native SwiftUI port using Apple's Liquid Glass lives in [`ios/`](ios/README.md) (Xcode 27.1, iOS 26+). Onboarding, the live Home feed, the Reader/Web article page, Saved collections, Search and all Settings pages (preferences, gestures, sources, custom RSS feeds, providers, tab order, AI switches, backup/restore and OPML) work; AI summaries/translation, TTS, the widget and background refresh are not built yet.
+
 ---
 
 ## 📁 Repository Structure
@@ -140,6 +142,7 @@ streamfolio/
 │   │   └── androidTest/                # Instrumented Android UI tests
 │   ├── build.gradle.kts                # Application module build script & dependencies
 │   └── proguard-rules.pro              # R8 minification and keep rules
+├── ios/                                # Native SwiftUI iOS port with Liquid Glass (in progress, see ios/README.md)
 ├── design_system/                      # Brand assets, React/HTML UI kit, CSS design tokens
 ├── docs/                               # Complete project documentation suite
 ├── gradle/                             # Gradle wrapper & version catalog (libs.versions.toml)

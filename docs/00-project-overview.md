@@ -190,6 +190,7 @@ d:/News/
 ## 6. Project Status, Assumptions & Known Gaps
 
 ### Current Status
+- **iOS port (added 2026-10-24):** in progress in [`ios/`](../ios/README.md) — onboarding, live Home feed, the article page (Reader + Web View), Saved collections, Search and all Settings pages (including custom RSS feeds and backup/restore) work; AI summary/translation, TTS, the widget and background refresh are not built. Not released; everything else in this document describes the Android app. Decisions: [ADR-007 and ADR-008](14-decisions-and-known-limitations.md).
 - **Release Version:** `1.3.5` (versionCode `26`).
 - **Production Status:** Distributed via Google Play Store (`uk.sume.streamfolio`).
 - **Core Architecture:** Clean MVVM with Room SQLite persistence, Jetpack Compose UI, and background playback.

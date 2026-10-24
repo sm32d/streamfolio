@@ -21,6 +21,18 @@
 | **Room Persistence Library** | An Android Jetpack object-relational mapping (ORM) library that provides an abstraction layer over SQLite. |
 | **WorkManager** | The recommended Android library for persistent, deferrable, and guaranteed background work. |
 
+### iOS Terms (added 2026-10-24)
+
+| Term | Definition |
+| :--- | :--- |
+| **Liquid Glass** | Apple's translucent, refractive material (iOS 26+) used by system navigation and controls; applied in SwiftUI with `glassEffect`, grouped with `GlassEffectContainer`. StreamFolio uses it only on controls/navigation, never on content. |
+| **XcodeGen** | A tool that generates the `.xcodeproj` from `ios/project.yml`, so the project file is not hand-edited or committed. |
+| **Foundation Models** | Apple's framework for the on-device language model (planned replacement for Gemini Nano summarization on iOS). |
+| **Dynamic Type** | iOS user setting that scales text; StreamFolio's iOS typography uses text styles so it follows it. |
+| **OPML** | XML list of feed subscriptions grouped in folders; StreamFolio imports one (each folder becomes a Home tab label) and exports custom feeds as one (`Opml`). |
+| **Tab label (category)** | The text of a Home tab. For a custom feed it is the label the user chose; `CategoryLayout` merges these with the selected curated categories and the saved order. |
+| **Provider key** | `"REGION\|Category\|url"`, the string stored in `disabled_feed_urls` / `enabled_cross_region_feeds` to switch one curated publisher off (own region) or on (another region); managed by `ProviderSelection`. |
+
 ---
 
 ## 2. Web, RSS & Security Terms

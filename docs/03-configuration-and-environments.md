@@ -94,6 +94,14 @@ The remote list itself is [source-config/sources.json](file:///d:/News/source-co
 
 ---
 
+### 4.2 iOS Preferences (added 2026-10-24)
+
+The iOS app stores the **same keys with the same defaults and ranges** (table above) in `UserDefaults`, defined once in [Preference.swift](../ios/Packages/StreamFolioCore/Sources/StreamFolioCore/Preferences/Preference.swift) (`Prefs`, each a `Preference<Value>`), so Settings, the repository and backup share one definition (backup file names differ from the stored key for a few preferences, e.g. `is_default_feeds_enabled` ↔ `google_news_enabled`, `is_ai_enabled` ↔ `ai_enabled`; the mapping is `BackupPreferences`). Differences: sets and lists are stored as native string arrays instead of `StringSet` / CSV / `|||`; `use_dynamic_colors` is kept for backup round-trips but has no effect (no Material You); `has_cleared_old_tags_v3` (an Android data migration flag) is not carried. Link-only state uses the separate `link_only_state` defaults suite with identical key names. Coverage of every key is by `PreferencesTests`; the AI switches (`ai_*`) and `tts_speech_rate` are stored by Settings but nothing reads them until summaries, translation and Listen are built. The translation target language is `language` (as on Android).
+
+**iOS network exceptions (`ios/project.yml` → `Info.plist`):** App Transport Security allows cleartext for the hosts Android allows: `scmp.com`, `rthk.hk`, `techradar.com`, `nhk.or.jp`, `dailymaverick.co.za`, `iol.co.za` (with subdomains). Android also lists `rthk9.rthk.hk`, which `rthk.hk` + subdomains already covers. Re-audit with Android's list.
+
+---
+
 ## 5. Network Security Configuration (`network_security_config.xml`)
 
 Defined in [network_security_config.xml](file:///d:/News/app/src/main/res/xml/network_security_config.xml). By default, Android blocks cleartext (HTTP) traffic. StreamFolio enforces HTTPS by default and whitelists cleartext traffic strictly for legacy publisher domains that do not support HTTPS RSS feeds:

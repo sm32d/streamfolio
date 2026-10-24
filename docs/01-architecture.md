@@ -266,3 +266,46 @@ sequenceDiagram
 | **Data Integrity** | Explicit Room migrations (v5 to v8); destructive migrations restricted to legacy v1-4. | [Migrations.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/data/local/Migrations.kt) |
 | **Security** | SSRF blocking interceptor; cleartext domain whitelist; input length clamping on backup restore. | [UrlSecurityValidator.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/util/UrlSecurityValidator.kt) |
 | **User Experience** | Glassmorphic design system; shared element transitions; lockscreen media controls. | [NavRoutes.kt](file:///d:/News/app/src/main/java/uk/sume/streamfolio/ui/navigation/NavRoutes.kt#L79-L86) |
+
+---
+
+## 6. iOS Architecture (`ios/`, added 2026-10-24)
+
+The iOS app is a separate native SwiftUI client with the same product rules. Android is the specification; differences are listed in [14](14-decisions-and-known-limitations.md).
+
+```mermaid
+graph TB
+    subgraph "App target (ios/StreamFolio)"
+        Root["RootView<br/>Onboarding or TabView"] --> Screens["Home | Detail | Onboarding<br/>(Saved, Search, Settings: shells)"]
+        Env["AppEnvironment<br/>(built once, via SwiftUI environment)"]
+    end
+    subgraph "StreamFolioUI package"
+        Comp["Tokens, glass wrappers, SFArticleRow, SFTrendingCard,<br/>SFToggleCard, SFCategoryChips, ImagePipeline"]
+    end
+    subgraph "StreamFolioCore package (no UI)"
+        Feed["FeedStore (@Observable)"] --> Repo["NewsRepository"]
+        Actions["ArticleActions"] --> Stores
+        Repo --> Dl["FeedDownloader (actor)"] --> Http["SafeHTTPClient (URLSession)"]
+        Repo --> Parser["RssParser (XMLParser + SwiftSoup)"]
+        Repo --> Group["StoryGrouper (Jaccard)"]
+        Repo --> Content["ArticleContentService + ArticleExtractor"] --> Http
+        Reader["ReaderStore"] --> Content
+        Repo --> Stores["ArticleStore / BookmarkStore (GRDB)"]
+        Dl --> LO["LinkOnly policy + SourceConfig"]
+        Prefs["AppPreferences (UserDefaults, typed keys)"]
+    end
+    Screens --> Comp
+    Screens --> Env --> Feed & Actions & Prefs
+```
+
+Flow of a refresh (`FeedStore.refreshNow` → `NewsRepository.refresh` → `refreshDefaultFeeds` / `refreshCustomFeeds`): validate the remote source list, look up curated feeds for the region/category, fetch all feeds in parallel (`FeedDownloader` → `SafeHTTPClient`), parse each (`RssParser`), de-duplicate by link, assign story groups (`StoryGrouper`), upsert preserving user state, prune by retention. The database change is observed (`ValueObservation`) and `FeedStore` republishes grouped stories to the UI. A category is refreshed automatically when selected if it is older than 15 minutes (as on Android).
+
+**Article content:** `ArticleContentService` fetches an article page through the same safe client, `ArticleExtractor` (SwiftSoup) pulls the paragraphs (`article p, main p, …` else every `p`, minus promos/captions, ≥30 characters) and the lead image (`og:image` → `twitter:image` → JSON-LD → first article image; Google-hosted logos rejected; https-only), and `ReaderStore` turns that into what the Reader shows. After a refresh, `NewsRepository` resolves up to 40 missing images and pre-fetches the 10 newest bodies in the background; link-only articles are skipped inside the service.
+
+**Search and Saved:** `SearchService` fetches the active curated feeds (8 in parallel), keeps matches (`SearchMatching`) and caches them under category `SEARCH`; `SearchStore` debounces typing, observes the local results and keeps recents/trending. `BookmarkStore` + `SavedStore`/`CollectionContents` provide collections with counts and previews; `ArticleActions` + `ArticleInteractions` run save/share/read from any list.
+
+**Custom feeds and Home tabs:** `CustomFeedStore` (validated adds/edits, OPML import) feeds `FeedStore`, which merges each custom feed's tab label into the Home tabs with the selected curated categories (`CategoryLayout`, the single definition also used by the Reorder screen). `NewsRepository.refresh(category:customFeeds:)` fetches the custom feeds under that label and then, for a curated category, the curated feeds; `FeedReader` is the one place a feed URL becomes articles (HTTPS-only validation, OPML-as-feed expansion, link-only skipping for search) and is shared by refresh and online search. `ProviderSelection` owns the on/off rules of curated publishers.
+
+**Backup:** `BackupService` writes and restores Android's backup v2 JSON. One table (`BackupPreferences`) maps the backup's key names to the `Preference` registry and drives both export and import, so they cannot drift; values that come from a file are validated by the same `Preference` ranges.
+
+**Not built yet on iOS:** AI tagging/summary, translation (the Settings switches exist and are stored), TTS, widget, background refresh, Google News URL resolution.

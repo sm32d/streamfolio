@@ -150,3 +150,27 @@ adb shell am start -n uk.sume.streamfolio.debug/uk.sume.streamfolio.MainActivity
 ### Issue 4: KAPT Schema Directory Warning
 - **Cause:** KAPT room schema export configured in `app/build.gradle.kts` (`room.schemaLocation = "$projectDir/schemas"`).
 - **Fix:** Ensure `app/schemas` directory is preserved in git. Schemas are committed for Room schema migration validation.
+
+---
+
+## 6. iOS Port (`ios/`) — in progress (Phase 0, added 2026-10-24)
+
+The iOS app is a separate native SwiftUI project; it does not affect the Gradle build. Full instructions: [ios/README.md](../ios/README.md).
+
+| Tool | Version verified | Purpose |
+| :--- | :--- | :--- |
+| macOS + **Xcode** | Xcode 27.1 (27A9275), SDK `iphoneos27.1` | Build, simulator, signing |
+| **Swift** | 6.4 (language mode 6) | App and packages |
+| **XcodeGen** | 2.46.0 | Generates `ios/StreamFolio.xcodeproj` from `ios/project.yml` |
+| iOS Simulator runtimes | iOS 27.1 and 26.5 installed; the 27.1 runtime lists only the **iPhone Duo** (foldable) device type on this machine | Run and screenshot |
+
+```bash
+cd ios && xcodegen generate
+swift test --package-path Packages/StreamFolioCore
+swift test --package-path Packages/StreamFolioUI
+```
+
+- Deployment target is iOS 26.0 (Liquid Glass first shipped in 26); iOS 27 APIs are gated with `#available`.
+- Apple Developer Team ID, signing and App Store Connect setup: `Unknown / Requires Confirmation`.
+- Xcode ships SwiftUI guidance for coding agents; export it with `xcrun mcpbridge run-agent skills export` (writes `./xcode-skills`, do not commit).
+- Foundation Models and Translation on the Simulator: `Unknown / Requires Confirmation` — plan on a physical device for Phase 5.

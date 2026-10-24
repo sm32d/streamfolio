@@ -93,6 +93,18 @@ Feeds on hosts registered in [LinkOnlySources.kt](file:///d:/News/app/src/main/j
 
 ---
 
+### iOS differences (added 2026-10-24)
+
+- **User-Agent:** ordinary feeds send an iPhone Safari User-Agent (`FeedDownloader.browserUserAgent`) with the same `Accept` / `Accept-Language` headers; link-only feeds and the source list send `StreamFolio/<version> (iOS feed reader; headline-and-link only)`. Everything else in sections 1–5 above (fetch limits, headers for conditional requests, `Retry-After`/`ttl`/429/503/404/410 handling, the 60-second source-list freshness, purge on withdrawal) is implemented identically and covered by `RepositoryTests` and `LinkOnlyPolicyTests`. Publisher terms are platform-independent.
+- **Timeouts and limits:** 10 s request timeout, 30 s total, 20 MB maximum body.
+- **Concurrency:** a link-only slot is reserved *before* the request is sent, so concurrent refreshes cannot both pass the 30-minute check; on a transport error (no HTTP response) the previous schedule is restored, like Android.
+- **Article pages** (body scraping and lead-image resolution) are fetched with the same safe client, the browser User-Agent and `Accept-Language: en-US`, decoded with the charset the server declares. Link-only article pages and images are never requested. Extraction rules are in `docs/01` §6.
+- **Online search** (`SearchService`) does not call a search API: it fetches every active curated feed (8 in parallel, same headers and safe client), filters locally and caches matches, exactly like Android's `searchNewsOnline`. Link-only feeds are skipped.
+- **Custom feeds** (`NewsRepository.refreshCustomFeeds`, `FeedReader`): each custom feed URL is re-validated (HTTPS, public host) before every fetch; a document that is OPML instead of RSS is expanded into the feeds it lists, each validated again; articles are tagged with the feed's id and title and filed under its tab label. Online search also covers custom feeds, even with curated feeds off, and never fetches link-only URLs.
+- **Not yet ported:** Google News redirect resolution (`resolveGoogleNewsUrl`).
+
+---
+
 ## 3. Internal Android IPC & Intent Contracts
 
 ### 1. `MainActivity` Deep Linking Intent
@@ -235,3 +247,13 @@ StreamFolio exports and imports its entire local application state via a structu
   }
 }
 ```
+
+### iOS backup and OPML (added 2026-10-24)
+
+[BackupService](../ios/Packages/StreamFolioCore/Sources/StreamFolioCore/Backup/BackupService.swift) reads and writes this exact schema, so a backup made on Android restores on iOS and vice versa (tested with an Android-shaped file). Differences:
+
+- **Export** lists every key above (`BackupPreferences`), keys sorted, pretty-printed; link-only articles and their list links are never exported. It does not include `completed_onboarding`; the translation target language is the `language` preference, as on Android.
+- **Restore** parses the whole file *before* changing anything (Android deletes custom feeds first, so an invalid file there loses them); a bad file changes nothing. Then, in one transaction: custom feeds are replaced; articles are inserted/replaced; if the file has lists, non-default lists are replaced; if it has links, all links are replaced by those whose list exists (links to missing lists are dropped). Preferences are applied last: a scalar outside its allowed range (font size 99, swipe action "explode", a number where a boolean is expected) is ignored, not clamped; collections are bounded by the preference's own rules. The default "Saved" list is re-created if the file omitted it.
+- **Limits:** 32 MB per backup file, 5 MB per OPML file (iOS addition; Android has none). Text fields keep Android's bounds (title 500, description 2000, text 50 000, summary 10 000 …).
+- **OPML** (`Opml`): same folder rule as Android (an `<outline>` with `xmlUrl` is a feed filed under the nearest enclosing folder, else "Imported"); `xmlurl` in lower case is read too; DOCTYPE entities are not resolved. Import lists only safe, not-yet-subscribed feeds, lets the user untick folders and rename their tabs, and skips duplicates (URL, case-insensitive). Export groups feeds by tab label in first-seen order and escapes `& < > " '`.
+- Files are chosen and saved through the system Files picker (`fileImporter` / `fileExporter`); nothing is shared with another app unless the user picks a location there.

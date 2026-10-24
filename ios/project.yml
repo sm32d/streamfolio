@@ -1,0 +1,75 @@
+# XcodeGen spec — `ios/StreamFolio.xcodeproj` is generated from this file and is git-ignored.
+#   brew install xcodegen && cd ios && xcodegen generate
+name: StreamFolio
+
+options:
+  bundleIdPrefix: uk.sume
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    # DEVELOPMENT_TEAM is intentionally unset: Unknown / Requires Confirmation (see docs/02).
+
+packages:
+  StreamFolioCore:
+    path: Packages/StreamFolioCore
+  StreamFolioUI:
+    path: Packages/StreamFolioUI
+
+targets:
+  StreamFolio:
+    type: application
+    platform: iOS
+    sources:
+      - path: StreamFolio
+    dependencies:
+      - package: StreamFolioCore
+        product: StreamFolioCore
+      - package: StreamFolioUI
+        product: StreamFolioUI
+    info:
+      path: StreamFolio/Info.plist
+      properties:
+        # Cleartext is allowed only for the publishers Android's network_security_config.xml allows
+        # (their feeds still redirect through http). Re-audit whenever Android's list changes.
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            scmp.com: {NSIncludesSubdomains: true, NSExceptionAllowsInsecureHTTPLoads: true}
+            rthk.hk: {NSIncludesSubdomains: true, NSExceptionAllowsInsecureHTTPLoads: true}
+            techradar.com: {NSIncludesSubdomains: true, NSExceptionAllowsInsecureHTTPLoads: true}
+            nhk.or.jp: {NSIncludesSubdomains: true, NSExceptionAllowsInsecureHTTPLoads: true}
+            dailymaverick.co.za: {NSIncludesSubdomains: true, NSExceptionAllowsInsecureHTTPLoads: true}
+            iol.co.za: {NSIncludesSubdomains: true, NSExceptionAllowsInsecureHTTPLoads: true}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.sume.streamfolio
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: StreamFolio
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.news
+
+schemes:
+  StreamFolio:
+    build:
+      targets:
+        StreamFolio: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    profile:
+      config: Release
